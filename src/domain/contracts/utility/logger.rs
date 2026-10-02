@@ -1,6 +1,5 @@
 use crate::domain::models::{LoggerContext, LoggerLevel, LoggerMeta};
 
-/// Thread-safe, best-effort logging. Context and metadata are supplied by the caller.
 pub trait Logger: Send + Sync {
     fn log(&self, context: &LoggerContext, level: LoggerLevel, message: &str, meta: &LoggerMeta);
 
