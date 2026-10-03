@@ -1,6 +1,5 @@
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
-    role_id BIGINT NOT NULL REFERENCES roles (id),
     name TEXT NOT NULL,
     bio TEXT NOT NULL DEFAULT '',
     username TEXT NOT NULL,
@@ -18,8 +17,6 @@ CREATE TABLE users (
     updated_by BIGINT,
     deleted_by BIGINT
 );
-
-CREATE INDEX idx_users_role_id ON users (role_id);
 
 CREATE INDEX idx_users_name_trgm ON users USING GIN (name gin_trgm_ops);
 

@@ -1,6 +1,7 @@
 CREATE TABLE api_keys (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users (id),
+    space_id BIGINT NOT NULL REFERENCES spaces (id),
+    member_id BIGINT NOT NULL REFERENCES space_members (id),
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     hash TEXT NOT NULL,
@@ -14,7 +15,7 @@ CREATE TABLE api_keys (
     deleted_by BIGINT
 );
 
-CREATE INDEX idx_api_keys_user_id ON api_keys (user_id);
+CREATE INDEX idx_api_keys_space_id_member_id ON api_keys (space_id, member_id);
 
 CREATE INDEX idx_api_keys_name_trgm ON api_keys USING GIN (name gin_trgm_ops);
 

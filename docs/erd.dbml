@@ -1,0 +1,237 @@
+Project lockmate {
+    database_type: 'PostgreSQL'
+    Note: '''
+Intended space-aware schema for Lockmate. Users share one identity across projects;
+roles, permissions, memberships, and API keys are scoped to a space.
+Migrations implement this schema; Rust models and repositories still need alignment.
+Partial indexes and PostgreSQL GIN operator classes are documented in index notes
+and implemented in SQL migrations.
+References use individual IDs. Application validation must ensure that linked
+roles, permissions, memberships, and API keys belong to the same space.
+'''
+}
+
+Table spaces [headercolor: #059669] {
+    Note: 'Project authorization boundary. Disabling a space blocks access to its memberships and API keys.'
+
+    id          BIGINT      [pk, increment]
+    slug        TEXT        [not null, note: 'Stable project identifier, such as taskmate or financemate.']
+    name        TEXT        [not null]
+    description TEXT        [not null, default: '']
+    is_active   BOOLEAN     [not null, default: true]
+    preferences JSONB       [not null, default: `'{}'::jsonb`]
+    created_at  TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at  TIMESTAMPTZ
+    deleted_at  TIMESTAMPTZ
+    created_by  BIGINT
+    updated_by  BIGINT
+    deleted_by  BIGINT
+
+    Indexes {
+        slug       [unique, name: 'uq_spaces_slug', note: 'Stable identifier; reserved even after soft deletion.']
+        deleted_at [name: 'idx_spaces_deleted_at']
+    }
+}
+
+Table permissions [headercolor: #7C3AED] {
+    Note: 'Owned by one space. Slugs identify roles or permissions within that space; names are display labels.'
+
+    id          BIGINT      [pk, increment]
+    space_id    BIGINT      [not null]
+    slug        TEXT        [not null, note: 'Stable identifier within the space.']
+    name        TEXT        [not null, note: 'Human-readable display name.']
+    description TEXT        [not null, default: '']
+    preferences JSONB       [not null, default: `'{}'::jsonb`]
+    created_at  TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at  TIMESTAMPTZ
+    deleted_at  TIMESTAMPTZ
+    created_by  BIGINT
+    updated_by  BIGINT
+    deleted_by  BIGINT
+
+    Indexes {
+        space_id         [name: 'idx_permissions_space_id']
+        (space_id, slug) [unique, name: 'uq_permissions_space_id_slug', note: 'Partial unique index: WHERE deleted_at IS NULL']
+        name             [name: 'idx_permissions_name_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        deleted_at       [name: 'idx_permissions_deleted_at']
+    }
+}
+
+Table roles [headercolor: #7C3AED] {
+    Note: 'Owned by one space. Slugs identify roles or permissions within that space; names are display labels.'
+
+    id          BIGINT      [pk, increment]
+    space_id    BIGINT      [not null]
+    slug        TEXT        [not null, note: 'Stable identifier within the space.']
+    name        TEXT        [not null, note: 'Human-readable display name.']
+    description TEXT        [not null, default: '']
+    is_default  BOOLEAN     [not null, default: false]
+    preferences JSONB       [not null, default: `'{}'::jsonb`]
+    created_at  TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at  TIMESTAMPTZ
+    deleted_at  TIMESTAMPTZ
+    created_by  BIGINT
+    updated_by  BIGINT
+    deleted_by  BIGINT
+
+    Indexes {
+        space_id         [name: 'idx_roles_space_id']
+        (space_id, slug) [unique, name: 'uq_roles_space_id_slug', note: 'Partial unique index: WHERE deleted_at IS NULL']
+        name             [name: 'idx_roles_name_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        space_id         [unique, name: 'uq_roles_space_id_default', note: 'Partial unique index: WHERE is_default = TRUE AND deleted_at IS NULL; at most one active default role per space.']
+        deleted_at       [name: 'idx_roles_deleted_at']
+    }
+}
+
+Table role_permission [headercolor: #A78BFA] {
+    Note: 'Permissions granted by a role. Both endpoints must belong to the same space. Assignments are deleted physically.'
+
+    id            BIGINT      [pk, increment]
+    space_id      BIGINT      [not null]
+    role_id       BIGINT      [not null]
+    permission_id BIGINT      [not null]
+    created_at    TIMESTAMPTZ [not null, default: `NOW()`]
+    created_by    BIGINT
+
+    Indexes {
+        (space_id, role_id, permission_id) [unique, name: 'uq_role_permission_space_role_permission']
+        role_id                            [name: 'idx_role_permission_role_id']
+        permission_id                      [name: 'idx_role_permission_permission_id']
+    }
+}
+
+Table users [headercolor: #2563EB] {
+    Note: 'Global accounts and credentials shared across spaces.'
+
+    id                BIGINT      [pk, increment]
+    name              TEXT        [not null]
+    bio               TEXT        [not null, default: '']
+    username          TEXT        [not null]
+    email             TEXT
+    phone             TEXT
+    password_hash     TEXT        [not null]
+    is_email_verified BOOLEAN     [not null, default: false]
+    is_phone_verified BOOLEAN     [not null, default: false]
+    avatar_path       TEXT        [note: 'Object-storage key for the shared profile avatar.']
+    preferences       JSONB       [not null, default: `'{}'::jsonb`]
+    created_at        TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at        TIMESTAMPTZ
+    deleted_at        TIMESTAMPTZ
+    created_by        BIGINT
+    updated_by        BIGINT
+    deleted_by        BIGINT
+
+    Indexes {
+        name              [name: 'idx_users_name_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        username          [unique, name: 'uq_users_username', note: 'Partial unique index: WHERE deleted_at IS NULL']
+        username          [name: 'idx_users_username_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        email             [unique, name: 'uq_users_email', note: 'Partial unique index: WHERE deleted_at IS NULL']
+        email             [name: 'idx_users_email_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        phone             [unique, name: 'uq_users_phone', note: 'Partial unique index: WHERE deleted_at IS NULL']
+        phone             [name: 'idx_users_phone_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        is_email_verified [name: 'idx_users_is_email_verified']
+        is_phone_verified [name: 'idx_users_is_phone_verified']
+        deleted_at        [name: 'idx_users_deleted_at']
+    }
+}
+
+Table space_members [headercolor: #0891B2] {
+    Note: 'Connects a global user to a space. Roles are assigned to this membership, never directly to the user. The space default role is assigned when joining.'
+
+    id          BIGINT      [pk, increment]
+    space_id    BIGINT      [not null]
+    user_id     BIGINT      [not null]
+    is_active   BOOLEAN     [not null, default: true, note: 'Suspension blocks access without deleting the global account.']
+    preferences JSONB       [not null, default: `'{}'::jsonb`]
+    created_at  TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at  TIMESTAMPTZ
+    deleted_at  TIMESTAMPTZ
+    created_by  BIGINT
+    updated_by  BIGINT
+    deleted_by  BIGINT
+
+    Indexes {
+        (space_id, user_id) [unique, name: 'uq_space_members_space_id_user_id', note: 'Partial unique index: WHERE deleted_at IS NULL; suspended memberships still reserve their place.']
+        user_id             [name: 'idx_space_members_user_id']
+        deleted_at          [name: 'idx_space_members_deleted_at']
+    }
+}
+
+Table member_role [headercolor: #22D3EE] {
+    Note: 'A membership can receive multiple roles from its own space. Effective permissions are the union of the assigned roles. Assignments are deleted physically.'
+
+    id         BIGINT      [pk, increment]
+    space_id   BIGINT      [not null]
+    member_id  BIGINT      [not null]
+    role_id    BIGINT      [not null]
+    created_at TIMESTAMPTZ [not null, default: `NOW()`]
+    created_by BIGINT
+
+    Indexes {
+        (space_id, member_id, role_id) [unique, name: 'uq_member_role_space_member_role']
+        (space_id, role_id)            [name: 'idx_member_role_space_id_role_id']
+    }
+}
+
+Table api_keys [headercolor: #D97706] {
+    Note: 'A user API key grants access only through its active space membership. Store the hash, never the raw key.'
+
+    id          BIGINT      [pk, increment]
+    space_id    BIGINT      [not null]
+    member_id   BIGINT      [not null]
+    name        TEXT        [not null]
+    description TEXT        [not null, default: '']
+    hash        TEXT        [not null]
+    redacted    TEXT        [not null]
+    preferences JSONB       [not null, default: `'{}'::jsonb`]
+    created_at  TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at  TIMESTAMPTZ
+    deleted_at  TIMESTAMPTZ
+    created_by  BIGINT
+    updated_by  BIGINT
+    deleted_by  BIGINT
+
+    Indexes {
+        (space_id, member_id) [name: 'idx_api_keys_space_id_member_id']
+        name                  [name: 'idx_api_keys_name_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        hash                  [unique, name: 'uq_api_keys_hash', note: 'Partial unique index: WHERE deleted_at IS NULL']
+        redacted              [name: 'idx_api_keys_redacted_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        deleted_at            [name: 'idx_api_keys_deleted_at']
+    }
+}
+
+// Space ownership and global identity.
+Ref: permissions.space_id > spaces.id
+Ref: roles.space_id > spaces.id
+Ref: space_members.space_id > spaces.id
+Ref: space_members.user_id > users.id
+
+// Role grants, membership assignments, and space-scoped credentials.
+Ref: role_permission.space_id > spaces.id
+Ref: role_permission.role_id > roles.id [delete: cascade]
+Ref: role_permission.permission_id > permissions.id [delete: cascade]
+Ref: member_role.space_id > spaces.id
+Ref: member_role.member_id > space_members.id [delete: cascade]
+Ref: member_role.role_id > roles.id [delete: cascade]
+Ref: api_keys.space_id > spaces.id
+Ref: api_keys.member_id > space_members.id
+
+TableGroup identity [color: #2563EB] {
+    users
+    Note: 'Shared identity across all Mate projects.'
+}
+
+TableGroup space_authorization [color: #7C3AED] {
+    spaces
+    roles
+    permissions
+    role_permission
+    Note: 'Each space owns an independent role and permission catalog.'
+}
+
+TableGroup membership_access [color: #0891B2] {
+    space_members
+    member_role
+    api_keys
+    Note: 'Project access, role assignments, and user API credentials.'
+}

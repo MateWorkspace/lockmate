@@ -2,6 +2,8 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE permissions (
     id BIGSERIAL PRIMARY KEY,
+    space_id BIGINT NOT NULL REFERENCES spaces (id),
+    slug TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -13,7 +15,9 @@ CREATE TABLE permissions (
     deleted_by BIGINT
 );
 
-CREATE UNIQUE INDEX uq_permissions_name ON permissions (name)
+CREATE INDEX idx_permissions_space_id ON permissions (space_id);
+
+CREATE UNIQUE INDEX uq_permissions_space_id_slug ON permissions (space_id, slug)
 WHERE
     deleted_at IS NULL;
 
