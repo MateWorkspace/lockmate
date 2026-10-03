@@ -3,6 +3,17 @@ pub enum ValidatorError {
     #[error("invalid arguments")]
     BadArgs,
 
+    /// environment
+
+    #[error("{key} is required")]
+    EnvironmentRequired { key: &'static str },
+
+    #[error("{key} {reason}")]
+    EnvironmentInvalid {
+        key: &'static str,
+        reason: &'static str,
+    },
+
     /// Permission
 
     #[error("permission name is invalid")]
@@ -101,6 +112,8 @@ impl ValidatorError {
     pub const fn code(&self) -> &'static str {
         match self {
             Self::BadArgs => "BAD_ARGS",
+            Self::EnvironmentRequired { .. } => "ENVIRONMENT_REQUIRED",
+            Self::EnvironmentInvalid { .. } => "ENVIRONMENT_INVALID",
 
             Self::PermissionNameInvalid => "PERMISSION_NAME_INVALID",
             Self::PermissionNameTooLong => "PERMISSION_NAME_TOO_LONG",

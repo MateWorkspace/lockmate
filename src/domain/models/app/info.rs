@@ -1,4 +1,4 @@
 pub struct AppInfo {
-    pub name: String,
-    pub version: String,
+    pub name: &'static str,
+    pub version: &'static str,
 }
