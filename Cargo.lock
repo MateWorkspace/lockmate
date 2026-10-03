@@ -1080,6 +1080,7 @@ dependencies = [
  "axum",
  "bcrypt",
  "dotenvy",
+ "futures-util",
  "getrandom 0.4.3",
  "hex",
  "humantime",

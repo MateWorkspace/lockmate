@@ -7,6 +7,7 @@ edition = "2024"
 axum = "0.8.9"
 bcrypt = "0.19"
 dotenvy = "0.15"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 getrandom = { version = "0.4", features = ["std"] }
 hex = "0.4"
 humantime = "2"
