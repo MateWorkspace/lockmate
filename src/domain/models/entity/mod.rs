@@ -6,7 +6,7 @@ pub mod role;
 pub mod role_permission;
 pub mod user;
 
-pub use api_key::ApiKey;
+pub use api_key::{ApiKey, GeneratedApiKey};
 pub use audit::{AuditCreate, AuditCreateUpdateDelete, AuditDelete, AuditUpdate};
 pub use claims::{AccessClaims, RefreshClaims};
 pub use permission::Permission;

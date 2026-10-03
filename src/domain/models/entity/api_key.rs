@@ -20,3 +20,9 @@ pub struct ApiKey {
 fn is_zero(value: &i64) -> bool {
     *value == 0
 }
+
+pub struct GeneratedApiKey {
+    pub raw: String,
+    pub hash: String,
+    pub redacted: String,
+}
