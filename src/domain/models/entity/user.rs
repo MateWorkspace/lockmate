@@ -17,6 +17,8 @@ pub struct User {
     pub password_hash: String,
     pub is_email_verified: bool,
     pub is_phone_verified: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_path: Option<String>,
     pub preferences: Value,
     #[serde(flatten)]
     pub audit: AuditCreateUpdateDelete,
