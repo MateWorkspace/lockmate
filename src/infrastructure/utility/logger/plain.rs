@@ -7,7 +7,7 @@ use serde_json::json;
 
 use crate::domain::{
     contracts::utility::Logger,
-    models::{LoggerContext, LoggerLevel, LoggerMeta},
+    models::{AppContext, LoggerLevel, LoggerMeta},
 };
 
 use super::utils::{LogRecord, write_record};
@@ -33,12 +33,19 @@ impl<W: Write + Send> PlainLogger<W> {
 }
 
 impl<W: Write + Send> Logger for PlainLogger<W> {
-    fn log(&self, context: &LoggerContext, level: LoggerLevel, message: &str, meta: &LoggerMeta) {
+    fn log(
+        &self,
+        context: &AppContext,
+        level: LoggerLevel,
+        tag: &str,
+        message: &str,
+        meta: &LoggerMeta,
+    ) {
         if !self.level.allows(level) {
             return;
         }
 
-        let record = LogRecord::new(context, level, message, meta);
+        let record = LogRecord::new(context, level, tag, message, meta);
         let Ok(meta) = serde_json::to_string(record.meta) else {
             return;
         };

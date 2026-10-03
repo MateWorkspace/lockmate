@@ -5,7 +5,7 @@ use std::{
 
 use crate::domain::{
     contracts::utility::Logger,
-    models::{LoggerContext, LoggerLevel, LoggerMeta},
+    models::{AppContext, LoggerLevel, LoggerMeta},
 };
 
 use super::utils::{LogRecord, write_record};
@@ -31,12 +31,19 @@ impl<W: Write + Send> JsonLogger<W> {
 }
 
 impl<W: Write + Send> Logger for JsonLogger<W> {
-    fn log(&self, context: &LoggerContext, level: LoggerLevel, message: &str, meta: &LoggerMeta) {
+    fn log(
+        &self,
+        context: &AppContext,
+        level: LoggerLevel,
+        tag: &str,
+        message: &str,
+        meta: &LoggerMeta,
+    ) {
         if !self.level.allows(level) {
             return;
         }
 
-        let record = LogRecord::new(context, level, message, meta);
+        let record = LogRecord::new(context, level, tag, message, meta);
         let Ok(record) = serde_json::to_string(&record) else {
             return;
         };

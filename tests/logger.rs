@@ -8,7 +8,7 @@ use lockmate::{
     domain::{
         contracts::utility::Logger,
         models::{
-            LoggerContext, LoggerFormat, LoggerLevel, LoggerMeta, LoggerMetaValue, RepositoryError,
+            AppContext, LoggerFormat, LoggerLevel, LoggerMeta, LoggerMetaValue, RepositoryError,
         },
     },
     infrastructure::utility::logger::{JsonLogger, PlainLogger},
@@ -48,7 +48,7 @@ fn absent_context_fields_and_empty_metadata_have_explicit_defaults() {
     for format in [LoggerFormat::Json, LoggerFormat::Plain] {
         let capture = Capture::default();
         let logger = new_logger(capture.clone(), format, LoggerLevel::Info);
-        logger.info(&LoggerContext::default(), "event", &LoggerMeta::new());
+        logger.info(&AppContext::default(), "", "event", &LoggerMeta::new());
         let output = capture.output();
         assert_eq!(output.lines().count(), 1);
         match format {
@@ -75,8 +75,7 @@ fn absent_context_fields_and_empty_metadata_have_explicit_defaults() {
 fn prints_supplied_context_and_metadata_without_expanding_error_sources() {
     let capture = Capture::default();
     let logger = JsonLogger::with_writer(capture.clone(), LoggerLevel::Error);
-    let context = LoggerContext {
-        tag: "repository/user/ReadById".into(),
+    let context = AppContext {
         actor: Some("admin".into()),
         trace_id: Some(Uuid::from_u128(42)),
     };
@@ -94,10 +93,10 @@ fn prints_supplied_context_and_metadata_without_expanding_error_sources() {
             )])),
         ),
     ]);
-    logger.error(&context, "read failed", &meta);
+    logger.error(&context, "repository/user/ReadById", "read failed", &meta);
     let output = capture.output();
     let record: Value = serde_json::from_str(output.trim()).unwrap();
-    assert_eq!(record["tag"], context.tag);
+    assert_eq!(record["tag"], "repository/user/ReadById");
     assert_eq!(record["actor"], "admin");
     assert_eq!(record["trace_id"], Uuid::from_u128(42).to_string());
     assert_eq!(
@@ -116,11 +115,11 @@ fn plain_output_preserves_empty_actor_and_escapes_control_characters() {
     let capture = Capture::default();
     let logger = PlainLogger::with_writer(capture.clone(), LoggerLevel::Warn);
     logger.warn(
-        &LoggerContext {
-            tag: "repository\n/read".into(),
+        &AppContext {
             actor: Some(String::new()),
             trace_id: None,
         },
+        "repository\n/read",
         "failed\n\u{1b}",
         &LoggerMeta::from([("attempt".into(), 2_u64.into())]),
     );
@@ -145,8 +144,9 @@ fn filters_all_levels_in_both_formats() {
             let logger = new_logger(capture.clone(), format, configured);
             for level in levels {
                 logger.log(
-                    &LoggerContext::default(),
+                    &AppContext::default(),
                     level,
+                    "test/log",
                     "event",
                     &LoggerMeta::new(),
                 );
@@ -165,13 +165,17 @@ fn shared_logger_keeps_concurrent_records_and_context_intact() {
         .map(|id| {
             let logger = Arc::clone(&logger);
             thread::spawn(move || {
-                let context = LoggerContext {
-                    tag: "repository/read".into(),
+                let context = AppContext {
                     actor: Some(id.to_string()),
                     trace_id: Some(Uuid::from_u128(id)),
                 };
                 for _ in 0..20 {
-                    logger.info(&context, &id.to_string(), &LoggerMeta::new());
+                    logger.info(
+                        &context,
+                        "repository/read",
+                        &id.to_string(),
+                        &LoggerMeta::new(),
+                    );
                 }
             })
         })
