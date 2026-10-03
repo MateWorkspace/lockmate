@@ -261,6 +261,7 @@ fn configuration_and_input_errors_are_logged_once_without_secrets_or_tokens() {
     let context = AppContext {
         actor: Some("admin".into()),
         trace_id: Some(uuid::Uuid::from_u128(42)),
+        ..AppContext::default()
     };
     let refresh = RefreshClaims {
         user_id: 1,

@@ -342,6 +342,7 @@ fn each_validation_failure_logs_once_with_context_and_without_submitted_values()
     let context = AppContext {
         actor: Some("admin".into()),
         trace_id: Some(uuid::Uuid::from_u128(123)),
+        ..AppContext::default()
     };
     validator
         .user_password(&context, "private password")

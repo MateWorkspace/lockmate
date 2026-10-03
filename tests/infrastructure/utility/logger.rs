@@ -78,6 +78,7 @@ fn prints_supplied_context_and_metadata_without_expanding_error_sources() {
     let context = AppContext {
         actor: Some("admin".into()),
         trace_id: Some(Uuid::from_u128(42)),
+        ..AppContext::default()
     };
     let error = RepositoryError::Failure {
         source: Box::new(io::Error::other("private database details")),
@@ -118,6 +119,7 @@ fn plain_output_preserves_empty_actor_and_escapes_control_characters() {
         &AppContext {
             actor: Some(String::new()),
             trace_id: None,
+            ..AppContext::default()
         },
         "repository\n/read",
         "failed\n\u{1b}",
@@ -168,6 +170,7 @@ fn shared_logger_keeps_concurrent_records_and_context_intact() {
                 let context = AppContext {
                     actor: Some(id.to_string()),
                     trace_id: Some(Uuid::from_u128(id)),
+                    ..AppContext::default()
                 };
                 for _ in 0..20 {
                     logger.info(

@@ -55,6 +55,7 @@ fn errors_are_logged_once_with_request_context_and_without_credentials() {
     let context = AppContext {
         actor: Some("admin".into()),
         trace_id: Some(uuid::Uuid::from_u128(42)),
+        ..AppContext::default()
     };
     let secret = "private password";
     let hash = password.hash(&context, secret).unwrap();

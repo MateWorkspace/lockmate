@@ -97,6 +97,7 @@ fn validation_errors_keep_context_and_log_once_without_keys() {
     let context = AppContext {
         actor: Some("test actor".to_owned()),
         trace_id: Some(uuid::Uuid::from_u128(123)),
+        ..AppContext::default()
     };
     assert!(generator.validate(&context, "").is_err());
     let secret = "lockmate-invalid-private-key";
