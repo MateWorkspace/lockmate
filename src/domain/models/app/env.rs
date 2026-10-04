@@ -22,4 +22,15 @@ pub struct AppEnv {
     pub postgres_ssl_mode: String,
     pub postgres_max_connections: u32,
     pub postgres_connect_timeout: Duration,
+
+    pub redis_host: String,
+    pub redis_port: u16,
+    pub redis_database: u8,
+    pub redis_password: String,
+    pub redis_namespace: String,
+    pub redis_connect_timeout: Duration,
+    pub redis_operation_timeout: Duration,
+
+    pub caching_record_ttl: Duration,
+    pub caching_list_ttl: Duration,
 }

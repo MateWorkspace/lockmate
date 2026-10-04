@@ -72,6 +72,20 @@ fn load_env_with(
         postgres_ssl_mode: reader.string("LOCKMATE_POSTGRES_SSL_MODE", "disable")?,
         postgres_max_connections: reader.max_connections()?,
         postgres_connect_timeout: reader.duration("LOCKMATE_POSTGRES_CONNECT_TIMEOUT", 10)?,
+
+        redis_host: reader.string("LOCKMATE_REDIS_HOST", "127.0.0.1")?,
+        redis_port: reader.port("LOCKMATE_REDIS_PORT", 6379)?,
+        redis_database: reader.redis_database()?,
+        redis_password: reader.string("LOCKMATE_REDIS_PASSWORD", "")?,
+        redis_namespace: reader.string("LOCKMATE_REDIS_NAMESPACE", "lockmate")?,
+        redis_connect_timeout: reader.duration("LOCKMATE_REDIS_CONNECT_TIMEOUT", 5)?,
+        redis_operation_timeout: reader.duration_with_fallback(
+            "LOCKMATE_REDIS_OPERATION_TIMEOUT",
+            Duration::from_millis(200),
+        )?,
+
+        caching_record_ttl: reader.duration("LOCKMATE_CACHING_RECORD_TTL", 60)?,
+        caching_list_ttl: reader.duration("LOCKMATE_CACHING_LIST_TTL", 15)?,
     };
     Ok(config)
 }
@@ -122,14 +136,34 @@ impl<F: Fn(&'static str) -> Result<Option<String>, ValidatorError>> EnvReader<F>
         Ok(value as u32)
     }
 
+    fn redis_database(&self) -> Result<u8, ValidatorError> {
+        const KEY: &str = "LOCKMATE_REDIS_DATABASE";
+        let value = self.integer(KEY, 0)?;
+        if !(0..=i64::from(u8::MAX)).contains(&value) {
+            return Err(ValidatorError::EnvironmentInvalid {
+                key: KEY,
+                reason: "must be between 0 and 255",
+            });
+        }
+        Ok(value as u8)
+    }
+
     fn duration(&self, key: &'static str, fallback: u64) -> Result<Duration, ValidatorError> {
+        self.duration_with_fallback(key, Duration::from_secs(fallback))
+    }
+
+    fn duration_with_fallback(
+        &self,
+        key: &'static str,
+        fallback: Duration,
+    ) -> Result<Duration, ValidatorError> {
         let value = self.string(key, "")?;
         let negative = value.starts_with('-');
         let unsigned = value.strip_prefix(['-', '+']).unwrap_or(&value);
         let parsed = humantime::parse_duration(unsigned)
             .ok()
             .or_else(|| unsigned.parse::<u64>().ok().map(Duration::from_secs));
-        let duration = parsed.unwrap_or(Duration::from_secs(fallback));
+        let duration = parsed.unwrap_or(fallback);
 
         // Malformed values use the fallback; valid negative and zero values are invalid.
         if (negative && parsed.is_some()) || duration.is_zero() {
