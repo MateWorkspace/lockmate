@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use futures_util::TryStreamExt;
 
-use mate_pgdt::{
-    Pgdt,
-    sqlx::{self, Row, postgres::PgRow},
-};
+use mate_pgdt::{Pgdt, sqlx::Row};
 
 use crate::domain::{
     contracts::{
@@ -41,12 +38,17 @@ impl RolePermission for PostgresRolePermission {
     fn create<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         input: CreateRolePermission,
     ) -> RepositoryFuture<'a, i64> {
         Box::pin(async move {
             let result: Result<i64, OperationError> = async {
-                let mut query = query::create(&input);
-                let row = self.database.query_row(context, query.build()).await?;
+                let mut query = query::create(space_id, &input);
+                let row = self
+                    .database
+                    .query_optional(context, query.build())
+                    .await?
+                    .ok_or(RepositoryError::BadArgs)?;
                 Ok(row.try_get("id")?)
             }
             .await;
@@ -63,13 +65,18 @@ impl RolePermission for PostgresRolePermission {
     fn read_by_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         id: i64,
     ) -> RepositoryFuture<'a, RolePermissionDetails> {
         Box::pin(async move {
             let result: Result<RolePermissionDetails, OperationError> = async {
-                let mut query = query::read_by_id(id);
+                let mut query = query::read_by_id(space_id, id);
                 let row = self.database.query_row(context, query.build()).await?;
-                Ok(decode(&row)?)
+                Ok(RolePermissionDetails {
+                    role_permission: scan::role_permission::decode(&row, "rp_")?,
+                    role: scan::role::decode(&row, "r_")?,
+                    permission: scan::permission::decode(&row, "p_")?,
+                })
             }
             .await;
             finish(
@@ -82,14 +89,44 @@ impl RolePermission for PostgresRolePermission {
         })
     }
 
+    fn read_by_role_id_and_permission_id<'a>(
+        &'a self,
+        context: &'a AppContext,
+        space_id: i64,
+        role_id: i64,
+        permission_id: i64,
+    ) -> RepositoryFuture<'a, RolePermissionDetails> {
+        Box::pin(async move {
+            let result: Result<RolePermissionDetails, OperationError> = async {
+                let mut query =
+                    query::read_by_role_id_and_permission_id(space_id, role_id, permission_id);
+                let row = self.database.query_row(context, query.build()).await?;
+                Ok(RolePermissionDetails {
+                    role_permission: scan::role_permission::decode(&row, "rp_")?,
+                    role: scan::role::decode(&row, "r_")?,
+                    permission: scan::permission::decode(&row, "p_")?,
+                })
+            }
+            .await;
+            finish(
+                self.logger.as_ref(),
+                context,
+                "repository/role_permission/postgres/read_by_role_id_and_permission_id",
+                result,
+                || RepositoryError::RolePermissionNotFound,
+            )
+        })
+    }
+
     fn read_by_role_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         role_id: i64,
     ) -> RepositoryFuture<'a, Vec<RolePermissionWithPermission>> {
         Box::pin(async move {
             let result: Result<Vec<RolePermissionWithPermission>, OperationError> = async {
-                let mut query = query::read_by_role_id(role_id);
+                let mut query = query::read_by_role_id(space_id, role_id);
                 let mut rows = self.database.query(context, query.build());
                 let mut items = Vec::new();
                 while let Some(row) = rows.try_next().await? {
@@ -114,11 +151,12 @@ impl RolePermission for PostgresRolePermission {
     fn read_by_permission_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         permission_id: i64,
     ) -> RepositoryFuture<'a, Vec<RolePermissionWithRole>> {
         Box::pin(async move {
             let result: Result<Vec<RolePermissionWithRole>, OperationError> = async {
-                let mut query = query::read_by_permission_id(permission_id);
+                let mut query = query::read_by_permission_id(space_id, permission_id);
                 let mut rows = self.database.query(context, query.build());
                 let mut items = Vec::new();
                 while let Some(row) = rows.try_next().await? {
@@ -140,10 +178,15 @@ impl RolePermission for PostgresRolePermission {
         })
     }
 
-    fn delete_by_id<'a>(&'a self, context: &'a AppContext, id: i64) -> RepositoryFuture<'a, ()> {
+    fn delete_by_id<'a>(
+        &'a self,
+        context: &'a AppContext,
+        space_id: i64,
+        id: i64,
+    ) -> RepositoryFuture<'a, ()> {
         Box::pin(async move {
             let result: Result<(), OperationError> = async {
-                let mut query = query::delete_by_id(id);
+                let mut query = query::delete_by_id(space_id, id);
                 require_affected(
                     self.database
                         .exec(context, query.build())
@@ -166,12 +209,14 @@ impl RolePermission for PostgresRolePermission {
     fn delete_by_role_id_or_permission_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         role_id: Option<i64>,
         permission_id: Option<i64>,
     ) -> RepositoryFuture<'a, ()> {
         Box::pin(async move {
             let result: Result<(), OperationError> = async {
-                let mut query = query::delete_by_role_id_or_permission_id(role_id, permission_id)?;
+                let mut query =
+                    query::delete_by_role_id_or_permission_id(space_id, role_id, permission_id)?;
                 require_affected(
                     self.database
                         .exec(context, query.build())
@@ -190,12 +235,4 @@ impl RolePermission for PostgresRolePermission {
             )
         })
     }
-}
-
-fn decode(row: &PgRow) -> Result<RolePermissionDetails, sqlx::Error> {
-    Ok(RolePermissionDetails {
-        role_permission: scan::role_permission::decode(row, "rp_")?,
-        role: scan::role::decode(row, "r_")?,
-        permission: scan::permission::decode(row, "p_")?,
-    })
 }

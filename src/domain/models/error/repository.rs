@@ -1,8 +1,7 @@
 #[derive(Debug, thiserror::Error)]
 pub enum RepositoryError {
-
     /// Generic errors.
-    
+
     #[error("invalid arguments")]
     BadArgs,
 
@@ -32,17 +31,35 @@ pub enum RepositoryError {
 
     /// Specific errors.
 
+    #[error("space was not found")]
+    SpaceNotFound,
+
+    #[error("space slug conflicts with existing data")]
+    SpaceSlugConflict,
+
+    #[error("space member was not found")]
+    SpaceMemberNotFound,
+
+    #[error("space member conflicts with existing data")]
+    SpaceMemberConflict,
+
+    #[error("member role was not found")]
+    MemberRoleNotFound,
+
+    #[error("member role conflicts with existing data")]
+    MemberRoleConflict,
+
     #[error("permission was not found")]
     PermissionNotFound,
 
-    #[error("permission name conflicts with existing data")]
-    PermissionNameConflict,
+    #[error("permission slug conflicts with existing data")]
+    PermissionSlugConflict,
 
     #[error("role was not found")]
     RoleNotFound,
 
-    #[error("role name conflicts with existing data")]
-    RoleNameConflict,
+    #[error("role slug conflicts with existing data")]
+    RoleSlugConflict,
 
     #[error("role permission was not found")]
     RolePermissionNotFound,
@@ -63,7 +80,7 @@ pub enum RepositoryError {
     UserPhoneConflict,
 
     #[error("api key was not found")]
-    UserApiKeyNotFound,
+    ApiKeyNotFound,
 }
 
 impl RepositoryError {
@@ -76,17 +93,23 @@ impl RepositoryError {
             Self::Timeout { .. } => "TIMEOUT",
             Self::Failure { .. } => "FAILURE",
             Self::Unimplemented => "UNIMPLEMENTED",
+            Self::SpaceNotFound => "SPACE_NOT_FOUND",
+            Self::SpaceSlugConflict => "SPACE_SLUG_CONFLICT",
+            Self::SpaceMemberNotFound => "SPACE_MEMBER_NOT_FOUND",
+            Self::SpaceMemberConflict => "SPACE_MEMBER_CONFLICT",
+            Self::MemberRoleNotFound => "MEMBER_ROLE_NOT_FOUND",
+            Self::MemberRoleConflict => "MEMBER_ROLE_CONFLICT",
             Self::PermissionNotFound => "PERMISSION_NOT_FOUND",
-            Self::PermissionNameConflict => "PERMISSION_NAME_CONFLICT",
+            Self::PermissionSlugConflict => "PERMISSION_SLUG_CONFLICT",
             Self::RoleNotFound => "ROLE_NOT_FOUND",
-            Self::RoleNameConflict => "ROLE_NAME_CONFLICT",
+            Self::RoleSlugConflict => "ROLE_SLUG_CONFLICT",
             Self::RolePermissionNotFound => "ROLE_PERMISSION_NOT_FOUND",
             Self::RolePermissionConflict => "ROLE_PERMISSION_CONFLICT",
             Self::UserNotFound => "USER_NOT_FOUND",
             Self::UserUsernameConflict => "USER_USERNAME_CONFLICT",
             Self::UserEmailConflict => "USER_EMAIL_CONFLICT",
             Self::UserPhoneConflict => "USER_PHONE_CONFLICT",
-            Self::UserApiKeyNotFound => "API_KEY_NOT_FOUND",
+            Self::ApiKeyNotFound => "API_KEY_NOT_FOUND",
         }
     }
 }

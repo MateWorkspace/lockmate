@@ -9,8 +9,7 @@ use serde_json::json;
 #[ignore = "requires isolated PostgreSQL via LOCKMATE_TEST_DATABASE_URL"]
 async fn user_crud_defaults_contacts_verification_and_avatar() {
     let f = Fixture::new().await;
-    let role = f.role("user", false).await;
-    let id = f.user(role, "user").await;
+    let id = f.user("user").await;
     let item = f.users.read_by_id(&f.context, id).await.unwrap();
     assert_eq!(item.bio, "");
     assert!(item.email.is_none());
@@ -138,7 +137,7 @@ async fn user_crud_defaults_contacts_verification_and_avatar() {
         f.users.delete_by_id(&f.context, id, None).await,
         Err(RepositoryError::UserNotFound)
     ));
-    assert_ne!(f.user(role, "user").await, id);
+    assert_ne!(f.user("user").await, id);
     f.close().await;
 }
 
@@ -146,8 +145,7 @@ async fn user_crud_defaults_contacts_verification_and_avatar() {
 #[ignore = "requires isolated PostgreSQL via LOCKMATE_TEST_DATABASE_URL"]
 async fn user_conflicts_filters_and_creation_options() {
     let f = Fixture::new().await;
-    let role = f.role("user", false).await;
-    let mut input = Fixture::user_input(role, "first");
+    let mut input = Fixture::user_input("first");
     input.email = Some("first@example.com".into());
     input.phone = Some("+123456789".into());
     input.avatar_path = Some("avatars/first.webp".into());
@@ -184,12 +182,6 @@ async fn user_conflicts_filters_and_creation_options() {
             .await,
         Err(RepositoryError::UserUsernameConflict)
     ));
-    assert!(matches!(
-        f.users
-            .create(&f.context, Fixture::user_input(999999, "invalid"))
-            .await,
-        Err(RepositoryError::Conflict)
-    ));
     let (items, total) = f
         .users
         .read_by_filter(
@@ -197,7 +189,6 @@ async fn user_conflicts_filters_and_creation_options() {
             UserFilter {
                 page: 1,
                 limit: 10,
-                role_id: Some(role),
                 search: Some("FIRST@".into()),
                 is_email_verified: Some(true),
                 is_phone_verified: Some(true),

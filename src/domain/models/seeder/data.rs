@@ -1,8 +1,8 @@
-use super::{SeedPermission, SeedRole, SeedUser};
+use super::{SeedSpace, SeedSpaceMember, SeedUser};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct SeedData {
-    pub permissions: Vec<SeedPermission>,
-    pub roles: Vec<SeedRole>,
+    pub spaces: Vec<SeedSpace>,
     pub users: Vec<SeedUser>,
+    pub space_members: Vec<SeedSpaceMember>,
 }

@@ -66,12 +66,17 @@ fn map_driver(source: sqlx::Error, not_found: fn() -> RepositoryError) -> Reposi
         match error.code().as_deref() {
             Some("23505") => {
                 return match error.constraint() {
-                    Some("uq_permissions_name") => RepositoryError::PermissionNameConflict,
-                    Some("uq_roles_name") => RepositoryError::RoleNameConflict,
+                    Some("uq_permissions_space_id_slug") => RepositoryError::PermissionSlugConflict,
+                    Some("uq_roles_space_id_slug") => RepositoryError::RoleSlugConflict,
+                    Some("uq_spaces_slug") => RepositoryError::SpaceSlugConflict,
+                    Some("uq_space_members_space_id_user_id") => {
+                        RepositoryError::SpaceMemberConflict
+                    }
+                    Some("uq_member_role_space_member_role") => RepositoryError::MemberRoleConflict,
                     Some("uq_users_username") => RepositoryError::UserUsernameConflict,
                     Some("uq_users_email") => RepositoryError::UserEmailConflict,
                     Some("uq_users_phone") => RepositoryError::UserPhoneConflict,
-                    Some("uq_role_permission_role_id_permission_id") => {
+                    Some("uq_role_permission_space_role_permission") => {
                         RepositoryError::RolePermissionConflict
                     }
                     _ => RepositoryError::Conflict,

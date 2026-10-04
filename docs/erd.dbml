@@ -3,7 +3,7 @@ Project lockmate {
     Note: '''
 Intended space-aware schema for Lockmate. Users share one identity across projects;
 roles, permissions, memberships, and API keys are scoped to a space.
-Migrations implement this schema; Rust models and repositories still need alignment.
+Migrations, persistent Rust entities, and repositories implement this schema.
 Partial indexes and PostgreSQL GIN operator classes are documented in index notes
 and implemented in SQL migrations.
 References use individual IDs. Application validation must ensure that linked

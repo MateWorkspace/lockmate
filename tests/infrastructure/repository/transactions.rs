@@ -26,7 +26,26 @@ async fn repository_trait_objects_return_send_futures_without_connecting() {
         Arc::new(RecordingLogger::default()),
     ));
     let context = Default::default();
-    send(repository.read_by_name(&context, "borrowed"));
+    send(repository.read_by_slug(&context, 1, "borrowed"));
+    let logger = Arc::new(RecordingLogger::default());
+    use lockmate::{domain::contracts::repository as repo, infrastructure::repository::*};
+    let spaces: Arc<dyn repo::Space> = Arc::new(PostgresSpace::new(db.clone(), logger.clone()));
+    let users: Arc<dyn repo::User> = Arc::new(PostgresUser::new(db.clone(), logger.clone()));
+    let roles: Arc<dyn repo::Role> = Arc::new(PostgresRole::new(db.clone(), logger.clone()));
+    let members: Arc<dyn repo::SpaceMember> =
+        Arc::new(PostgresSpaceMember::new(db.clone(), logger.clone()));
+    let assignments: Arc<dyn repo::MemberRole> =
+        Arc::new(PostgresMemberRole::new(db.clone(), logger.clone()));
+    let grants: Arc<dyn repo::RolePermission> =
+        Arc::new(PostgresRolePermission::new(db.clone(), logger.clone()));
+    let keys: Arc<dyn repo::ApiKey> = Arc::new(PostgresApiKey::new(db.clone(), logger));
+    send(spaces.read_by_slug(&context, "borrowed"));
+    send(users.read_by_username(&context, "borrowed"));
+    send(roles.read_default(&context, 1));
+    send(members.read_by_user_id(&context, 1, 1));
+    send(assignments.read_effective_permissions_by_member_id(&context, 1, 1));
+    send(grants.read_by_role_id_and_permission_id(&context, 1, 1, 1));
+    send(keys.read_active_by_hash(&context, 1, "borrowed"));
     db.pool().close().await;
 }
 
@@ -34,6 +53,7 @@ async fn repository_trait_objects_return_send_futures_without_connecting() {
 #[ignore = "requires isolated PostgreSQL via LOCKMATE_TEST_DATABASE_URL"]
 async fn cross_repository_transactions_commit_rollback_and_reject_retained_handles() {
     let f = Fixture::new().await;
+    let space_id = f.space_id;
     let role = f.role("default", true).await;
     let permissions = f.permissions.clone();
     let roles = f.roles.clone();
@@ -48,7 +68,9 @@ async fn cross_repository_transactions_commit_rollback_and_reject_retained_handl
                     permissions
                         .create(
                             &context,
+                            space_id,
                             CreatePermission {
+                                slug: "committed".into(),
                                 name: "committed".into(),
                                 description: None,
                                 by: None,
@@ -58,6 +80,7 @@ async fn cross_repository_transactions_commit_rollback_and_reject_retained_handl
                     roles
                         .update_by_id(
                             &context,
+                            space_id,
                             role,
                             UpdateRole {
                                 is_default: Some(true),
@@ -85,7 +108,11 @@ async fn cross_repository_transactions_commit_rollback_and_reject_retained_handl
         .await
         .unwrap();
     let retained = receive.await.unwrap();
-    let error = f.permissions.read_by_id(&retained, 1).await.unwrap_err();
+    let error = f
+        .permissions
+        .read_by_id(&retained, f.space_id, 1)
+        .await
+        .unwrap_err();
     assert!(matches!(error, RepositoryError::Failure { .. }));
     assert!(matches!(
         error.source().unwrap().downcast_ref::<sqlx::Error>(),
@@ -102,7 +129,9 @@ async fn cross_repository_transactions_commit_rollback_and_reject_retained_handl
                     permissions
                         .create(
                             &context,
+                            space_id,
                             CreatePermission {
+                                slug: "rolled-back".into(),
                                 name: "rolled-back".into(),
                                 description: None,
                                 by: None,
@@ -112,6 +141,7 @@ async fn cross_repository_transactions_commit_rollback_and_reject_retained_handl
                     roles
                         .update_by_id(
                             &context,
+                            space_id,
                             role,
                             UpdateRole {
                                 name: Some("rolled-back".into()),
@@ -126,14 +156,25 @@ async fn cross_repository_transactions_commit_rollback_and_reject_retained_handl
         .await;
     assert!(matches!(result, Err(TransactorError::Callback { .. })));
     assert_eq!(
-        f.roles.read_by_id(root, role).await.unwrap().name,
+        f.roles
+            .read_by_id(root, f.space_id, role)
+            .await
+            .unwrap()
+            .name,
         "default"
     );
     assert!(matches!(
-        f.permissions.read_by_name(root, "rolled-back").await,
+        f.permissions
+            .read_by_slug(root, f.space_id, "rolled-back")
+            .await,
         Err(RepositoryError::PermissionNotFound)
     ));
-    assert!(f.permissions.read_by_name(root, "committed").await.is_ok());
+    assert!(
+        f.permissions
+            .read_by_slug(root, f.space_id, "committed")
+            .await
+            .is_ok()
+    );
     f.close().await;
 }
 
@@ -141,6 +182,7 @@ async fn cross_repository_transactions_commit_rollback_and_reject_retained_handl
 #[ignore = "requires isolated PostgreSQL via LOCKMATE_TEST_DATABASE_URL"]
 async fn foreign_handles_failure_sources_and_safe_logging() {
     let f = Fixture::new().await;
+    let space_id = f.space_id;
     let id = f.permission("private-permission-name").await;
     let foreign = PostgresPermission::new(Pgdt::new(f.db.pool().clone()), f.logger.clone());
     let result = f
@@ -149,7 +191,10 @@ async fn foreign_handles_failure_sources_and_safe_logging() {
             &f.context,
             Box::new(move |context| {
                 Box::pin(async move {
-                    let error = foreign.read_by_id(&context, id).await.unwrap_err();
+                    let error = foreign
+                        .read_by_id(&context, space_id, id)
+                        .await
+                        .unwrap_err();
                     assert!(matches!(error, RepositoryError::Failure { .. }));
                     Ok(())
                 })
@@ -165,19 +210,24 @@ async fn foreign_handles_failure_sources_and_safe_logging() {
         f.permissions
             .create(
                 &f.context,
+                f.space_id,
                 CreatePermission {
+                    slug: "private-permission-name".into(),
                     name: "private-permission-name".into(),
                     description: None,
                     by: None
                 }
             )
             .await,
-        Err(RepositoryError::PermissionNameConflict)
+        Err(RepositoryError::PermissionSlugConflict)
     ));
     let entries = f.logger.0.lock().unwrap().clone();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].meta["sql_state"], "23505".into());
-    assert_eq!(entries[0].meta["constraint"], "uq_permissions_name".into());
+    assert_eq!(
+        entries[0].meta["constraint"],
+        "uq_permissions_space_id_slug".into()
+    );
     assert_eq!(entries[0].context, f.context);
     assert!(!entries[0].message.contains("private-permission-name"));
     f.logger.0.lock().unwrap().clear();
@@ -193,7 +243,9 @@ async fn foreign_handles_failure_sources_and_safe_logging() {
         f.permissions
             .create(
                 &f.context,
+                f.space_id,
                 CreatePermission {
+                    slug: "rejected".into(),
                     name: "rejected".into(),
                     description: None,
                     by: None
@@ -211,7 +263,11 @@ async fn foreign_handles_failure_sources_and_safe_logging() {
     )
     .await
     .unwrap();
-    let error = f.permissions.read_by_id(&f.context, id).await.unwrap_err();
+    let error = f
+        .permissions
+        .read_by_id(&f.context, f.space_id, id)
+        .await
+        .unwrap_err();
     assert!(matches!(error, RepositoryError::Failure { .. }));
     assert!(
         error
@@ -232,6 +288,7 @@ async fn closed_pool_errors_log_once_and_keep_native_cause() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: 1,
                 limit: 10,
@@ -253,6 +310,7 @@ async fn closed_pool_errors_log_once_and_keep_native_cause() {
 #[ignore = "requires isolated PostgreSQL via LOCKMATE_TEST_DATABASE_URL"]
 async fn statement_timeout_and_rollback_preserve_single_repository_log() {
     let f = Fixture::new().await;
+    let space_id = f.space_id;
     let permissions = f.permissions.clone();
     let db = &f.db;
     let result = f
@@ -273,7 +331,9 @@ async fn statement_timeout_and_rollback_preserve_single_repository_log() {
                     permissions
                         .create(
                             &context,
+                            space_id,
                             CreatePermission {
+                                slug: "triggered".into(),
                                 name: "triggered".into(),
                                 description: None,
                                 by: None,
@@ -307,7 +367,9 @@ async fn statement_timeout_and_rollback_preserve_single_repository_log() {
                     permissions
                         .create(
                             &context,
+                            space_id,
                             CreatePermission {
+                                slug: "private-input".into(),
                                 name: "private-input".into(),
                                 description: None,
                                 by: None,
@@ -328,6 +390,7 @@ async fn statement_timeout_and_rollback_preserve_single_repository_log() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: 1,
                 limit: 10,
@@ -348,7 +411,11 @@ async fn pool_timeouts_are_classified_and_preserve_native_source() {
     for _ in 0..4 {
         connections.push(f.db.pool().acquire().await.unwrap());
     }
-    let error = f.permissions.read_by_id(&f.context, 1).await.unwrap_err();
+    let error = f
+        .permissions
+        .read_by_id(&f.context, f.space_id, 1)
+        .await
+        .unwrap_err();
     assert!(matches!(error, RepositoryError::Timeout { .. }));
     assert!(matches!(
         error.source().unwrap().downcast_ref::<sqlx::Error>(),

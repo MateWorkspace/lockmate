@@ -1,0 +1,24 @@
+[
+  {
+    "space_slug": "lockmate",
+    "username": "super",
+    "is_active": true,
+    "roles": [
+      "super"
+    ]
+  },
+  {
+    "space_slug": "lockmate",
+    "username": "admin",
+    "is_active": true,
+    "roles": [
+      "admin"
+    ]
+  },
+  {
+    "space_slug": "lockmate",
+    "username": "user",
+    "is_active": true,
+    "roles": []
+  }
+]

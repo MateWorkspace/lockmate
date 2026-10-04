@@ -7,11 +7,11 @@ use crate::domain::{
 
 use super::super::shared::query::{pagination, search_pattern};
 
-const COLUMNS: &str = "id, role_id, name, bio, username, email, phone, password_hash, is_email_verified, is_phone_verified, avatar_path, preferences, created_at, updated_at, deleted_at, created_by, updated_by, deleted_by";
+const COLUMNS: &str = "id, name, bio, username, email, phone, password_hash, is_email_verified, is_phone_verified, avatar_path, preferences, created_at, updated_at, deleted_at, created_by, updated_by, deleted_by";
 
 pub(super) fn create(input: &CreateUser) -> QueryBuilder<Postgres> {
     let mut query = QueryBuilder::new("INSERT INTO users (");
-    query.push("role_id, name, username, password_hash, created_by");
+    query.push("name, username, password_hash, created_by");
     if input.bio.is_some() {
         query.push(", bio");
     }
@@ -33,7 +33,6 @@ pub(super) fn create(input: &CreateUser) -> QueryBuilder<Postgres> {
     query.push(") VALUES (");
     {
         let mut values = query.separated(", ");
-        values.push_bind(input.role_id);
         values.push_bind(input.name.clone());
         values.push_bind(input.username.clone());
         values.push_bind(input.password_hash.clone());
@@ -111,9 +110,6 @@ fn conditions(query: &mut QueryBuilder<Postgres>, filter: &UserFilter) {
         query.push(" OR phone ILIKE ").push_bind(pattern.clone());
         query.push(")");
     }
-    if let Some(value) = filter.role_id {
-        query.push(" AND role_id = ").push_bind(value);
-    }
     if let Some(value) = filter.is_email_verified {
         query.push(" AND is_email_verified = ").push_bind(value);
     }
@@ -142,9 +138,6 @@ pub(super) fn update_by_id(id: i64, input: &UpdateUser) -> QueryBuilder<Postgres
     let mut query = QueryBuilder::new("UPDATE users SET ");
     {
         let mut sets = query.separated(", ");
-        if let Some(value) = &input.role_id {
-            sets.push("role_id = ").push_bind_unseparated(*value);
-        }
         if let Some(value) = &input.name {
             sets.push("name = ").push_bind_unseparated(value.clone());
         }

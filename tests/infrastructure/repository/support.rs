@@ -54,6 +54,10 @@ impl Logger for RecordingLogger {
 
 pub struct Fixture {
     pub db: Pgdt,
+    pub space_id: i64,
+    pub spaces: Arc<dyn repo::Space>,
+    pub space_members: Arc<dyn repo::SpaceMember>,
+    pub member_roles: Arc<dyn repo::MemberRole>,
     pub context: AppContext,
     pub logger: Arc<RecordingLogger>,
     pub permissions: Arc<dyn repo::Permission>,
@@ -106,14 +110,17 @@ impl Fixture {
             .connect(&url)
             .await
             .unwrap();
-        // The fixture applies the real up migrations, including the avatar column.
+        // Apply all real migrations in dependency order.
         for migration in [
+            include_str!("../../../database/migrations/20260930033910_create_spaces.up.sql"),
             include_str!("../../../database/migrations/20260930033915_create_permissions.up.sql"),
             include_str!("../../../database/migrations/20260930033922_create_roles.up.sql"),
             include_str!(
                 "../../../database/migrations/20260930033930_create_role_permission.up.sql"
             ),
             include_str!("../../../database/migrations/20260930033933_create_users.up.sql"),
+            include_str!("../../../database/migrations/20260930033934_create_space_members.up.sql"),
+            include_str!("../../../database/migrations/20260930033936_create_member_role.up.sql"),
             include_str!("../../../database/migrations/20260930033938_create_api_keys.up.sql"),
         ] {
             sqlx::raw_sql(sqlx::AssertSqlSafe(migration))
@@ -123,7 +130,25 @@ impl Fixture {
         }
         let db = Pgdt::new(pool);
         let logger = Arc::new(RecordingLogger::default());
+        let spaces: Arc<dyn repo::Space> = Arc::new(PostgresSpace::new(db.clone(), logger.clone()));
+        let space_id = spaces
+            .create(
+                &AppContext::default(),
+                repo::CreateSpace {
+                    slug: "test-space".into(),
+                    name: "Test space".into(),
+                    description: None,
+                    is_active: None,
+                    by: Some(42),
+                },
+            )
+            .await
+            .unwrap();
         Self {
+            space_id,
+            spaces,
+            space_members: Arc::new(PostgresSpaceMember::new(db.clone(), logger.clone())),
+            member_roles: Arc::new(PostgresMemberRole::new(db.clone(), logger.clone())),
             permissions: Arc::new(PostgresPermission::new(db.clone(), logger.clone())),
             roles: Arc::new(PostgresRole::new(db.clone(), logger.clone())),
             users: Arc::new(PostgresUser::new(db.clone(), logger.clone())),
@@ -146,7 +171,9 @@ impl Fixture {
         self.permissions
             .create(
                 &self.context,
+                self.space_id,
                 repo::CreatePermission {
+                    slug: name.into(),
                     name: name.into(),
                     description: None,
                     by: Some(42),
@@ -159,7 +186,9 @@ impl Fixture {
         self.roles
             .create(
                 &self.context,
+                self.space_id,
                 repo::CreateRole {
+                    slug: name.into(),
                     name: name.into(),
                     description: None,
                     is_default: Some(default),
@@ -169,9 +198,8 @@ impl Fixture {
             .await
             .unwrap()
     }
-    pub fn user_input(role_id: i64, username: &str) -> repo::CreateUser {
+    pub fn user_input(username: &str) -> repo::CreateUser {
         repo::CreateUser {
-            role_id,
             name: "User".into(),
             bio: None,
             username: username.into(),
@@ -184,15 +212,15 @@ impl Fixture {
             by: Some(42),
         }
     }
-    pub async fn user(&self, role_id: i64, username: &str) -> i64 {
+    pub async fn user(&self, username: &str) -> i64 {
         self.users
-            .create(&self.context, Self::user_input(role_id, username))
+            .create(&self.context, Self::user_input(username))
             .await
             .unwrap()
     }
-    pub fn key_input(user_id: i64, name: &str, hash: &str) -> repo::CreateApiKey {
+    pub fn key_input(member_id: i64, name: &str, hash: &str) -> repo::CreateApiKey {
         repo::CreateApiKey {
-            user_id,
+            member_id,
             name: name.into(),
             description: None,
             hash: hash.into(),
@@ -204,9 +232,39 @@ impl Fixture {
         self.role_permissions
             .create(
                 &self.context,
+                self.space_id,
                 repo::CreateRolePermission {
                     role_id,
                     permission_id,
+                    by: Some(42),
+                },
+            )
+            .await
+            .unwrap()
+    }
+    pub async fn member(&self, space_id: i64, user_id: i64) -> i64 {
+        self.space_members
+            .create(
+                &self.context,
+                space_id,
+                repo::CreateSpaceMember {
+                    user_id,
+                    is_active: None,
+                    by: Some(42),
+                },
+            )
+            .await
+            .unwrap()
+    }
+    pub async fn space(&self, slug: &str) -> i64 {
+        self.spaces
+            .create(
+                &self.context,
+                repo::CreateSpace {
+                    slug: slug.into(),
+                    name: slug.into(),
+                    description: None,
+                    is_active: None,
                     by: Some(42),
                 },
             )

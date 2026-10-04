@@ -58,7 +58,6 @@ pub trait User: Send + Sync {
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct CreateUser {
-    pub role_id: i64,
     pub name: String,
     pub bio: Option<String>,
     pub username: String,
@@ -76,14 +75,12 @@ pub struct UserFilter {
     pub page: i64,
     pub limit: i64,
     pub search: Option<String>,
-    pub role_id: Option<i64>,
     pub is_email_verified: Option<bool>,
     pub is_phone_verified: Option<bool>,
 }
 
 #[derive(Clone, Default, PartialEq)]
 pub struct UpdateUser {
-    pub role_id: Option<i64>,
     pub name: Option<String>,
     pub bio: Option<String>,
     pub username: Option<String>,

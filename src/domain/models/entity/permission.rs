@@ -6,6 +6,8 @@ use super::AuditCreateUpdateDelete;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Permission {
     pub id: i64,
+    pub space_id: i64,
+    pub slug: String,
     pub name: String,
     pub description: String,
     pub preferences: Value,

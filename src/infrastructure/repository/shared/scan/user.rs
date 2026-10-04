@@ -5,7 +5,6 @@ use crate::domain::models::User;
 pub(crate) fn decode(row: &PgRow, prefix: &str) -> Result<User, sqlx::Error> {
     Ok(User {
         id: row.try_get(format!("{prefix}id").as_str())?,
-        role_id: row.try_get(format!("{prefix}role_id").as_str())?,
         name: row.try_get(format!("{prefix}name").as_str())?,
         bio: row.try_get(format!("{prefix}bio").as_str())?,
         username: row.try_get(format!("{prefix}username").as_str())?,

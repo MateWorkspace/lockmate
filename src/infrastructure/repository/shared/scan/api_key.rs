@@ -5,7 +5,8 @@ use crate::domain::models::ApiKey;
 pub(crate) fn decode(row: &PgRow, prefix: &str) -> Result<ApiKey, sqlx::Error> {
     Ok(ApiKey {
         id: row.try_get(format!("{prefix}id").as_str())?,
-        user_id: row.try_get(format!("{prefix}user_id").as_str())?,
+        space_id: row.try_get(format!("{prefix}space_id").as_str())?,
+        member_id: row.try_get(format!("{prefix}member_id").as_str())?,
         name: row.try_get(format!("{prefix}name").as_str())?,
         description: row.try_get(format!("{prefix}description").as_str())?,
         hash: row.try_get(format!("{prefix}hash").as_str())?,

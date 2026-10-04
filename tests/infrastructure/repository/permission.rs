@@ -11,14 +11,18 @@ use serde_json::json;
 async fn permission_crud_defaults_audits_and_partial_uniqueness() {
     let f = Fixture::new().await;
     let id = f.permission("permission").await;
-    let item = f.permissions.read_by_id(&f.context, id).await.unwrap();
+    let item = f
+        .permissions
+        .read_by_id(&f.context, f.space_id, id)
+        .await
+        .unwrap();
     assert_eq!(item.description, "");
     assert_eq!(item.preferences, json!({}));
     assert_eq!(item.audit.create.by, Some(42));
     assert!(item.audit.update.at.is_none());
     assert_eq!(
         f.permissions
-            .read_by_name(&f.context, "permission")
+            .read_by_slug(&f.context, f.space_id, "permission")
             .await
             .unwrap()
             .id,
@@ -27,6 +31,7 @@ async fn permission_crud_defaults_audits_and_partial_uniqueness() {
     f.permissions
         .update_by_id(
             &f.context,
+            f.space_id,
             id,
             UpdatePermission {
                 description: Some("description".into()),
@@ -37,7 +42,11 @@ async fn permission_crud_defaults_audits_and_partial_uniqueness() {
         )
         .await
         .unwrap();
-    let item = f.permissions.read_by_id(&f.context, id).await.unwrap();
+    let item = f
+        .permissions
+        .read_by_id(&f.context, f.space_id, id)
+        .await
+        .unwrap();
     assert_eq!(item.description, "description");
     assert_eq!(item.audit.update.by, Some(43));
     assert!(item.audit.update.at.is_some());
@@ -46,7 +55,9 @@ async fn permission_crud_defaults_audits_and_partial_uniqueness() {
         .permissions
         .create(
             &f.context,
+            f.space_id,
             CreatePermission {
+                slug: "permission".into(),
                 name: "permission".into(),
                 description: None,
                 by: None,
@@ -54,27 +65,31 @@ async fn permission_crud_defaults_audits_and_partial_uniqueness() {
         )
         .await
         .unwrap_err();
-    assert!(matches!(err, RepositoryError::PermissionNameConflict));
+    assert!(matches!(err, RepositoryError::PermissionSlugConflict));
     f.permissions
-        .delete_by_id(&f.context, id, Some(44))
+        .delete_by_id(&f.context, f.space_id, id, Some(44))
         .await
         .unwrap();
     assert!(matches!(
-        f.permissions.read_by_id(&f.context, id).await,
-        Err(RepositoryError::PermissionNotFound)
-    ));
-    assert!(matches!(
-        f.permissions.read_by_name(&f.context, "permission").await,
+        f.permissions.read_by_id(&f.context, f.space_id, id).await,
         Err(RepositoryError::PermissionNotFound)
     ));
     assert!(matches!(
         f.permissions
-            .update_by_id(&f.context, id, UpdatePermission::default())
+            .read_by_slug(&f.context, f.space_id, "permission")
             .await,
         Err(RepositoryError::PermissionNotFound)
     ));
     assert!(matches!(
-        f.permissions.delete_by_id(&f.context, id, None).await,
+        f.permissions
+            .update_by_id(&f.context, f.space_id, id, UpdatePermission::default())
+            .await,
+        Err(RepositoryError::PermissionNotFound)
+    ));
+    assert!(matches!(
+        f.permissions
+            .delete_by_id(&f.context, f.space_id, id, None)
+            .await,
         Err(RepositoryError::PermissionNotFound)
     ));
     let row =
@@ -101,6 +116,7 @@ async fn permission_pagination_binding_and_failure_logs() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: 1,
                 limit: 10,
@@ -115,6 +131,7 @@ async fn permission_pagination_binding_and_failure_logs() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: -5,
                 limit: 0,
@@ -129,6 +146,7 @@ async fn permission_pagination_binding_and_failure_logs() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: 1,
                 limit: -1,
@@ -143,6 +161,7 @@ async fn permission_pagination_binding_and_failure_logs() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: 1,
                 limit: 1,
@@ -156,6 +175,7 @@ async fn permission_pagination_binding_and_failure_logs() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: 2,
                 limit: 1,
@@ -169,6 +189,7 @@ async fn permission_pagination_binding_and_failure_logs() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: 100,
                 limit: 10,
@@ -183,6 +204,7 @@ async fn permission_pagination_binding_and_failure_logs() {
         .permissions
         .read_by_filter(
             &f.context,
+            f.space_id,
             PermissionFilter {
                 page: 1,
                 limit: 10,
@@ -197,6 +219,7 @@ async fn permission_pagination_binding_and_failure_logs() {
         f.permissions
             .read_by_filter(
                 &f.context,
+                f.space_id,
                 PermissionFilter {
                     page: i64::MAX,
                     limit: 2,

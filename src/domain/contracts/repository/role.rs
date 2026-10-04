@@ -8,32 +8,41 @@ pub trait Role: Send + Sync {
     fn create<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         input: CreateRole,
     ) -> RepositoryFuture<'a, i64>;
 
     fn read_by_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         id: i64,
     ) -> RepositoryFuture<'a, RoleEntity>;
 
-    fn read_by_name<'a>(
+    fn read_by_slug<'a>(
         &'a self,
         context: &'a AppContext,
-        name: &'a str,
+        space_id: i64,
+        slug: &'a str,
     ) -> RepositoryFuture<'a, RoleEntity>;
 
     fn read_by_filter<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         filter: RoleFilter,
     ) -> RepositoryFuture<'a, (Vec<RoleEntity>, i64)>;
 
-    fn read_default<'a>(&'a self, context: &'a AppContext) -> RepositoryFuture<'a, RoleEntity>;
+    fn read_default<'a>(
+        &'a self,
+        context: &'a AppContext,
+        space_id: i64,
+    ) -> RepositoryFuture<'a, RoleEntity>;
 
     fn update_by_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         id: i64,
         input: UpdateRole,
     ) -> RepositoryFuture<'a, ()>;
@@ -41,6 +50,7 @@ pub trait Role: Send + Sync {
     fn delete_by_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         id: i64,
         by: Option<i64>,
     ) -> RepositoryFuture<'a, ()>;
@@ -48,6 +58,7 @@ pub trait Role: Send + Sync {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateRole {
+    pub slug: String,
     pub name: String,
     pub description: Option<String>,
     pub is_default: Option<bool>,

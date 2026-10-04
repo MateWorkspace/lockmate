@@ -21,7 +21,14 @@ fn new_validator() -> RegexValidator {
 fn name_and_username_rules_preserve_field_errors_and_length_precedence() {
     let validator: Arc<dyn Validator> = Arc::new(new_validator());
     let context = AppContext::default();
-    let cases: [(Check, usize, ValidatorError, ValidatorError, ValidatorError); 5] = [
+    let cases: [(Check, usize, ValidatorError, ValidatorError, ValidatorError); 6] = [
+        (
+            |v, c, s| v.space_name(c, s),
+            100,
+            ValidatorError::SpaceNameTooShort,
+            ValidatorError::SpaceNameTooLong,
+            ValidatorError::SpaceNameInvalid,
+        ),
         (
             |v, c, s| v.permission_name(c, s),
             100,
@@ -46,9 +53,9 @@ fn name_and_username_rules_preserve_field_errors_and_length_precedence() {
         (
             |v, c, s| v.api_key_name(c, s),
             100,
-            ValidatorError::UserApiKeyNameTooShort,
-            ValidatorError::UserApiKeyNameTooLong,
-            ValidatorError::UserApiKeyNameInvalid,
+            ValidatorError::ApiKeyNameTooShort,
+            ValidatorError::ApiKeyNameTooLong,
+            ValidatorError::ApiKeyNameInvalid,
         ),
         (
             |v, c, s| v.user_username(c, s),
@@ -76,15 +83,15 @@ fn name_and_username_rules_preserve_field_errors_and_length_precedence() {
         }
     }
     validator
-        .permission_name(&context, "user:read.all_items-1")
+        .permission_slug(&context, "user:read.all_items-1")
         .unwrap();
     assert_eq!(
-        validator.permission_name(&context, "1user"),
-        Err(ValidatorError::PermissionNameInvalid)
+        validator.permission_slug(&context, "1user"),
+        Err(ValidatorError::PermissionSlugInvalid)
     );
     assert_eq!(
-        validator.permission_name(&context, "用户名"),
-        Err(ValidatorError::PermissionNameInvalid)
+        validator.permission_slug(&context, "用户名"),
+        Err(ValidatorError::PermissionSlugInvalid)
     );
     validator.user_username(&context, "1user.name-_9").unwrap();
     assert_eq!(
@@ -97,7 +104,9 @@ fn name_and_username_rules_preserve_field_errors_and_length_precedence() {
 fn display_names_support_unicode_letters_numbers_and_combining_marks() {
     let validator = new_validator();
     let context = AppContext::default();
-    let checks: [Check; 3] = [
+    let checks: [Check; 5] = [
+        |v, c, s| v.space_name(c, s),
+        |v, c, s| v.permission_name(c, s),
         |v, c, s| v.role_name(c, s),
         |v, c, s| v.user_name(c, s),
         |v, c, s| v.api_key_name(c, s),
@@ -133,7 +142,11 @@ fn display_names_support_unicode_letters_numbers_and_combining_marks() {
 fn optional_text_counts_characters_and_api_key_description_filters_controls() {
     let validator = new_validator();
     let context = AppContext::default();
-    let checks: [(Check, ValidatorError); 4] = [
+    let checks: [(Check, ValidatorError); 5] = [
+        (
+            |v, c, s| v.space_desc(c, s),
+            ValidatorError::SpaceDescTooLong,
+        ),
         (
             |v, c, s| v.permission_desc(c, s),
             ValidatorError::PermissionDescTooLong,
@@ -142,7 +155,7 @@ fn optional_text_counts_characters_and_api_key_description_filters_controls() {
         (|v, c, s| v.user_bio(c, s), ValidatorError::UserBioTooLong),
         (
             |v, c, s| v.api_key_desc(c, s),
-            ValidatorError::UserApiKeyDescTooLong,
+            ValidatorError::ApiKeyDescTooLong,
         ),
     ];
     for (check, too_long) in checks {
@@ -161,7 +174,7 @@ fn optional_text_counts_characters_and_api_key_description_filters_controls() {
     ] {
         assert_eq!(
             validator.api_key_desc(&context, value),
-            Err(ValidatorError::UserApiKeyDescInvalid)
+            Err(ValidatorError::ApiKeyDescInvalid)
         );
         validator.permission_desc(&context, value).unwrap();
         validator.role_desc(&context, value).unwrap();
@@ -351,6 +364,17 @@ fn each_validation_failure_logs_once_with_context_and_without_submitted_values()
     let long_text = "private text".repeat(100);
     let errors = [
         (
+            "space_slug",
+            validator.space_slug(&context, "private/space"),
+        ),
+        ("space_name", validator.space_name(&context, "private/name")),
+        ("space_desc", validator.space_desc(&context, &long_text)),
+        ("role_slug", validator.role_slug(&context, "private/role")),
+        (
+            "permission_slug",
+            validator.permission_slug(&context, "private/permission"),
+        ),
+        (
             "permission_name",
             validator.permission_name(&context, "private/name"),
         ),
@@ -399,4 +423,82 @@ fn each_validation_failure_logs_once_with_context_and_without_submitted_values()
         assert_eq!(entry.meta["error"], error.to_string().into());
         assert!(!format!("{} {:?}", entry.message, entry.meta).contains("private"));
     }
+}
+
+#[test]
+fn slug_fields_enforce_length_case_and_entity_specific_syntax() {
+    let validator = new_validator();
+    let context = AppContext::default();
+    let cases: [(Check, ValidatorError, ValidatorError, ValidatorError, &str); 3] = [
+        (
+            |v, c, s| v.space_slug(c, s),
+            ValidatorError::SpaceSlugTooShort,
+            ValidatorError::SpaceSlugTooLong,
+            ValidatorError::SpaceSlugInvalid,
+            "SPACE_SLUG_INVALID",
+        ),
+        (
+            |v, c, s| v.role_slug(c, s),
+            ValidatorError::RoleSlugTooShort,
+            ValidatorError::RoleSlugTooLong,
+            ValidatorError::RoleSlugInvalid,
+            "ROLE_SLUG_INVALID",
+        ),
+        (
+            |v, c, s| v.permission_slug(c, s),
+            ValidatorError::PermissionSlugTooShort,
+            ValidatorError::PermissionSlugTooLong,
+            ValidatorError::PermissionSlugInvalid,
+            "PERMISSION_SLUG_INVALID",
+        ),
+    ];
+    for (check, short, long, invalid, code) in cases {
+        assert_eq!(invalid.code(), code);
+        for value in ["", "ab", "!"] {
+            assert_eq!(check(&validator, &context, value), Err(short));
+        }
+        check(&validator, &context, "abc").unwrap();
+        check(&validator, &context, &"a".repeat(100)).unwrap();
+        assert_eq!(check(&validator, &context, &"!".repeat(101)), Err(long));
+        for value in [
+            "ABC",
+            "someThing",
+            "1abc",
+            " abc",
+            "abc ",
+            "abc\n",
+            "a/b",
+            "用户名",
+            "a😀b",
+        ] {
+            assert_eq!(check(&validator, &context, value), Err(invalid));
+        }
+    }
+    for check in [
+        |v: &dyn Validator, c: &AppContext, s: &str| v.space_slug(c, s),
+        |v: &dyn Validator, c: &AppContext, s: &str| v.role_slug(c, s),
+    ] {
+        for value in ["taskmate", "project-v2", "some-space-42"] {
+            check(&validator, &context, value).unwrap();
+        }
+        for value in ["-abc", "abc-", "abc--def", "abc_def", "abc.def", "abc:def"] {
+            assert!(check(&validator, &context, value).is_err());
+        }
+    }
+    for value in [
+        "profile:get",
+        "profile_security:set",
+        "settings.read",
+        "user:read.all_items-1",
+    ] {
+        validator.permission_slug(&context, value).unwrap();
+    }
+    assert_eq!(
+        ValidatorError::ApiKeyNameInvalid.code(),
+        "API_KEY_NAME_INVALID"
+    );
+    assert_eq!(
+        ValidatorError::ApiKeyDescTooLong.code(),
+        "API_KEY_DESC_TOO_LONG"
+    );
 }

@@ -9,6 +9,8 @@ use crate::domain::{
 
 use super::utils::{validate_length, validate_pattern};
 
+const SLUG_MIN_LENGTH: usize = 3;
+const SLUG_MAX_LENGTH: usize = 100;
 const NAME_MIN_LENGTH: usize = 3;
 const NAME_MAX_LENGTH: usize = 100;
 const TEXT_MAX_LENGTH: usize = 1000;
@@ -23,7 +25,8 @@ const PASSWORD_MAX_BYTES: usize = 72;
 
 pub struct RegexValidator {
     logger: Arc<dyn Logger>,
-    permission_name: Regex,
+    permission_slug: Regex,
+    slug: Regex,
     name: Regex,
     username: Regex,
     email: Regex,
@@ -34,8 +37,10 @@ impl RegexValidator {
     pub fn new(logger: Arc<dyn Logger>) -> Self {
         Self {
             logger,
-            permission_name: Regex::new(r"\A[A-Za-z][A-Za-z0-9_.:-]*\z")
-                .expect("valid permission name pattern"),
+            permission_slug: Regex::new(r"\A[a-z][a-z0-9_.:-]*\z")
+                .expect("valid permission slug pattern"),
+            slug: Regex::new(r"\A[a-z][a-z0-9]*(?:-[a-z0-9]+)*\z")
+                .expect("valid slug pattern"),
             name: Regex::new(r"\A[\p{L}\p{N}][\p{L}\p{M}\p{N} ._'-]*\z")
                 .expect("valid name pattern"),
             username: Regex::new(r"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")
@@ -63,6 +68,74 @@ impl RegexValidator {
 }
 
 impl Validator for RegexValidator {
+    fn space_slug(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError> {
+        const TAG: &str = "utility/validator/regex/space_slug";
+        self.finish(
+            context,
+            TAG,
+            validate_pattern(
+                value,
+                SLUG_MIN_LENGTH..=SLUG_MAX_LENGTH,
+                &self.slug,
+                (
+                    ValidatorError::SpaceSlugInvalid,
+                    ValidatorError::SpaceSlugTooShort,
+                    ValidatorError::SpaceSlugTooLong,
+                ),
+            ),
+        )
+    }
+
+    fn space_name(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError> {
+        const TAG: &str = "utility/validator/regex/space_name";
+        self.finish(
+            context,
+            TAG,
+            validate_pattern(
+                value,
+                NAME_MIN_LENGTH..=NAME_MAX_LENGTH,
+                &self.name,
+                (
+                    ValidatorError::SpaceNameInvalid,
+                    ValidatorError::SpaceNameTooShort,
+                    ValidatorError::SpaceNameTooLong,
+                ),
+            ),
+        )
+    }
+
+    fn space_desc(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError> {
+        const TAG: &str = "utility/validator/regex/space_desc";
+        self.finish(
+            context,
+            TAG,
+            validate_length(
+                value,
+                0..=TEXT_MAX_LENGTH,
+                ValidatorError::BadArgs,
+                ValidatorError::SpaceDescTooLong,
+            ),
+        )
+    }
+
+    fn permission_slug(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError> {
+        const TAG: &str = "utility/validator/regex/permission_slug";
+        self.finish(
+            context,
+            TAG,
+            validate_pattern(
+                value,
+                SLUG_MIN_LENGTH..=SLUG_MAX_LENGTH,
+                &self.permission_slug,
+                (
+                    ValidatorError::PermissionSlugInvalid,
+                    ValidatorError::PermissionSlugTooShort,
+                    ValidatorError::PermissionSlugTooLong,
+                ),
+            ),
+        )
+    }
+
     fn permission_name(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError> {
         const TAG: &str = "utility/validator/regex/permission_name";
         self.finish(
@@ -71,11 +144,29 @@ impl Validator for RegexValidator {
             validate_pattern(
                 value,
                 NAME_MIN_LENGTH..=NAME_MAX_LENGTH,
-                &self.permission_name,
+                &self.name,
                 (
                     ValidatorError::PermissionNameInvalid,
                     ValidatorError::PermissionNameTooShort,
                     ValidatorError::PermissionNameTooLong,
+                ),
+            ),
+        )
+    }
+
+    fn role_slug(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError> {
+        const TAG: &str = "utility/validator/regex/role_slug";
+        self.finish(
+            context,
+            TAG,
+            validate_pattern(
+                value,
+                SLUG_MIN_LENGTH..=SLUG_MAX_LENGTH,
+                &self.slug,
+                (
+                    ValidatorError::RoleSlugInvalid,
+                    ValidatorError::RoleSlugTooShort,
+                    ValidatorError::RoleSlugTooLong,
                 ),
             ),
         )
@@ -145,9 +236,9 @@ impl Validator for RegexValidator {
                 NAME_MIN_LENGTH..=NAME_MAX_LENGTH,
                 &self.name,
                 (
-                    ValidatorError::UserApiKeyNameInvalid,
-                    ValidatorError::UserApiKeyNameTooShort,
-                    ValidatorError::UserApiKeyNameTooLong,
+                    ValidatorError::ApiKeyNameInvalid,
+                    ValidatorError::ApiKeyNameTooShort,
+                    ValidatorError::ApiKeyNameTooLong,
                 ),
             ),
         )
@@ -262,14 +353,14 @@ impl Validator for RegexValidator {
             value,
             0..=TEXT_MAX_LENGTH,
             ValidatorError::BadArgs,
-            ValidatorError::UserApiKeyDescTooLong,
+            ValidatorError::ApiKeyDescTooLong,
         )
         .and_then(|()| {
             if value
                 .chars()
                 .any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t'))
             {
-                return Err(ValidatorError::UserApiKeyDescInvalid);
+                return Err(ValidatorError::ApiKeyDescInvalid);
             }
             Ok(())
         });

@@ -1,0 +1,270 @@
+[
+  {
+    "slug": "lockmate",
+    "name": "Lockmate",
+    "description": "Lockmate authentication and access management.",
+    "is_active": true,
+    "permissions": [
+      {
+        "slug": "profile:get",
+        "name": "View profile",
+        "description": "View own profile and permissions."
+      },
+      {
+        "slug": "profile:set",
+        "name": "Update profile",
+        "description": "Update own profile."
+      },
+      {
+        "slug": "profile_security:set",
+        "name": "Update profile security",
+        "description": "Change own password."
+      },
+      {
+        "slug": "profile_api_key:add",
+        "name": "Create profile API key",
+        "description": "Create an API key for own space membership."
+      },
+      {
+        "slug": "permission:get",
+        "name": "View permission",
+        "description": "View permissions."
+      },
+      {
+        "slug": "permission:add",
+        "name": "Create permission",
+        "description": "Create permissions."
+      },
+      {
+        "slug": "permission:set",
+        "name": "Update permission",
+        "description": "Update permissions."
+      },
+      {
+        "slug": "permission:remove",
+        "name": "Delete permission",
+        "description": "Delete permissions."
+      },
+      {
+        "slug": "role:get",
+        "name": "View role",
+        "description": "View roles."
+      },
+      {
+        "slug": "role:add",
+        "name": "Create role",
+        "description": "Create roles."
+      },
+      {
+        "slug": "role:set",
+        "name": "Update role",
+        "description": "Update roles, including setting the default role."
+      },
+      {
+        "slug": "role:remove",
+        "name": "Delete role",
+        "description": "Delete roles."
+      },
+      {
+        "slug": "role_permission:get",
+        "name": "View role permission",
+        "description": "View role-permission assignments."
+      },
+      {
+        "slug": "role_permission:add",
+        "name": "Create role permission",
+        "description": "Assign a permission to a role."
+      },
+      {
+        "slug": "role_permission:remove",
+        "name": "Delete role permission",
+        "description": "Remove a permission from a role."
+      },
+      {
+        "slug": "user:get",
+        "name": "View user",
+        "description": "View users."
+      },
+      {
+        "slug": "user:add",
+        "name": "Create user",
+        "description": "Create users."
+      },
+      {
+        "slug": "user:set",
+        "name": "Update user",
+        "description": "Update users."
+      },
+      {
+        "slug": "user:remove",
+        "name": "Delete user",
+        "description": "Delete users."
+      },
+      {
+        "slug": "user_permission:get",
+        "name": "View user permission",
+        "description": "View a space member's effective permissions."
+      },
+      {
+        "slug": "user_password:set",
+        "name": "Update user password",
+        "description": "Reset a user's password."
+      },
+      {
+        "slug": "api_key:get",
+        "name": "View API key",
+        "description": "View API keys."
+      },
+      {
+        "slug": "api_key:add",
+        "name": "Create API key",
+        "description": "Create an API key for a space membership."
+      },
+      {
+        "slug": "api_key:set",
+        "name": "Update API key",
+        "description": "Update API key name and description."
+      },
+      {
+        "slug": "api_key:remove",
+        "name": "Delete API key",
+        "description": "Delete API keys."
+      },
+      {
+        "slug": "space:get",
+        "name": "View space",
+        "description": "View spaces."
+      },
+      {
+        "slug": "space:add",
+        "name": "Create space",
+        "description": "Create spaces."
+      },
+      {
+        "slug": "space:set",
+        "name": "Update space",
+        "description": "Update spaces."
+      },
+      {
+        "slug": "space:remove",
+        "name": "Delete space",
+        "description": "Delete spaces."
+      },
+      {
+        "slug": "space_member:get",
+        "name": "View space membership",
+        "description": "View space memberships."
+      },
+      {
+        "slug": "space_member:add",
+        "name": "Create space membership",
+        "description": "Create space memberships."
+      },
+      {
+        "slug": "space_member:set",
+        "name": "Update space membership",
+        "description": "Update space memberships."
+      },
+      {
+        "slug": "space_member:remove",
+        "name": "Delete space membership",
+        "description": "Delete space memberships."
+      },
+      {
+        "slug": "member_role:get",
+        "name": "View member role assignment",
+        "description": "View member role assignments."
+      },
+      {
+        "slug": "member_role:add",
+        "name": "Create member role assignment",
+        "description": "Create member role assignments."
+      },
+      {
+        "slug": "member_role:remove",
+        "name": "Delete member role assignment",
+        "description": "Delete member role assignments."
+      }
+    ],
+    "roles": [
+      {
+        "slug": "super",
+        "name": "Super",
+        "description": "Full Lockmate space access, including spaces, memberships, roles, permissions, and assignments.",
+        "is_default": false,
+        "permissions": [
+          "profile:get",
+          "profile:set",
+          "profile_security:set",
+          "profile_api_key:add",
+          "permission:get",
+          "permission:add",
+          "permission:set",
+          "permission:remove",
+          "role:get",
+          "role:add",
+          "role:set",
+          "role:remove",
+          "role_permission:get",
+          "role_permission:add",
+          "role_permission:remove",
+          "user:get",
+          "user:add",
+          "user:set",
+          "user:remove",
+          "user_permission:get",
+          "user_password:set",
+          "api_key:get",
+          "api_key:add",
+          "api_key:set",
+          "api_key:remove",
+          "space:get",
+          "space:add",
+          "space:set",
+          "space:remove",
+          "space_member:get",
+          "space_member:add",
+          "space_member:set",
+          "space_member:remove",
+          "member_role:get",
+          "member_role:add",
+          "member_role:remove"
+        ]
+      },
+      {
+        "slug": "admin",
+        "name": "Admin",
+        "description": "Manages users and API keys, with self-service profile and security access.",
+        "is_default": false,
+        "permissions": [
+          "profile:get",
+          "profile:set",
+          "profile_security:set",
+          "profile_api_key:add",
+          "user:get",
+          "user:add",
+          "user:set",
+          "user:remove",
+          "user_permission:get",
+          "user_password:set",
+          "api_key:get",
+          "api_key:add",
+          "api_key:set",
+          "api_key:remove"
+        ]
+      },
+      {
+        "slug": "user",
+        "name": "User",
+        "description": "Default role with self-service profile, password, and membership API key access.",
+        "is_default": true,
+        "permissions": [
+          "profile:get",
+          "profile:set",
+          "profile_security:set",
+          "profile_api_key:add"
+        ]
+      }
+    ]
+  }
+]

@@ -7,9 +7,11 @@ pub trait Token: Send + Sync {
         claims: &AccessClaims,
     ) -> Result<String, TokenError>;
 
+    /// Checks token contents against the caller's expected space, without repository reads.
     fn validate_access(
         &self,
         context: &AppContext,
+        space_id: i64,
         token: &str,
     ) -> Result<AccessClaims, TokenError>;
 
@@ -19,9 +21,11 @@ pub trait Token: Send + Sync {
         claims: &RefreshClaims,
     ) -> Result<String, TokenError>;
 
+    /// Checks refresh purpose and scope; application code rechecks live membership.
     fn validate_refresh(
         &self,
         context: &AppContext,
+        space_id: i64,
         token: &str,
     ) -> Result<RefreshClaims, TokenError>;
 }

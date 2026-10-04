@@ -1,9 +1,15 @@
 use crate::domain::models::{AppContext, ValidatorError};
 
 pub trait Validator: Send + Sync {
+    fn space_slug(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
+    fn space_name(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
+    fn space_desc(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
+
+    fn permission_slug(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
     fn permission_name(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
     fn permission_desc(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
 
+    fn role_slug(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
     fn role_name(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
     fn role_desc(&self, context: &AppContext, value: &str) -> Result<(), ValidatorError>;
 

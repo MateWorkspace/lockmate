@@ -8,21 +8,25 @@ async fn role_permission_joined_reads_conflicts_and_active_visibility() {
     let r = f.role("role", false).await;
     let p = f.permission("permission").await;
     let id = f.pivot(r, p).await;
-    let item = f.role_permissions.read_by_id(&f.context, id).await.unwrap();
+    let item = f
+        .role_permissions
+        .read_by_id(&f.context, f.space_id, id)
+        .await
+        .unwrap();
     assert_eq!(item.role_permission.id, id);
     assert_eq!(item.role.id, r);
     assert_eq!(item.permission.id, p);
     assert_eq!(item.role_permission.audit.by, Some(42));
     let items = f
         .role_permissions
-        .read_by_role_id(&f.context, r)
+        .read_by_role_id(&f.context, f.space_id, r)
         .await
         .unwrap();
     assert_eq!(items.len(), 1);
     assert_eq!(items[0].permission.id, p);
     let items = f
         .role_permissions
-        .read_by_permission_id(&f.context, p)
+        .read_by_permission_id(&f.context, f.space_id, p)
         .await
         .unwrap();
     assert_eq!(items.len(), 1);
@@ -31,6 +35,7 @@ async fn role_permission_joined_reads_conflicts_and_active_visibility() {
         f.role_permissions
             .create(
                 &f.context,
+                f.space_id,
                 CreateRolePermission {
                     role_id: r,
                     permission_id: p,
@@ -44,6 +49,7 @@ async fn role_permission_joined_reads_conflicts_and_active_visibility() {
         f.role_permissions
             .create(
                 &f.context,
+                f.space_id,
                 CreateRolePermission {
                     role_id: 999999,
                     permission_id: p,
@@ -51,41 +57,50 @@ async fn role_permission_joined_reads_conflicts_and_active_visibility() {
                 }
             )
             .await,
-        Err(RepositoryError::Conflict)
+        Err(RepositoryError::BadArgs)
     ));
     f.permissions
-        .delete_by_id(&f.context, p, None)
+        .delete_by_id(&f.context, f.space_id, p, None)
         .await
         .unwrap();
     assert!(matches!(
-        f.role_permissions.read_by_id(&f.context, id).await,
+        f.role_permissions
+            .read_by_id(&f.context, f.space_id, id)
+            .await,
         Err(RepositoryError::RolePermissionNotFound)
     ));
     assert!(
         f.role_permissions
-            .read_by_role_id(&f.context, r)
+            .read_by_role_id(&f.context, f.space_id, r)
             .await
             .unwrap()
             .is_empty()
     );
     f.role_permissions
-        .delete_by_id(&f.context, id)
+        .delete_by_id(&f.context, f.space_id, id)
         .await
         .unwrap();
     assert!(matches!(
-        f.role_permissions.delete_by_id(&f.context, id).await,
+        f.role_permissions
+            .delete_by_id(&f.context, f.space_id, id)
+            .await,
         Err(RepositoryError::RolePermissionNotFound)
     ));
     let p = f.permission("permission").await;
     let id = f.pivot(r, p).await;
-    f.roles.delete_by_id(&f.context, r, None).await.unwrap();
+    f.roles
+        .delete_by_id(&f.context, f.space_id, r, None)
+        .await
+        .unwrap();
     assert!(matches!(
-        f.role_permissions.read_by_id(&f.context, id).await,
+        f.role_permissions
+            .read_by_id(&f.context, f.space_id, id)
+            .await,
         Err(RepositoryError::RolePermissionNotFound)
     ));
     assert!(
         f.role_permissions
-            .read_by_permission_id(&f.context, p)
+            .read_by_permission_id(&f.context, f.space_id, p)
             .await
             .unwrap()
             .is_empty()
@@ -107,24 +122,24 @@ async fn role_permission_bulk_deletion_uses_or_and_requires_an_id() {
     let keep = f.pivot(b, y).await;
     assert!(matches!(
         f.role_permissions
-            .delete_by_role_id_or_permission_id(&f.context, None, None)
+            .delete_by_role_id_or_permission_id(&f.context, f.space_id, None, None)
             .await,
         Err(RepositoryError::BadArgs)
     ));
     f.role_permissions
-        .delete_by_role_id_or_permission_id(&f.context, Some(a), Some(x))
+        .delete_by_role_id_or_permission_id(&f.context, f.space_id, Some(a), Some(x))
         .await
         .unwrap();
     assert!(
         f.role_permissions
-            .read_by_role_id(&f.context, a)
+            .read_by_role_id(&f.context, f.space_id, a)
             .await
             .unwrap()
             .is_empty()
     );
     assert_eq!(
         f.role_permissions
-            .read_by_id(&f.context, keep)
+            .read_by_id(&f.context, f.space_id, keep)
             .await
             .unwrap()
             .role
@@ -133,17 +148,17 @@ async fn role_permission_bulk_deletion_uses_or_and_requires_an_id() {
     );
     assert!(matches!(
         f.role_permissions
-            .delete_by_role_id_or_permission_id(&f.context, Some(a), None)
+            .delete_by_role_id_or_permission_id(&f.context, f.space_id, Some(a), None)
             .await,
         Err(RepositoryError::RolePermissionNotFound)
     ));
     f.role_permissions
-        .delete_by_role_id_or_permission_id(&f.context, None, Some(y))
+        .delete_by_role_id_or_permission_id(&f.context, f.space_id, None, Some(y))
         .await
         .unwrap();
     assert!(
         f.role_permissions
-            .read_by_permission_id(&f.context, y)
+            .read_by_permission_id(&f.context, f.space_id, y)
             .await
             .unwrap()
             .is_empty()

@@ -6,32 +6,50 @@ pub trait RolePermission: Send + Sync {
     fn create<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         input: CreateRolePermission,
     ) -> RepositoryFuture<'a, i64>;
 
     fn read_by_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         id: i64,
+    ) -> RepositoryFuture<'a, RolePermissionDetails>;
+
+    fn read_by_role_id_and_permission_id<'a>(
+        &'a self,
+        context: &'a AppContext,
+        space_id: i64,
+        role_id: i64,
+        permission_id: i64,
     ) -> RepositoryFuture<'a, RolePermissionDetails>;
 
     fn read_by_role_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         role_id: i64,
     ) -> RepositoryFuture<'a, Vec<RolePermissionWithPermission>>;
 
     fn read_by_permission_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         permission_id: i64,
     ) -> RepositoryFuture<'a, Vec<RolePermissionWithRole>>;
 
-    fn delete_by_id<'a>(&'a self, context: &'a AppContext, id: i64) -> RepositoryFuture<'a, ()>;
+    fn delete_by_id<'a>(
+        &'a self,
+        context: &'a AppContext,
+        space_id: i64,
+        id: i64,
+    ) -> RepositoryFuture<'a, ()>;
 
     fn delete_by_role_id_or_permission_id<'a>(
         &'a self,
         context: &'a AppContext,
+        space_id: i64,
         role_id: Option<i64>,
         permission_id: Option<i64>,
     ) -> RepositoryFuture<'a, ()>;

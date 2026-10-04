@@ -6,7 +6,6 @@ use super::AuditCreateUpdateDelete;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct User {
     pub id: i64,
-    pub role_id: i64,
     pub name: String,
     pub bio: String,
     pub username: String,

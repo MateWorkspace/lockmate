@@ -14,7 +14,39 @@ pub enum ValidatorError {
         reason: &'static str,
     },
 
+    /// Space
+
+    #[error("space slug is invalid")]
+    SpaceSlugInvalid,
+
+    #[error("space slug is too long")]
+    SpaceSlugTooLong,
+
+    #[error("space slug is too short")]
+    SpaceSlugTooShort,
+
+    #[error("space name is invalid")]
+    SpaceNameInvalid,
+
+    #[error("space name is too long")]
+    SpaceNameTooLong,
+
+    #[error("space name is too short")]
+    SpaceNameTooShort,
+
+    #[error("space description is too long")]
+    SpaceDescTooLong,
+
     /// Permission
+
+    #[error("permission slug is invalid")]
+    PermissionSlugInvalid,
+
+    #[error("permission slug is too long")]
+    PermissionSlugTooLong,
+
+    #[error("permission slug is too short")]
+    PermissionSlugTooShort,
 
     #[error("permission name is invalid")]
     PermissionNameInvalid,
@@ -29,6 +61,15 @@ pub enum ValidatorError {
     PermissionDescTooLong,
 
     /// Role
+
+    #[error("role slug is invalid")]
+    RoleSlugInvalid,
+
+    #[error("role slug is too long")]
+    RoleSlugTooLong,
+
+    #[error("role slug is too short")]
+    RoleSlugTooShort,
 
     #[error("role name is invalid")]
     RoleNameInvalid,
@@ -92,20 +133,22 @@ pub enum ValidatorError {
     #[error("user password is too short")]
     UserPasswordTooShort,
 
+    /// API key
+
     #[error("api key name is invalid")]
-    UserApiKeyNameInvalid,
+    ApiKeyNameInvalid,
 
     #[error("api key name is too long")]
-    UserApiKeyNameTooLong,
+    ApiKeyNameTooLong,
 
     #[error("api key name is too short")]
-    UserApiKeyNameTooShort,
+    ApiKeyNameTooShort,
 
     #[error("api key description is invalid")]
-    UserApiKeyDescInvalid,
+    ApiKeyDescInvalid,
 
     #[error("api key description is too long")]
-    UserApiKeyDescTooLong,
+    ApiKeyDescTooLong,
 }
 
 impl ValidatorError {
@@ -114,17 +157,27 @@ impl ValidatorError {
             Self::BadArgs => "BAD_ARGS",
             Self::EnvironmentRequired { .. } => "ENVIRONMENT_REQUIRED",
             Self::EnvironmentInvalid { .. } => "ENVIRONMENT_INVALID",
-
+            Self::SpaceSlugInvalid => "SPACE_SLUG_INVALID",
+            Self::SpaceSlugTooLong => "SPACE_SLUG_TOO_LONG",
+            Self::SpaceSlugTooShort => "SPACE_SLUG_TOO_SHORT",
+            Self::SpaceNameInvalid => "SPACE_NAME_INVALID",
+            Self::SpaceNameTooLong => "SPACE_NAME_TOO_LONG",
+            Self::SpaceNameTooShort => "SPACE_NAME_TOO_SHORT",
+            Self::SpaceDescTooLong => "SPACE_DESC_TOO_LONG",
+            Self::PermissionSlugInvalid => "PERMISSION_SLUG_INVALID",
+            Self::PermissionSlugTooLong => "PERMISSION_SLUG_TOO_LONG",
+            Self::PermissionSlugTooShort => "PERMISSION_SLUG_TOO_SHORT",
             Self::PermissionNameInvalid => "PERMISSION_NAME_INVALID",
             Self::PermissionNameTooLong => "PERMISSION_NAME_TOO_LONG",
             Self::PermissionNameTooShort => "PERMISSION_NAME_TOO_SHORT",
             Self::PermissionDescTooLong => "PERMISSION_DESC_TOO_LONG",
-
+            Self::RoleSlugInvalid => "ROLE_SLUG_INVALID",
+            Self::RoleSlugTooLong => "ROLE_SLUG_TOO_LONG",
+            Self::RoleSlugTooShort => "ROLE_SLUG_TOO_SHORT",
             Self::RoleNameInvalid => "ROLE_NAME_INVALID",
             Self::RoleNameTooLong => "ROLE_NAME_TOO_LONG",
             Self::RoleNameTooShort => "ROLE_NAME_TOO_SHORT",
             Self::RoleDescTooLong => "ROLE_DESC_TOO_LONG",
-            
             Self::UserNameInvalid => "USER_NAME_INVALID",
             Self::UserNameTooLong => "USER_NAME_TOO_LONG",
             Self::UserNameTooShort => "USER_NAME_TOO_SHORT",
@@ -141,11 +194,11 @@ impl ValidatorError {
             Self::UserPasswordInvalid => "USER_PASSWORD_INVALID",
             Self::UserPasswordTooLong => "USER_PASSWORD_TOO_LONG",
             Self::UserPasswordTooShort => "USER_PASSWORD_TOO_SHORT",
-            Self::UserApiKeyNameInvalid => "API_KEY_NAME_INVALID",
-            Self::UserApiKeyNameTooLong => "API_KEY_NAME_TOO_LONG",
-            Self::UserApiKeyNameTooShort => "API_KEY_NAME_TOO_SHORT",
-            Self::UserApiKeyDescInvalid => "API_KEY_DESC_INVALID",
-            Self::UserApiKeyDescTooLong => "API_KEY_DESC_TOO_LONG",
+            Self::ApiKeyNameInvalid => "API_KEY_NAME_INVALID",
+            Self::ApiKeyNameTooLong => "API_KEY_NAME_TOO_LONG",
+            Self::ApiKeyNameTooShort => "API_KEY_NAME_TOO_SHORT",
+            Self::ApiKeyDescInvalid => "API_KEY_DESC_INVALID",
+            Self::ApiKeyDescTooLong => "API_KEY_DESC_TOO_LONG",
         }
     }
 }

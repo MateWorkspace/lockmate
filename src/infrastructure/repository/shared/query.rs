@@ -1,3 +1,5 @@
+use mate_pgdt::sqlx::{Postgres, QueryBuilder};
+
 use crate::domain::models::RepositoryError;
 
 pub(crate) fn pagination(page: i64, limit: i64) -> Result<(i64, i64), RepositoryError> {
@@ -17,4 +19,13 @@ pub(crate) fn search_pattern(search: &Option<String>) -> Option<String> {
         .as_ref()
         .filter(|value| !value.is_empty())
         .map(|value| format!("%{value}%"))
+}
+
+// The same lock serializes default-role replacement and membership joining.
+pub(crate) fn lock_default(space_id: i64) -> QueryBuilder<Postgres> {
+    let mut query = QueryBuilder::new(
+        "SELECT pg_advisory_xact_lock(hashtextextended('lockmate/default-role/' || ",
+    );
+    query.push_bind(space_id).push("::bigint::text, 0))");
+    query
 }
