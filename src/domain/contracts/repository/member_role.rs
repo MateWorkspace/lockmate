@@ -41,7 +41,6 @@ pub trait MemberRole: Send + Sync {
         member_id: i64,
     ) -> RepositoryFuture<'a, Vec<MemberRoleWithRole>>;
 
-    /// Requires a live user and active space/membership; returns distinct live roles.
     fn read_effective_roles_by_member_id<'a>(
         &'a self,
         context: &'a AppContext,
@@ -49,8 +48,6 @@ pub trait MemberRole: Send + Sync {
         member_id: i64,
     ) -> RepositoryFuture<'a, Vec<Role>>;
 
-    /// Returns the union of permissions from the member's live roles, ordered by slug and ID.
-    /// Missing membership returns SpaceMemberNotFound; inactive access returns BadState.
     fn read_effective_permissions_by_member_id<'a>(
         &'a self,
         context: &'a AppContext,

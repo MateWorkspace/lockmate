@@ -5,8 +5,6 @@ use crate::domain::models::{AppContext, SpaceMember as SpaceMemberEntity, User};
 use super::RepositoryFuture;
 
 pub trait SpaceMember: Send + Sync {
-    /// Creates the membership and assigns the current default role atomically.
-    /// Returns RoleNotFound without creating records if the space has no default.
     fn create<'a>(
         &'a self,
         context: &'a AppContext,

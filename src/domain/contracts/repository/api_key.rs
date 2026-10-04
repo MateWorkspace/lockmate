@@ -26,8 +26,6 @@ pub trait ApiKey: Send + Sync {
         hash: &'a str,
     ) -> RepositoryFuture<'a, ApiKeyEntity>;
 
-    /// Resolves a key with live parents and active space/membership.
-    /// Unavailable credentials return ApiKeyNotFound.
     fn read_active_by_hash<'a>(
         &'a self,
         context: &'a AppContext,
