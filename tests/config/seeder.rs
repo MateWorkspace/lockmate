@@ -40,16 +40,19 @@ fn embedded_catalog_and_additional_membership_roles_are_consistent() {
     assert_eq!(space.slug, "lockmate");
     assert_eq!(space.name, "Lockmate");
     assert!(space.is_active);
-    assert_eq!(space.permissions.len(), 36);
+    assert_eq!(space.permissions.len(), 39);
     assert_eq!(space.roles.len(), 3);
     let permissions: HashSet<_> = space
         .permissions
         .iter()
         .map(|permission| permission.slug.as_str())
         .collect();
-    assert_eq!(permissions.len(), 36);
+    assert_eq!(permissions.len(), 39);
     for slug in [
         "profile:get",
+        "profile_api_key:get",
+        "profile_api_key:set",
+        "profile_api_key:remove",
         "user_permission:get",
         "space:add",
         "space_member:set",
@@ -57,9 +60,16 @@ fn embedded_catalog_and_additional_membership_roles_are_consistent() {
     ] {
         assert!(permissions.contains(slug));
     }
-    for (slug, count) in [("super", 36), ("admin", 14), ("user", 4)] {
+    for (slug, count) in [("super", 39), ("admin", 17), ("user", 7)] {
         let role = space.roles.iter().find(|role| role.slug == slug).unwrap();
         assert_eq!(role.permissions.len(), count);
+        for slug in [
+            "profile_api_key:get",
+            "profile_api_key:set",
+            "profile_api_key:remove",
+        ] {
+            assert!(role.permissions.iter().any(|permission| permission == slug));
+        }
         assert_eq!(role.is_default, slug == "user");
         assert!(
             role.permissions

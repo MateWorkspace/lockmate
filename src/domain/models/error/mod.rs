@@ -4,6 +4,7 @@ pub mod password;
 pub mod repository;
 pub mod token;
 pub mod transactor;
+pub mod usecase;
 pub mod validator;
 
 pub use api_key::ApiKeyError;
@@ -12,4 +13,5 @@ pub use password::PasswordError;
 pub use repository::RepositoryError;
 pub use token::TokenError;
 pub use transactor::TransactorError;
+pub use usecase::UsecaseError;
 pub use validator::ValidatorError;

@@ -26,6 +26,21 @@
         "description": "Create an API key for own space membership."
       },
       {
+        "slug": "profile_api_key:get",
+        "name": "View profile API key",
+        "description": "View API keys for own space membership."
+      },
+      {
+        "slug": "profile_api_key:set",
+        "name": "Update profile API key",
+        "description": "Update API keys for own space membership."
+      },
+      {
+        "slug": "profile_api_key:remove",
+        "name": "Delete profile API key",
+        "description": "Delete API keys for own space membership."
+      },
+      {
         "slug": "permission:get",
         "name": "View permission",
         "description": "View permissions."
@@ -197,6 +212,9 @@
           "profile:set",
           "profile_security:set",
           "profile_api_key:add",
+          "profile_api_key:get",
+          "profile_api_key:set",
+          "profile_api_key:remove",
           "permission:get",
           "permission:add",
           "permission:set",
@@ -241,6 +259,9 @@
           "profile:set",
           "profile_security:set",
           "profile_api_key:add",
+          "profile_api_key:get",
+          "profile_api_key:set",
+          "profile_api_key:remove",
           "user:get",
           "user:add",
           "user:set",
@@ -262,7 +283,10 @@
           "profile:get",
           "profile:set",
           "profile_security:set",
-          "profile_api_key:add"
+          "profile_api_key:add",
+          "profile_api_key:get",
+          "profile_api_key:set",
+          "profile_api_key:remove"
         ]
       }
     ]

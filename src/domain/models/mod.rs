@@ -19,7 +19,7 @@ pub use entity::{
 };
 pub use error::{
     ApiKeyError, CachingError, PasswordError, RepositoryError, TokenError, TransactorError,
-    ValidatorError,
+    UsecaseError, ValidatorError,
 };
 pub use logger::{LoggerFormat, LoggerLevel, LoggerMeta, LoggerMetaValue};
 pub use seeder::{SeedData, SeedPermission, SeedRole, SeedSpace, SeedSpaceMember, SeedUser};
