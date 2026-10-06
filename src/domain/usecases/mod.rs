@@ -1,4 +1,4 @@
-#![doc = include_str!("README.md")]
+//! Auth, management, and profile interfaces with shared safe response types.
 
 pub mod auth;
 pub mod management;

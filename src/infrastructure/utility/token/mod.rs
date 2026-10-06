@@ -1,4 +1,4 @@
-#![doc = include_str!("README.md")]
+//! JWT access and refresh token generation and validation for one space membership.
 
 mod jwt;
 

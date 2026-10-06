@@ -1,10 +1,31 @@
-# Usecase interfaces
+# Domain usecases
+
+## Purpose
 
 These interfaces define application behavior using domain models and dependency
 contracts. They do not implement application logic or enforce authorization on
 their own. Application implementations must follow the rules below. Repository,
 caching, and utility adapters remain independent dependencies selected by
 composition; domain usecases never import those adapters or transport types.
+
+## Layout
+
+- `auth/session.rs`: login, refresh, and access-token/API-key authentication.
+- `management/`: one trait file for each of the eight repository entities;
+  role_permission and member_role assignments have their own files.
+- `profile/`: account, security, and own-API-key traits.
+- `shared/`: safe views, joined results, Page, and `future.rs` with UsecaseFuture.
+- `mod.rs` files declare modules and explicitly reexport traits/shared types.
+  Keep local CreateRequest/UpdateRequest names in their feature modules.
+
+## Code style
+
+Follow the existing contract layout: explicit trait methods first, requests and
+results afterward. Traits are Send + Sync and object safe, with named lifetimes
+and boxed Send futures. Keep method names snake_case and data structs simple.
+Add dependencies through domain contracts first; do not reference concrete
+adapters. Keep implementation and orchestration in the future application layer.
+Use shared safe responses rather than cache-named DTOs or hash-bearing entities.
 
 ## Calling conventions and responses
 
@@ -161,7 +182,7 @@ cache-aside contracts after authorization; credential and effective-grant reads
 always bypass caches. Collect mutated families and invalidate only after the
 outermost successful commit, never during nested callbacks or after rollback.
 Membership creation invalidates SpaceMembers and MemberRoles; other changes
-follow the existing caching family dependency table. Cache failures fall back to
+follow the caching family dependency table in `../contracts/AGENTS.md`. Cache failures fall back to
 the database or leave committed success intact, without duplicating adapter logs.
 
 `UsecaseError` wraps typed dependency errors, preserving codes and sources with
@@ -175,3 +196,11 @@ transaction begin/commit/rollback failures remain Transactor errors.
 This module only defines interfaces and response conversions. Authorization,
 validation, transaction orchestration, logging, and caching behavior must be
 implemented and tested in the application layer before exposing these operations.
+
+## Verification
+
+Run `cargo fmt --check`, `cargo check --all-targets`, and `cargo test` from the
+Lockmate root. Interface tests live under tests/domain/usecases.rs. Check object
+safety, Send futures, credential-free responses, nullable updates, and error
+codes/sources. Runtime authorization and ownership tests belong to application
+implementations when added; interfaces alone do not enforce these policies.

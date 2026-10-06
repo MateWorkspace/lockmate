@@ -1,10 +1,47 @@
-# Management caching
+# Domain contracts
+
+## Purpose
+
+Define application dependencies independently of their implementations. Keep this
+folder limited to traits, dependency inputs/results, and future/callback aliases.
+Import domain models and necessary data types, never infrastructure, application,
+presentation, SQLx, mate-pgdt, Redis, JWT driver, or transport bindings.
+
+## Layout
+
+- `repository/`: one file per persisted entity; `future.rs` holds RepositoryFuture.
+- `caching/`: matching entity traits, plus key building, invalidation, and futures.
+- `utility/`: logger, password, token, API-key, validator, and transactor traits.
+- Each `mod.rs` declares modules and explicitly reexports their public contracts
+  and associated types. Keep the three dependency groups separate.
+
+## Code style
+
+- Match neighboring explicit trait signatures. Traits are `Send + Sync` and
+  object safe; use named lifetimes and boxed `Send` futures for asynchronous I/O.
+- Pass `&AppContext` first. Space-owned repository and cache operations take an
+  explicit positive `space_id`; global User and Space operations have no scope ID.
+- Place input, filter, and result structs after the trait's method list. Preserve
+  field order because canonical caching selectors depend on it.
+- Use repository verbs `create`, `read_by_id`, `read_by_<selector>`,
+  `read_by_filter`, `update_by_id`, and `delete_by_id`. Keep assignment joins typed.
+- Preserve optional update states with `Option<Option<T>>` for nullable fields.
+  Keep audit actor inputs numeric and separate from AppContext's logging actor.
+- Keep synchronous utility operations synchronous. Logger receives the tag as an
+  argument; Transactor callbacks receive an owned transactional AppContext and
+  return TransactionFuture with the domain TransactorError.
+- Use typed domain errors, not driver errors or arbitrary string errors. Retain
+  credential-bearing inputs without Debug; never introduce auth cache payloads.
+- Introduce a dependency contract before implementing a usecase that needs it.
+  Contract changes must align adapters, mocks, models, and exports together.
+
+## Caching behavior
 
 These contracts define cache-aside behavior independently of Redis. They do not
 change repository behavior. Redis adapters implement these interfaces separately;
 application orchestration remains separate work.
 
-## Read and store
+### Read and store
 
 Read the management cache outside a transaction. A hit supplies a typed value;
 a miss supplies `None`. Both supply a stamp identifying the lookup and dependency
@@ -32,7 +69,7 @@ can still return the database result. This prevents a delayed database read from
 refilling an invalidated generation. Cache hits must only use an entry matching
 the revisions observed by that cache read.
 
-## Safe management payloads
+### Safe management payloads
 
 `CachedUser` omits `password_hash`; `CachedApiKey` omits `hash`. Membership pages
 use `CachedSpaceMemberWithUser`. Explicit conversions consume repository entities
@@ -45,7 +82,7 @@ lookups, and effective role/permission checks bypass the management cache and
 read PostgreSQL. Never cache passwords, credential hashes, raw API keys, or JWTs.
 Cache hits do not authorize callers; application code still enforces access.
 
-## Invalidation dependencies
+### Invalidation dependencies
 
 Families are global users and spaces, or an entity family within a positive
 `space_id`. Replace every requested family's revision atomically with a fresh,
@@ -75,7 +112,7 @@ including the previously default role. Bulk assignment deletion invalidates its
 family even when no rows were removed. Global user and space revisions invalidate
 joined reads across spaces without discovering affected spaces.
 
-## Transactions and failures
+### Transactions and failures
 
 Application code bypasses caching whenever `AppContext.transaction` is present.
 Cache and key contracts reject transactional contexts with `BadState`, rather
@@ -101,9 +138,9 @@ prevent stale fills after successful invalidation, but do not eliminate the gap
 between those operations or failed invalidation. TTL bounds stale entries.
 Direct database writes are reflected at expiry unless they also invalidate.
 
-## Key builder
+### Key builder
 
-The separate `KeyBuilder` contract performs no I/O. Its future constructor
+The separate `KeyBuilder` contract performs no I/O. Its infrastructure constructor
 receives `redis_namespace`, used as the first key segment. Namespace must be
 nonempty and contain no colon, so it remains a single segment.
 
@@ -136,9 +173,9 @@ IDs with `BadArgs`. Hashing selectors prevents raw contacts and search values
 from appearing in keys; it is not encryption. Actor and trace ID never affect
 cache identity. Key and stamp specifications deliberately omit `Debug`.
 
-## Adapter acceptance scenarios
+### Adapter acceptance scenarios
 
-Future adapters must test hit, miss, expiry, successful empty results, invalid
+Adapter changes must test hit, miss, expiry, successful empty results, invalid
 payloads, positive TTL enforcement, and failed database reads not being stored.
 Test space/filter/optional-value key isolation, every mutation dependency,
 default-role replacement, bulk assignment deletion, and membership default-role
@@ -148,3 +185,9 @@ must never consume management cache values.
 
 Stampede locks, negative caching, durable invalidation retries, and authentication
 caching are deferred.
+
+## Verification
+
+Run checks from the Lockmate root: `cargo fmt --check`,
+`cargo check --all-targets`, and `cargo test`. Contract tests live under
+`tests/domain/`; adapter tests live under `tests/infrastructure/`.

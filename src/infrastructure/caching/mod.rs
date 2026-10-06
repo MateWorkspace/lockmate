@@ -1,4 +1,4 @@
-#![doc = include_str!("README.md")]
+//! Redis caching adapters with revision-checked reads, stores, and invalidation.
 
 pub mod api_key;
 pub mod invalidation;

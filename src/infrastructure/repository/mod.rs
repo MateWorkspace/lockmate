@@ -1,4 +1,4 @@
-#![doc = include_str!("README.md")]
+//! Scoped PostgreSQL repository adapters using a shared transaction-aware driver.
 
 pub mod api_key;
 pub mod member_role;

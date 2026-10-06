@@ -1,5 +1,33 @@
 # PostgreSQL repositories
 
+## Purpose
+
+Implement domain repository contracts using PostgreSQL.
+Keep business orchestration and authorization in application; keep driver types
+out of domain signatures. Preserve the existing behavior described below.
+
+## Layout
+
+- One directory per entity, with `mod.rs`, `postgres.rs`, and `postgres_query.rs`.
+- `shared/`: query/pagination helpers, driver error classification, and per-entity
+  scanners under `scan/`.
+- Root `mod.rs`: explicit exports of concrete Postgres adapters.
+
+## Code style
+
+Implement the domain trait in postgres.rs; keep SQL construction in
+postgres_query.rs with bound SQLx QueryBuilder arguments. Query builders do no
+I/O or logging. Use explicit implementations rather than production macros or a
+generic repository abstraction. Alias colliding entity/contract names clearly.
+
+Pass AppContext unchanged except for supplied transaction callbacks. Inject
+clones of one Pgdt owner and Arc<dyn Logger> through constructors. Map driver
+errors through shared helpers, and consume query streams before returning. Keep
+blank lines between query construction, execution, decoding, and error handling.
+Update scanner column order with model/query changes; preserve typed joined DTOs.
+
+## Behavior and verification
+
 Each entity keeps execution and its contract implementation in `postgres.rs`.
 Its `postgres_query.rs` builds native SQLx queries and bindings, without database
 access or logging. Shared helpers decode rows, classify errors, and normalize
@@ -8,23 +36,6 @@ pagination. The domain contains no SQLx types.
 Create one `mate_pgdt::Pgdt` from the pool and pass clones to every repository.
 Derive the application transactor from that same wrapper. Rewrapping the pool
 creates a different owner and transaction handles will be rejected.
-
-```rust,no_run
-use std::sync::Arc;
-use lockmate::{
-    domain::{contracts::{repository::Permission, utility::Logger}, models::AppContext},
-    infrastructure::{repository::PostgresPermission, utility::transactor::MatePgdtTransactor},
-};
-use mate_pgdt::{Pgdt, sqlx::PgPool};
-
-async fn dependencies(pool: PgPool, logger: Arc<dyn Logger>, context: &AppContext, space_id: i64) {
-    let database = Pgdt::new(pool);
-    let permissions: Arc<dyn Permission> =
-        Arc::new(PostgresPermission::new(database.clone(), logger.clone()));
-    let transactor = MatePgdtTransactor::new(database.transactor(), logger);
-    let permission = permissions.read_by_slug(context, space_id, "settings.read").await;
-}
-```
 
 Users have global identities. Spaces own roles and permissions, and space
 memberships receive roles through member-role assignments. Slugs are immutable;
@@ -81,11 +92,14 @@ Against a throwaway PostgreSQL database with pg_trgm available in public, run:
 
 ```sh
 LOCKMATE_TEST_DATABASE_URL='postgres://postgres:password@localhost/test_db' \
-    cargo test -- --include-ignored
+    cargo test infrastructure::repository -- --include-ignored
 ```
 
 The ignored database tests fail if the URL is absent. Normal `cargo test` runs
-all tests that do not require a database, including documentation examples.
+all tests that do not require a database, including pure contract/key checks.
 JWT claims and embedded seed definitions use the space-aware model. Application
 authentication, authorization, and database seeding execution remain separate
 work; token validation alone does not query live membership state.
+
+Run `cargo fmt --check`, `cargo check --all-targets`, and normal `cargo test`
+from the Lockmate root before relevant isolated integration checks.

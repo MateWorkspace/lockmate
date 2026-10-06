@@ -1,4 +1,4 @@
-#![doc = include_str!("README.md")]
+//! Cache-aside contracts, revision-based invalidation, and pure key building.
 
 pub mod api_key;
 pub mod future;
