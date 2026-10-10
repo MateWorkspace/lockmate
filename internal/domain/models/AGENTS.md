@@ -6,9 +6,9 @@ drivers, SQL builders, JWT library claims, bcrypt, and slog do not belong here.
 
 ## Layout
 
-- `app/`: application environment, package information, trace values, and trusted
-  client authentication identity.
-- `entity/`: persistence entities, shared audit fields, and access/refresh claims.
+- `app/`: application environment, package information, and trace values.
+- `entity/`: persistence entities, shared audit fields, access/refresh claims, and
+  trusted client authentication identity (in `client.go`).
   Use one file per entity; keep audit structs together in `audit.go` and both
   claim structs together in `claims.go`.
 - `error/`: the structured error wrapper and sentinel errors grouped by
@@ -55,9 +55,18 @@ and permission slugs. Keep them usable for users without classic authentication.
 
 `app.Trace` contains `EventId`, `ClientExecId`, and `ClientSlug` with snake_case
 JSON tags. Context storage belongs to the tracer adapter, not the trace model.
-Keep environment parsing and defaults in configuration code.
+Keep environment parsing and defaults in configuration code. `app.Env` contains
+logger settings, server ports, PostgreSQL settings, JWT secrets/lifetimes, bcrypt
+cost, and the management control-space slug. Domain fields use standard Go types,
+including time.Duration, uint16 ports, and an int32 PostgreSQL connection limit.
+Do not include driver-specific configuration objects or log the entire Env model.
+Configuration uses a global config.Env value. LoadEnv loads an optional .env
+file without overwriting existing process variables, assigns each field through
+typed envGet helpers using its existing value as fallback, and calls validate()
+at the end. Required/invalid settings use environment sentinels from
+error/validator.go.
 
-`app.ClientIdentity` is produced by client authentication and contains client ID,
+`entity.ClientIdentity` is produced by client authentication and contains client ID,
 space ID, and slug. It is not a request DTO; usecases recheck the live client and
 space. JWTs remain space-scoped and do not embed this identity.
 

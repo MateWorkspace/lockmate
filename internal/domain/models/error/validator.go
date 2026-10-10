@@ -65,3 +65,9 @@ var (
 )
 
 var UserNameInvalid = errors.New("USER_NAME_INVALID")
+
+// Environment configuration.
+var (
+	EnvironmentRequired = errors.New("ENVIRONMENT_REQUIRED")
+	EnvironmentInvalid  = errors.New("ENVIRONMENT_INVALID")
+)

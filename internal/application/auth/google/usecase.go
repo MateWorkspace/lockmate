@@ -7,7 +7,6 @@ import (
 	applicationshared "github.com/MateWorkspace/lockmate/internal/application/shared"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
 	domaincontractsutility "github.com/MateWorkspace/lockmate/internal/domain/contracts/utility"
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
 	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
 	domainmodelslogger "github.com/MateWorkspace/lockmate/internal/domain/models/logger"
@@ -60,7 +59,7 @@ func NewUsecaseImpl(
 	}
 }
 
-func (u *usecase) BeginSignIn(ctx context.Context, client *domainmodelsapp.ClientIdentity, request domainusecasesauth.BeginGoogleSignInRequest) (result *domainusecasesauth.BeginGoogleSignInResult, err error) {
+func (u *usecase) BeginSignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.BeginGoogleSignInRequest) (result *domainusecasesauth.BeginGoogleSignInResult, err error) {
 	const tag = tagPath + "/BeginSignIn"
 
 	if request.Binding == "" {
@@ -156,7 +155,7 @@ func (u *usecase) SignInCallback(ctx context.Context, request domainusecasesauth
 				return failure
 			}
 
-			if _, err := applicationshared.ReadClient(txCtx, u.client, u.space, &domainmodelsapp.ClientIdentity{
+			if _, err := applicationshared.ReadClient(txCtx, u.client, u.space, &domainmodelsentity.ClientIdentity{
 				Id:      completed.ClientId,
 				SpaceId: completed.SpaceId,
 				Slug:    client.Slug,

@@ -7,7 +7,6 @@ import (
 	applicationshared "github.com/MateWorkspace/lockmate/internal/application/shared"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
 	domaincontractsutility "github.com/MateWorkspace/lockmate/internal/domain/contracts/utility"
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
 	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
 	domainmodelslogger "github.com/MateWorkspace/lockmate/internal/domain/models/logger"
@@ -60,7 +59,7 @@ func NewUsecaseImpl(
 	}
 }
 
-func (u *usecase) SignIn(ctx context.Context, client *domainmodelsapp.ClientIdentity, request domainusecasesauth.SignInRequest) (result *domainusecasesauth.SessionResult, err error) {
+func (u *usecase) SignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.SignInRequest) (result *domainusecasesauth.SessionResult, err error) {
 	const tag = tagPath + "/SignIn"
 
 	if request.Username == "" || request.Password == "" {
@@ -216,7 +215,7 @@ func (u *usecase) SignIn(ctx context.Context, client *domainmodelsapp.ClientIden
 	return result, nil
 }
 
-func (u *usecase) Register(ctx context.Context, client *domainmodelsapp.ClientIdentity, request domainusecasesauth.RegisterRequest) (result *domainusecasesauth.SessionResult, err error) {
+func (u *usecase) Register(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RegisterRequest) (result *domainusecasesauth.SessionResult, err error) {
 	const tag = tagPath + "/Register"
 
 	err = u.transactor.WithTx(ctx, func(txCtx context.Context) error {
@@ -383,7 +382,7 @@ func (u *usecase) Register(ctx context.Context, client *domainmodelsapp.ClientId
 	return result, nil
 }
 
-func (u *usecase) Refresh(ctx context.Context, client *domainmodelsapp.ClientIdentity, request domainusecasesauth.RefreshRequest) (result *domainusecasesauth.SessionResult, err error) {
+func (u *usecase) Refresh(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RefreshRequest) (result *domainusecasesauth.SessionResult, err error) {
 	const tag = tagPath + "/Refresh"
 
 	if request.RefreshToken == "" {
@@ -464,7 +463,7 @@ func (u *usecase) Refresh(ctx context.Context, client *domainmodelsapp.ClientIde
 	return result, nil
 }
 
-func (u *usecase) AuthenticateAccessToken(ctx context.Context, client *domainmodelsapp.ClientIdentity, accessToken string) (result *domainmodelsentity.AccessClaims, err error) {
+func (u *usecase) AuthenticateAccessToken(ctx context.Context, client *domainmodelsentity.ClientIdentity, accessToken string) (result *domainmodelsentity.AccessClaims, err error) {
 	const tag = tagPath + "/AuthenticateAccessToken"
 
 	if accessToken == "" {

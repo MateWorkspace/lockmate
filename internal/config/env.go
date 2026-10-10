@@ -1,0 +1,256 @@
+package config
+
+import (
+	"math"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
+	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
+	domainmodelslogger "github.com/MateWorkspace/lockmate/internal/domain/models/logger"
+	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
+)
+
+var Env = domainmodelsapp.Env{
+	LoggerFormat:   domainmodelslogger.FormatJson,
+	LoggerLevel:    domainmodelslogger.LevelInfo,
+	LoggerUseTrace: true,
+
+	PortGrpcServer: 50051,
+	PortHttpServer: 50050,
+
+	PostgresHost:           "127.0.0.1",
+	PostgresPort:           5432,
+	PostgresUsername:       "postgres",
+	PostgresPassword:       "postgres",
+	PostgresDatabase:       "lockmate",
+	PostgresSslMode:        "disable",
+	PostgresMaxConnections: 20,
+	PostgresConnectTimeout: 10 * time.Second,
+
+	TokenAccessDuration:  15 * time.Minute,
+	TokenRefreshDuration: 24 * time.Hour,
+
+	PasswordBcryptCost: bcrypt.DefaultCost,
+	ControlSpaceSlug:   "lockmate",
+}
+
+func LoadEnv() error {
+	if err := godotenv.Load(".env"); err != nil && !os.IsNotExist(err) {
+		return domainmodelserror.NewError(".env could not be read or contains an invalid entry", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	Env.LoggerFormat = envGetLoggerFormat("LOCKMATE_LOGGER_FORMAT", Env.LoggerFormat)
+	Env.LoggerLevel = envGetLoggerLevel("LOCKMATE_LOGGER_LEVEL", Env.LoggerLevel)
+	Env.LoggerUseTrace = envGetBool("LOCKMATE_LOGGER_USE_TRACE", Env.LoggerUseTrace)
+
+	Env.PortGrpcServer = envGetUint16("LOCKMATE_PORT_GRPC_SERVER", Env.PortGrpcServer)
+	Env.PortHttpServer = envGetUint16("LOCKMATE_PORT_HTTP_SERVER", Env.PortHttpServer)
+
+	Env.PostgresHost = envGetString("LOCKMATE_POSTGRES_HOST", Env.PostgresHost)
+	Env.PostgresPort = envGetUint16("LOCKMATE_POSTGRES_PORT", Env.PostgresPort)
+	Env.PostgresUsername = envGetString("LOCKMATE_POSTGRES_USERNAME", Env.PostgresUsername)
+	Env.PostgresPassword = envGetString("LOCKMATE_POSTGRES_PASSWORD", Env.PostgresPassword)
+	Env.PostgresDatabase = envGetString("LOCKMATE_POSTGRES_DATABASE", Env.PostgresDatabase)
+	Env.PostgresSslMode = envGetString("LOCKMATE_POSTGRES_SSL_MODE", Env.PostgresSslMode)
+	Env.PostgresMaxConnections = envGetInt32("LOCKMATE_POSTGRES_MAX_CONNECTIONS", Env.PostgresMaxConnections)
+	Env.PostgresConnectTimeout = envGetDuration("LOCKMATE_POSTGRES_CONNECT_TIMEOUT", Env.PostgresConnectTimeout)
+
+	Env.TokenAccessSecret = envGetString("LOCKMATE_TOKEN_ACCESS_SECRET", Env.TokenAccessSecret)
+	Env.TokenRefreshSecret = envGetString("LOCKMATE_TOKEN_REFRESH_SECRET", Env.TokenRefreshSecret)
+	Env.TokenAccessDuration = envGetDuration("LOCKMATE_TOKEN_ACCESS_DURATION", Env.TokenAccessDuration)
+	Env.TokenRefreshDuration = envGetDuration("LOCKMATE_TOKEN_REFRESH_DURATION", Env.TokenRefreshDuration)
+
+	Env.PasswordBcryptCost = envGetInt("LOCKMATE_PASSWORD_BCRYPT_COST", Env.PasswordBcryptCost)
+	Env.ControlSpaceSlug = envGetString("LOCKMATE_CONTROL_SPACE_SLUG", Env.ControlSpaceSlug)
+
+	return validate()
+}
+
+func validate() error {
+	if strings.TrimSpace(Env.TokenAccessSecret) == "" {
+		return domainmodelserror.NewError("LOCKMATE_TOKEN_ACCESS_SECRET is required", domainmodelserror.EnvironmentRequired, nil)
+	}
+
+	if strings.TrimSpace(Env.TokenRefreshSecret) == "" {
+		return domainmodelserror.NewError("LOCKMATE_TOKEN_REFRESH_SECRET is required", domainmodelserror.EnvironmentRequired, nil)
+	}
+
+	if Env.TokenAccessDuration < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_TOKEN_ACCESS_DURATION must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.TokenRefreshDuration < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_TOKEN_REFRESH_DURATION must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.PortGrpcServer == 0 {
+		return domainmodelserror.NewError("LOCKMATE_PORT_GRPC_SERVER must be between 1 and 65535", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.PortHttpServer == 0 {
+		return domainmodelserror.NewError("LOCKMATE_PORT_HTTP_SERVER must be between 1 and 65535", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.PostgresPort == 0 {
+		return domainmodelserror.NewError("LOCKMATE_POSTGRES_PORT must be between 1 and 65535", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.PostgresMaxConnections <= 0 {
+		return domainmodelserror.NewError("LOCKMATE_POSTGRES_MAX_CONNECTIONS must be positive", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.PostgresConnectTimeout <= 0 {
+		return domainmodelserror.NewError("LOCKMATE_POSTGRES_CONNECT_TIMEOUT must be positive", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.PasswordBcryptCost < bcrypt.MinCost || Env.PasswordBcryptCost > bcrypt.MaxCost {
+		return domainmodelserror.NewError("LOCKMATE_PASSWORD_BCRYPT_COST must be between 4 and 31", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	return nil
+}
+
+func envGetString(key string, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func envGetStrings(key string, fallback []string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	values := strings.Split(value, ",")
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		result = append(result, value)
+	}
+	if len(result) == 0 {
+		return fallback
+	}
+
+	return result
+}
+
+func envGetInt(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	valInt, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return valInt
+}
+
+func envGetUint16(key string, fallback uint16) uint16 {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	valUint16, err := strconv.ParseUint(value, 10, 16)
+	if err != nil {
+		return fallback
+	}
+
+	return uint16(valUint16)
+}
+
+func envGetInt32(key string, fallback int32) int32 {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	valInt32, err := strconv.ParseInt(value, 10, 32)
+	if err != nil {
+		return fallback
+	}
+
+	return int32(valInt32)
+}
+
+func envGetBool(key string, fallback bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	valBool, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+	return valBool
+}
+
+func envGetDuration(key string, fallback time.Duration) time.Duration {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err == nil {
+		return duration
+	}
+
+	seconds, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	if int64(seconds) > math.MaxInt64/int64(time.Second) || int64(seconds) < math.MinInt64/int64(time.Second) {
+		return fallback
+	}
+
+	return time.Duration(seconds) * time.Second
+}
+
+func envGetLoggerFormat(key string, fallback domainmodelslogger.Format) domainmodelslogger.Format {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if value == "" {
+		return fallback
+	}
+	switch value {
+	case "plain":
+		return domainmodelslogger.FormatPlain
+	case "json":
+		return domainmodelslogger.FormatJson
+	default:
+		return fallback
+	}
+}
+
+func envGetLoggerLevel(key string, fallback domainmodelslogger.Level) domainmodelslogger.Level {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if value == "" {
+		return fallback
+	}
+	switch value {
+	case "none":
+		return domainmodelslogger.LevelNone
+	case "error":
+		return domainmodelslogger.LevelError
+	case "warn":
+		return domainmodelslogger.LevelWarn
+	case "info":
+		return domainmodelslogger.LevelInfo
+	case "debug":
+		return domainmodelslogger.LevelDebug
+	default:
+		return fallback
+	}
+}

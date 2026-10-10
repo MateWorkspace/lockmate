@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
 	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
 )
@@ -108,7 +107,7 @@ func (r *IdentityReader) Management(ctx context.Context, caller *domainmodelsent
 	return identity, nil
 }
 
-func ReadClient(ctx context.Context, clients domaincontractsrepository.Client, spaces domaincontractsrepository.Space, identity *domainmodelsapp.ClientIdentity) (*domainmodelsentity.Client, error) {
+func ReadClient(ctx context.Context, clients domaincontractsrepository.Client, spaces domaincontractsrepository.Space, identity *domainmodelsentity.ClientIdentity) (*domainmodelsentity.Client, error) {
 	if identity == nil || identity.Id <= 0 || identity.SpaceId <= 0 || identity.Slug == "" {
 		return nil, Unauthorized(nil)
 	}

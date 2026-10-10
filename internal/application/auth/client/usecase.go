@@ -7,7 +7,7 @@ import (
 	applicationshared "github.com/MateWorkspace/lockmate/internal/application/shared"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
 	domaincontractsutility "github.com/MateWorkspace/lockmate/internal/domain/contracts/utility"
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
+	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
 	domainmodelslogger "github.com/MateWorkspace/lockmate/internal/domain/models/logger"
 	domainusecasesauth "github.com/MateWorkspace/lockmate/internal/domain/usecases/auth"
@@ -31,7 +31,7 @@ func NewUsecaseImpl(
 	return &usecase{client: client, space: space, keygen: keygen, logger: logger}
 }
 
-func (u *usecase) Authenticate(ctx context.Context, request domainusecasesauth.AuthenticateClientRequest) (result *domainmodelsapp.ClientIdentity, err error) {
+func (u *usecase) Authenticate(ctx context.Context, request domainusecasesauth.AuthenticateClientRequest) (result *domainmodelsentity.ClientIdentity, err error) {
 	const tag = tagPath + "/Authenticate"
 
 	if request.Slug == "" || request.Secret == "" {
@@ -79,7 +79,7 @@ func (u *usecase) Authenticate(ctx context.Context, request domainusecasesauth.A
 		return nil, err
 	}
 
-	result = &domainmodelsapp.ClientIdentity{Id: client.Id, SpaceId: client.SpaceId, Slug: client.Slug}
+	result = &domainmodelsentity.ClientIdentity{Id: client.Id, SpaceId: client.SpaceId, Slug: client.Slug}
 	if _, err := applicationshared.ReadClient(ctx, u.client, u.space, result); err != nil {
 		u.logger.Error(ctx, tag, "failed to validate client identity", domainmodelslogger.Meta{
 			"err": err,

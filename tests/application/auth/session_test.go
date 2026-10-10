@@ -7,7 +7,6 @@ import (
 
 	applicationauthsession "github.com/MateWorkspace/lockmate/internal/application/auth/session"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
 	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
 	domainusecasesauth "github.com/MateWorkspace/lockmate/internal/domain/usecases/auth"
@@ -17,8 +16,8 @@ import (
 func session(f *testshared.Fixture) domainusecasesauth.Session {
 	return applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.Password, f.Token, f.Validator, f.Transactor, f.Logger)
 }
-func clientIdentity() *domainmodelsapp.ClientIdentity {
-	return &domainmodelsapp.ClientIdentity{Id: 30, SpaceId: 10, Slug: "web"}
+func clientIdentity() *domainmodelsentity.ClientIdentity {
+	return &domainmodelsentity.ClientIdentity{Id: 30, SpaceId: 10, Slug: "web"}
 }
 func registerRequest() domainusecasesauth.RegisterRequest {
 	return domainusecasesauth.RegisterRequest{Name: "New user", Username: "new-user", Password: "password123"}

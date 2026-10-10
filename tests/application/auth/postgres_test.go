@@ -8,7 +8,6 @@ import (
 
 	applicationauthsession "github.com/MateWorkspace/lockmate/internal/application/auth/session"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
 	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
 	infrastructureutilitypassword "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/password"
@@ -34,7 +33,7 @@ func TestPostgresRegistrationCommitBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client := &domainmodelsapp.ClientIdentity{Id: clientId, SpaceId: spaceId, Slug: "web"}
+	client := &domainmodelsentity.ClientIdentity{Id: clientId, SpaceId: spaceId, Slug: "web"}
 	password := infrastructureutilitypassword.NewBcryptImpl(4)
 	token := infrastructureutilitytoken.NewJwtImpl("test-access-secret", "test-refresh-secret", time.Minute, time.Hour)
 	validator := infrastructureutilityvalidator.NewValidatorImpl()

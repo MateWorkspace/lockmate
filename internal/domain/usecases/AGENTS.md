@@ -31,7 +31,7 @@ Keep logical sections separated by blank lines; format Go changes with gofmt.
 
 Every operation receives context first. Protected operations receive trusted
 `*AccessClaims` next, then explicit target scope/IDs where applicable. Session
-operations receive a trusted `*app.ClientIdentity` instead. Presentation cannot
+operations receive a trusted `*entity.ClientIdentity` instead. Presentation cannot
 construct either identity from request fields or unsigned claims. Trace fields
 are diagnostics, not authenticated identity or numeric audit actors.
 

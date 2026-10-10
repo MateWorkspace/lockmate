@@ -3,7 +3,6 @@ package domainusecasesauth
 import (
 	"context"
 
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
 	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 )
 
@@ -12,16 +11,16 @@ import (
 type Session interface {
 	// SignIn verifies classic credentials before enrolling a missing membership.
 	// Suspended memberships are never reactivated by authentication.
-	SignIn(ctx context.Context, client *domainmodelsapp.ClientIdentity, request SignInRequest) (*SessionResult, error)
+	SignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request SignInRequest) (*SessionResult, error)
 	// Register creates user, credentials, membership, and default role atomically.
 	// Return generated tokens only after the transaction commits successfully.
-	Register(ctx context.Context, client *domainmodelsapp.ClientIdentity, request RegisterRequest) (*SessionResult, error)
+	Register(ctx context.Context, client *domainmodelsentity.ClientIdentity, request RegisterRequest) (*SessionResult, error)
 	// Refresh requires an existing active membership and reloads current grants.
 	// It issues a new pair without revoking the previously issued refresh token.
-	Refresh(ctx context.Context, client *domainmodelsapp.ClientIdentity, request RefreshRequest) (*SessionResult, error)
+	Refresh(ctx context.Context, client *domainmodelsentity.ClientIdentity, request RefreshRequest) (*SessionResult, error)
 	// AuthenticateAccessToken validates the token, rechecks live identity and
 	// membership ownership, and returns current grants. It never enrolls users.
-	AuthenticateAccessToken(ctx context.Context, client *domainmodelsapp.ClientIdentity, accessToken string) (*domainmodelsentity.AccessClaims, error)
+	AuthenticateAccessToken(ctx context.Context, client *domainmodelsentity.ClientIdentity, accessToken string) (*domainmodelsentity.AccessClaims, error)
 }
 
 type SignInRequest struct {

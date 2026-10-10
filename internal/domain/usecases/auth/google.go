@@ -3,12 +3,12 @@ package domainusecasesauth
 import (
 	"context"
 
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
+	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 )
 
 // Google combines provider sign-in and first-time registration in one flow.
 type Google interface {
-	BeginSignIn(ctx context.Context, client *domainmodelsapp.ClientIdentity, request BeginGoogleSignInRequest) (*BeginGoogleSignInResult, error)
+	BeginSignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request BeginGoogleSignInRequest) (*BeginGoogleSignInResult, error)
 	// SignInCallback resolves client scope from the validated OAuth attempt.
 	// Match by subject only; never link existing users by email coincidence.
 	// Create missing user/identity/membership and synchronize Google contacts
