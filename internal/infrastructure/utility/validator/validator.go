@@ -23,6 +23,7 @@ const (
 	phoneMaxLength    = 15
 	passwordMinLength = 8
 	passwordMaxLength = 72
+	originMaxLength   = 2048
 )
 
 type validatorImpl struct {
@@ -249,4 +250,16 @@ func (v *validatorImpl) ClientDesc(val string) error {
 		domainmodelserror.ClientDescInvalid,
 		domainmodelserror.ClientDescTooLong,
 	)
+}
+
+func (v *validatorImpl) ClientOrigin(val string) error {
+	if len(val) > originMaxLength {
+		return domainmodelserror.NewError("client origin must not exceed 2048 bytes", domainmodelserror.ClientOriginTooLong, nil)
+	}
+
+	if !validClientOrigin(val) {
+		return domainmodelserror.NewError("client origin must be a canonical HTTPS or local HTTP origin", domainmodelserror.ClientOriginInvalid, nil)
+	}
+
+	return nil
 }

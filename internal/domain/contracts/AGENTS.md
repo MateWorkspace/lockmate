@@ -8,7 +8,7 @@ frameworks outside this scope.
 ## Layout
 
 - `repository/`: persistence interfaces for space, permission, role, user,
-  classic auth, Google auth, client, space member, role permission, and space
+  classic auth, Google auth, client, client origin, space member, role permission, and space
   member role. Keep one contract file per entity.
 - `utility/`: tracer, logger, keygen, password, transactor, token, validator,
   permission guard, and Google OAuth interfaces. Keep one file per capability.
@@ -91,3 +91,11 @@ credentials in error messages.
 
 When changing a signature, align implementations, callers, and tests together.
 Behavior tests belong in `tests/` under the corresponding layer and capability.
+
+ClientOrigin derives space ownership through its client. Every management operation
+is space-scoped. Origins must already be canonical and validated through
+Validator.ClientOrigin before persistence. Ordinary reads include inactive
+records; IsAllowedOriginForClient and the global IsAllowedOrigin require active,
+nondeleted origins, clients, and spaces. A global CORS match never authenticates
+or identifies a client. Client/origin uniqueness includes inactive records but
+excludes deleted records.

@@ -245,6 +245,28 @@ Table clients [headercolor: #D97706] {
     }
 }
 
+Table client_origins [headercolor: #D97706] {
+    Note: 'A client may own many exact browser origins. Space ownership is derived through the client. The same origin may belong to several clients. CORS eligibility requires an active, nondeleted origin, client, and space; it does not authenticate a client or grant user permissions. Origin records are retained when their parent is soft-deleted.'
+
+    id         BIGINT      [pk, increment]
+    client_id  BIGINT      [not null]
+    origin     TEXT        [not null, note: 'Canonical scheme://host[:port], at most 2048 bytes. HTTPS or local HTTP only; no paths, wildcards, null origins, or default ports.']
+    is_active  BOOLEAN     [not null, default: true]
+    created_at TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ
+    created_by BIGINT
+    updated_by BIGINT
+    deleted_by BIGINT
+
+    Indexes {
+        (client_id, origin) [unique, name: 'uq_client_origins_client_id_origin', note: 'Partial: WHERE deleted_at IS NULL. Disabled records still reserve the origin; deleted records permit re-registration.']
+        client_id           [name: 'idx_client_origins_client_id']
+        origin              [name: 'idx_client_origins_origin', note: 'Partial: WHERE deleted_at IS NULL AND is_active = TRUE']
+        deleted_at          [name: 'idx_client_origins_deleted_at']
+    }
+}
+
 // Space ownership and global identity.
 Ref: permissions.space_id > spaces.id
 Ref: roles.space_id > spaces.id
@@ -253,6 +275,7 @@ Ref: space_members.user_id > users.id
 Ref: classic_auths.user_id > users.id
 Ref: google_auths.user_id > users.id
 Ref: clients.space_id > spaces.id
+Ref: client_origins.client_id > clients.id
 
 // Role grants and membership assignments.
 Ref: role_permission.space_id > spaces.id
@@ -285,5 +308,6 @@ TableGroup membership_access [color: #0891B2] {
 
 TableGroup application_clients [color: #D97706] {
     clients
-    Note: 'Space-owned consuming applications with hashed client secrets.'
+    client_origins
+    Note: 'Space-owned consuming applications with hashed client secrets and per-client browser origin allowlists.'
 }

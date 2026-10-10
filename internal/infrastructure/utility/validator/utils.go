@@ -3,7 +3,10 @@ package infrastructureutilityvalidator
 import (
 	"fmt"
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
+	"net/netip"
+	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -58,4 +61,101 @@ func validateText(field, val string, invalid, tooLong domainmodelserror.Type) er
 		}
 	}
 	return nil
+}
+
+func validClientOrigin(val string) bool {
+	for _, char := range val {
+		if char <= ' ' || char > '~' {
+			return false
+		}
+	}
+
+	parsed, err := url.Parse(val)
+	if err != nil || parsed.Opaque != "" || parsed.User != nil || parsed.Host == "" ||
+		parsed.Path != "" || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
+		return false
+	}
+
+	if parsed.Scheme != "https" && parsed.Scheme != "http" {
+		return false
+	}
+
+	host := parsed.Hostname()
+	local := host == "localhost"
+	canonicalHost := host
+	if address, err := netip.ParseAddr(host); err == nil {
+		if address.Zone() != "" {
+			return false
+		}
+
+		local = address.Unmap().IsLoopback()
+		canonicalHost = address.String()
+		if address.Is4In6() {
+			// Browser origin serialization uses hexadecimal IPv6 groups even
+			// for IPv4-mapped addresses; netip.String uses a dotted IPv4 tail.
+			bytes := address.As16()
+			canonicalHost = "::ffff:" + strconv.FormatUint(uint64(bytes[12])<<8|uint64(bytes[13]), 16) +
+				":" + strconv.FormatUint(uint64(bytes[14])<<8|uint64(bytes[15]), 16)
+		}
+
+		if address.Is6() {
+			canonicalHost = "[" + canonicalHost + "]"
+		}
+	} else if !validOriginHostname(host) {
+		return false
+	}
+
+	if parsed.Scheme == "http" && !local {
+		return false
+	}
+
+	canonical := parsed.Scheme + "://" + canonicalHost
+	if port := parsed.Port(); port != "" {
+		value, err := strconv.ParseUint(port, 10, 16)
+		if err != nil || value == 0 || parsed.Scheme == "https" && value == 443 || parsed.Scheme == "http" && value == 80 {
+			return false
+		}
+
+		canonical += ":" + strconv.FormatUint(value, 10)
+	}
+
+	if val != canonical {
+		return false
+	}
+
+	return true
+}
+
+func validOriginHostname(host string) bool {
+	if host == "" || len(host) > 253 || strings.ToLower(host) != host {
+		return false
+	}
+
+	labels := strings.Split(host, ".")
+	for _, label := range labels {
+		if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+
+		for _, char := range label {
+			if !(char >= 'a' && char <= 'z' || char >= '0' && char <= '9' || char == '-') {
+				return false
+			}
+		}
+	}
+
+	// Browsers interpret numeric final labels as IPv4 addresses, including
+	// abbreviated and hexadecimal forms. Only canonical IPs are accepted above.
+	last := labels[len(labels)-1]
+	if strings.Trim(last, "0123456789") == "" {
+		return false
+	}
+
+	if strings.HasPrefix(last, "0x") {
+		if strings.Trim(last[2:], "0123456789abcdef") == "" {
+			return false
+		}
+	}
+
+	return true
 }

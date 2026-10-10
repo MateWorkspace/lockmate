@@ -40,6 +40,9 @@ Users contain profile data. Username, password hash, email, and phone belong to
 Memberships connect global users to spaces. Roles and permissions belong to
 spaces, and assignment entities connect memberships to roles and roles to
 permissions. Clients contain their space, identity, secret hash, and redaction.
+ClientOrigin stores a client-owned canonical browser origin, active state, and
+creation/update/deletion audit fields. Its space is derived through the client;
+do not embed origin collections in Client or ClientIdentity.
 
 Keep repository-specific filters, arguments, summaries, and joined projections
 in repository contracts. Entity models represent stored records. Some entity

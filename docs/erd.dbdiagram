@@ -60,6 +60,18 @@
         "schemaName": "public",
         "x": -322.8087997606083,
         "y": 1158.892095909061
+      },
+      {
+        "name": "google_auths",
+        "schemaName": "public",
+        "x": 530.51025390625,
+        "y": 2556
+      },
+      {
+        "name": "client_origins",
+        "schemaName": "public",
+        "x": -98.37547885576384,
+        "y": 1715.390148284517
       }
     ],
     "tableGroupCollapseStates": [],

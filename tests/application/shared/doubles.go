@@ -653,6 +653,7 @@ type Validator struct {
 	ClientSlugFn     func(val string) error
 	ClientNameFn     func(val string) error
 	ClientDescFn     func(val string) error
+	ClientOriginFn   func(val string) error
 }
 
 var _ domaincontractsutility.Validator = (*Validator)(nil)
@@ -949,4 +950,12 @@ func (s *Logger) Info(ctx context.Context, tag, message string, meta domainmodel
 }
 func (s *Logger) Debug(ctx context.Context, tag, message string, meta domainmodelslogger.Meta) {
 	s.record("debug", tag, message, meta)
+}
+
+func (s *Validator) ClientOrigin(val string) error {
+	if s.ClientOriginFn == nil {
+		panic("unexpected Validator.ClientOrigin call")
+	}
+
+	return s.ClientOriginFn(val)
 }

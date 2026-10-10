@@ -6,6 +6,7 @@ import (
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
 	infrastructurerepositoryclassicauth "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/classic_auth"
 	infrastructurerepositoryclient "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client"
+	infrastructurerepositoryclientorigin "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client_origin"
 	infrastructurerepositorygoogleauth "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/google_auth"
 	infrastructurerepositorypermission "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/permission"
 	infrastructurerepositoryrole "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/role"
@@ -37,6 +38,7 @@ type fixture struct {
 	ClassicAuth                           domaincontractsrepository.ClassicAuth
 	GoogleAuth                            domaincontractsrepository.GoogleAuth
 	Client                                domaincontractsrepository.Client
+	ClientOrigin                          domaincontractsrepository.ClientOrigin
 	SpaceMember                           domaincontractsrepository.SpaceMember
 	RolePermission                        domaincontractsrepository.RolePermission
 	SpaceMemberRole                       domaincontractsrepository.SpaceMemberRole
@@ -102,6 +104,7 @@ func newFixture(t *testing.T) *fixture {
 	f.ClassicAuth = infrastructurerepositoryclassicauth.NewPostgresImpl(dt, &question, &dollar)
 	f.GoogleAuth = infrastructurerepositorygoogleauth.NewPostgresImpl(dt, &question, &dollar)
 	f.Client = infrastructurerepositoryclient.NewPostgresImpl(dt, &question, &dollar)
+	f.ClientOrigin = infrastructurerepositoryclientorigin.NewPostgresImpl(dt, &question, &dollar)
 	f.SpaceMember = infrastructurerepositoryspacemember.NewPostgresImpl(dt, &question, &dollar)
 	f.RolePermission = infrastructurerepositoryrolepermission.NewPostgresImpl(dt, &question, &dollar)
 	f.SpaceMemberRole = infrastructurerepositoryspacememberrole.NewPostgresImpl(dt, &question, &dollar)

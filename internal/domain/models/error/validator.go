@@ -21,6 +21,7 @@ var (
 	RoleDescInvalid  = errors.New("ROLE_DESC_INVALID")
 	RoleDescTooLong  = errors.New("ROLE_DESC_TOO_LONG")
 
+	UserNameInvalid      = errors.New("USER_NAME_INVALID")
 	UserNameTooLong      = errors.New("USER_NAME_TOO_LONG")
 	UserNameTooShort     = errors.New("USER_NAME_TOO_SHORT")
 	UserBioInvalid       = errors.New("USER_BIO_INVALID")
@@ -60,14 +61,12 @@ var (
 	ClientDescInvalid  = errors.New("CLIENT_DESC_INVALID")
 	ClientDescTooLong  = errors.New("CLIENT_DESC_TOO_LONG")
 
+	ClientOriginInvalid = errors.New("CLIENT_ORIGIN_INVALID")
+	ClientOriginTooLong = errors.New("CLIENT_ORIGIN_TOO_LONG")
+
 	SpaceDescInvalid = errors.New("SPACE_DESC_INVALID")
 	SpaceDescTooLong = errors.New("SPACE_DESC_TOO_LONG")
-)
 
-var UserNameInvalid = errors.New("USER_NAME_INVALID")
-
-// Environment configuration.
-var (
 	EnvironmentRequired = errors.New("ENVIRONMENT_REQUIRED")
 	EnvironmentInvalid  = errors.New("ENVIRONMENT_INVALID")
 )

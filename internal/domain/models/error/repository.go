@@ -32,6 +32,9 @@ var (
 	ClientNotFound     = errors.New("CLIENT_NOT_FOUND")
 	ClientSlugConflict = errors.New("CLIENT_SLUG_CONFLICT")
 
+	ClientOriginNotFound = errors.New("CLIENT_ORIGIN_NOT_FOUND")
+	ClientOriginConflict = errors.New("CLIENT_ORIGIN_CONFLICT")
+
 	SpaceMemberNotFound     = errors.New("SPACE_MEMBER_NOT_FOUND")
 	SpaceMemberConflict     = errors.New("SPACE_MEMBER_CONFLICT")
 	SpaceMemberRoleNotFound = errors.New("SPACE_MEMBER_ROLE_NOT_FOUND")

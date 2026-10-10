@@ -10,7 +10,8 @@ these adapters. Utilities return domain models and errors through their contract
 - `password/bcrypt.go`: password hashing and comparison.
 - `transactor/pgxdt.go`: adaptation of the shared mate-golang transaction helper.
 - `token/jwt.go`: access and refresh JWT generation and validation.
-- `validator/validator.go` and `utils.go`: field validation and shared helpers.
+- `validator/validator.go`: all validator contract methods; `utils.go`: shared
+  helpers, including URL and address checks for client origins.
 - `permission_guard/claims.go`: permission checks against access claims.
 - `tracer/context.go`: UUIDv7 event generation and context injection/extraction.
 - `logger/slog.go` and `normalize.go`: slog output and metadata normalization.
@@ -96,3 +97,10 @@ transaction context reuse. PostgreSQL tests require an isolated database via
 Run `go test ./...`, `go vet ./...`, and `go build ./...` from the Lockmate root
 when changing Go implementations. Documentation-only changes need a content and
 whitespace review.
+
+ClientOrigin validation accepts canonical HTTPS origins and HTTP only for
+localhost or loopback IP addresses. Accept valid ASCII DNS/punycode names and
+canonical IPs, omit default ports, and reject paths, credentials, queries,
+fragments, wildcards, null origins, whitespace, and trailing-dot hostnames.
+Nondefault ports are 1–65535; the limit is 2048 bytes. Reject noncanonical input
+rather than rewriting it, resolving DNS, or checking persistence.
