@@ -15,3 +15,9 @@ Do not add mutable global policies, runtime dispatch, role bypasses, or concrete
 infrastructure dependencies. Constructors and domain contracts stay independent
 of the catalog. Keep independent permission expectations in application tests so
 an accidental policy change cannot silently change both implementation and tests.
+
+Origin administration belongs to management Client but uses its own
+client_origin:add/get/set/remove slugs. Name constants after the client methods;
+do not reuse client metadata or secret permissions. Misc allowlist checks run
+before authentication and have no permission requirement. Include these slugs in
+future seed definitions; there is no seeder to modify yet.

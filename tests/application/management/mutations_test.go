@@ -18,7 +18,7 @@ func classic(f *testshared.Fixture) domainusecasesmanagement.ClassicAuth {
 	return applicationmanagementclassicauth.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.ClassicAuth, f.GoogleAuth, f.Guard, f.Validator, f.Logger, f.Transactor, f.Password, "")
 }
 func client(f *testshared.Fixture) domainusecasesmanagement.Client {
-	return applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "")
+	return applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.ClientOrigin, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "")
 }
 func TestAdministratorPasswordResetAndLastMethod(t *testing.T) {
 	f := testshared.NewFixture()

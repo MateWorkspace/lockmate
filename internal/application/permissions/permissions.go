@@ -124,3 +124,14 @@ const (
 	ProfileSecurityUpdateClassicAuth = "profile_security:set"
 	ProfileSecurityChangePassword    = "profile_security:set"
 )
+
+// Client-origin administration within management client operations.
+const (
+	ManagementClientCreateOrigin          = "client_origin:add"
+	ManagementClientReadOriginById        = "client_origin:get"
+	ManagementClientReadOriginByValue     = "client_origin:get"
+	ManagementClientReadOriginsByClientId = "client_origin:get"
+	ManagementClientReadOriginsByFilter   = "client_origin:get"
+	ManagementClientUpdateOriginById      = "client_origin:set"
+	ManagementClientDeleteOriginById      = "client_origin:remove"
+)

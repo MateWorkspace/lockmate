@@ -19,6 +19,7 @@ type Fixture struct {
 	Space           *Space
 	SpaceMember     *SpaceMember
 	Client          *Client
+	ClientOrigin    *ClientOrigin
 	ClassicAuth     *ClassicAuth
 	GoogleAuth      *GoogleAuth
 	SpaceMemberRole *SpaceMemberRole
@@ -47,7 +48,7 @@ type Fixture struct {
 
 func NewFixture() *Fixture {
 	f := &Fixture{
-		User: &User{}, Space: &Space{}, SpaceMember: &SpaceMember{}, Client: &Client{},
+		User: &User{}, Space: &Space{}, SpaceMember: &SpaceMember{}, Client: &Client{}, ClientOrigin: &ClientOrigin{},
 		ClassicAuth: &ClassicAuth{}, GoogleAuth: &GoogleAuth{}, SpaceMemberRole: &SpaceMemberRole{},
 		Role: &Role{}, Permission: &Permission{}, RolePermission: &RolePermission{},
 		Guard: &PermissionGuard{}, Password: &Password{}, Token: &Token{}, Keygen: &Keygen{}, Transactor: &Transactor{}, Logger: &Logger{},

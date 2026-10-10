@@ -224,31 +224,31 @@ func TestEveryProtectedOperation(t *testing.T) {
 			return err
 		}},
 		{name: "client/Create", permission: "client:add", scoped: true, call: func(f *testshared.Fixture) error {
-			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").Create(context.Background(), f.Caller, 10, domainusecasesmanagement.CreateClientRequest{})
+			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.ClientOrigin, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").Create(context.Background(), f.Caller, 10, domainusecasesmanagement.CreateClientRequest{})
 			return err
 		}},
 		{name: "client/ReadById", permission: "client:get", scoped: true, call: func(f *testshared.Fixture) error {
-			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").ReadById(context.Background(), f.Caller, 10, 40)
+			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.ClientOrigin, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").ReadById(context.Background(), f.Caller, 10, 40)
 			return err
 		}},
 		{name: "client/ReadBySlug", permission: "client:get", scoped: true, call: func(f *testshared.Fixture) error {
-			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").ReadBySlug(context.Background(), f.Caller, 10, "user")
+			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.ClientOrigin, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").ReadBySlug(context.Background(), f.Caller, 10, "user")
 			return err
 		}},
 		{name: "client/ReadByFilter", permission: "client:get", scoped: true, call: func(f *testshared.Fixture) error {
-			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").ReadByFilter(context.Background(), f.Caller, 10, domainusecasesmanagement.FilterClientRequest{})
+			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.ClientOrigin, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").ReadByFilter(context.Background(), f.Caller, 10, domainusecasesmanagement.FilterClientRequest{})
 			return err
 		}},
 		{name: "client/UpdateById", permission: "client:set", scoped: true, call: func(f *testshared.Fixture) error {
-			err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").UpdateById(context.Background(), f.Caller, 10, 40, domainusecasesmanagement.UpdateClientRequest{})
+			err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.ClientOrigin, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").UpdateById(context.Background(), f.Caller, 10, 40, domainusecasesmanagement.UpdateClientRequest{})
 			return err
 		}},
 		{name: "client/RotateSecret", permission: "client_secret:set", scoped: true, call: func(f *testshared.Fixture) error {
-			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").RotateSecret(context.Background(), f.Caller, 10, 40)
+			_, err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.ClientOrigin, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").RotateSecret(context.Background(), f.Caller, 10, 40)
 			return err
 		}},
 		{name: "client/DeleteById", permission: "client:remove", scoped: true, call: func(f *testshared.Fixture) error {
-			err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").DeleteById(context.Background(), f.Caller, 10, 40)
+			err := applicationmanagementclient.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Client, f.ClientOrigin, f.Guard, f.Validator, f.Logger, f.Transactor, f.Keygen, "").DeleteById(context.Background(), f.Caller, 10, 40)
 			return err
 		}},
 		{name: "space/Create", permission: "space:add", scoped: false, call: func(f *testshared.Fixture) error {
@@ -297,6 +297,35 @@ func TestEveryProtectedOperation(t *testing.T) {
 		}},
 		{name: "permission/DeleteById", permission: "permission:remove", scoped: true, call: func(f *testshared.Fixture) error {
 			err := applicationmanagementpermission.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, f.Permission, f.Guard, f.Validator, f.Logger, f.Transactor, "").DeleteById(context.Background(), f.Caller, 10, 40)
+			return err
+		}},
+
+		{name: "client/CreateOrigin", permission: "client_origin:add", scoped: true, call: func(f *testshared.Fixture) error {
+			_, err := client(f).CreateOrigin(context.Background(), f.Caller, 10, 30, domainusecasesmanagement.CreateClientOriginRequest{})
+			return err
+		}},
+		{name: "client/ReadOriginById", permission: "client_origin:get", scoped: true, call: func(f *testshared.Fixture) error {
+			_, err := client(f).ReadOriginById(context.Background(), f.Caller, 10, 30, 50)
+			return err
+		}},
+		{name: "client/ReadOriginByValue", permission: "client_origin:get", scoped: true, call: func(f *testshared.Fixture) error {
+			_, err := client(f).ReadOriginByValue(context.Background(), f.Caller, 10, 30, "https://app.example.com")
+			return err
+		}},
+		{name: "client/ReadOriginsByClientId", permission: "client_origin:get", scoped: true, call: func(f *testshared.Fixture) error {
+			_, err := client(f).ReadOriginsByClientId(context.Background(), f.Caller, 10, 30)
+			return err
+		}},
+		{name: "client/ReadOriginsByFilter", permission: "client_origin:get", scoped: true, call: func(f *testshared.Fixture) error {
+			_, err := client(f).ReadOriginsByFilter(context.Background(), f.Caller, 10, 30, domainusecasesmanagement.FilterClientOriginRequest{})
+			return err
+		}},
+		{name: "client/UpdateOriginById", permission: "client_origin:set", scoped: true, call: func(f *testshared.Fixture) error {
+			err := client(f).UpdateOriginById(context.Background(), f.Caller, 10, 30, 50, domainusecasesmanagement.UpdateClientOriginRequest{})
+			return err
+		}},
+		{name: "client/DeleteOriginById", permission: "client_origin:remove", scoped: true, call: func(f *testshared.Fixture) error {
+			err := client(f).DeleteOriginById(context.Background(), f.Caller, 10, 30, 50)
 			return err
 		}},
 	}

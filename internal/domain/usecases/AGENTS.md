@@ -19,7 +19,7 @@ composition, and seed definitions remain separate follow-up work.
 - `management/`: one interface file per current entity; Google identities expose
   monitoring reads only. Assignment entities retain separate files.
 - `misc/`: small helper usecases exposed to presentation through application,
-  starting with the tracer injection mirror in `tracer.go`.
+  including tracer injection and the pre-authentication allowed-origin helper.
 - `shared/`: `Page[T]` and credential-free classic-auth/client views that reuse
   existing repository summaries.
 
@@ -173,7 +173,7 @@ follow repository visibility rules; inactive targets remain manageable.
 | Own classic credential/password changes | `profile_security:set` |
 
 Entity prefixes are space, permission, role, user, classic_auth, google_auth,
-client, space_member, role_permission, and space_member_role. Seed definitions
+client, client_origin, space_member, role_permission, and space_member_role. Seed definitions
 must later follow this catalog; no seed implementation is introduced here.
 
 User.Create atomically creates a profile and required classic credentials; it
@@ -214,8 +214,9 @@ inspect with errors.As. Public responses use a safe Message/classification, neve
 the full Error() source chain. Never log request structs, passwords, hashes,
 tokens, raw secrets, OAuth codes/state/bindings, or provider token responses.
 
-Application implementations emit one sanitized error log per failed operation.
-Helpers do not duplicate it. Log successful CREATE/UPDATE/DELETE operations only
+Application implementations write explicit error logs at each failure handling
+point. Transaction callback failures also receive a distinct outer transaction
+failure log; shared helpers do not log. Log successful CREATE/UPDATE/DELETE operations only
 after commit, including registration, enrollment, password updates, contact sync
 when changed, and secret rotation. Routine reads, successful authentication
 without writes, and successful token validation remain quiet.
@@ -237,3 +238,22 @@ cross-space denials; last-method deletion protection; and one-time secret output
 Forgotten-password recovery, OTP/verification delivery, authentication-method
 linking/unlinking in profile, self-deletion/space departure, persisted sessions,
 server-side logout/revocation, API keys, caching, and object storage are deferred.
+
+## Client origins
+
+Client management owns origin administration through CreateOrigin,
+ReadOriginById, ReadOriginByValue, ReadOriginsByClientId, ReadOriginsByFilter,
+UpdateOriginById, and DeleteOriginById. All require explicit target space/client
+IDs and separate client_origin:add/get/set/remove permissions. Requests cannot
+supply ownership or audit actors. Exact origin operations verify client ownership;
+inactive clients and origins remain manageable. Validate canonical origins with
+the validator utility. Mutations own strict transactions and derive audit actors
+from the authenticated caller. Origin and activation changes are access updates.
+
+Misc AllowedOrigin exposes global and client-scoped checks before authentication.
+It delegates through ClientOrigin and Validator contracts without a permission
+check or transaction. Known invalid/oversized origins return false without error,
+logging, or database access. Operational failures remain errors and emit explicit
+logs; successful matches and ordinary denials stay quiet. Scoped IDs must be
+positive. A match does not authenticate or identify a client. Gin/CORS wiring and
+caching are outside these usecases.

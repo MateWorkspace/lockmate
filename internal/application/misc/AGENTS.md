@@ -21,3 +21,12 @@ Use domain import aliases, context-first methods, early returns, and readable
 whitespace. Keep unrelated helpers separate; add capabilities only when needed.
 Tests live in tests/application/misc and use injected contracts without mutating
 global UUID randomness.
+
+AllowedOrigin lives in allowed_origin/usecase.go. Inject the ClientOrigin
+repository, Validator, and Logger contracts. Expose global and scoped live
+allowlist checks without authentication, permissions, or transactions. Reject
+invalid scoped IDs as BadArgs. Known invalid/oversized origins return false, nil
+without logging or persistence; unexpected validation or repository failures
+return false with the original error and an explicit step-specific log. Never
+swallow operational failures or use an allowance as authenticated identity.
+Routine matches and nonmatches are quiet; middleware and caching are deferred.

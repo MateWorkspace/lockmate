@@ -20,6 +20,16 @@ type Client interface {
 	// RotateSecret returns the raw replacement once, after successful commit.
 	RotateSecret(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, id int64) (*ClientSecretResult, error)
 	DeleteById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId int64, id int64) error
+
+	// Origin administration always addresses a client within the target space.
+	// Origin IDs from another client return ClientOriginNotFound.
+	CreateOrigin(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request CreateClientOriginRequest) (int64, error)
+	ReadOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) (*domainmodelsentity.ClientOrigin, error)
+	ReadOriginByValue(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, origin string) (*domainmodelsentity.ClientOrigin, error)
+	ReadOriginsByClientId(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64) ([]domainmodelsentity.ClientOrigin, error)
+	ReadOriginsByFilter(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request FilterClientOriginRequest) (domainusecasesshared.Page[domainmodelsentity.ClientOrigin], error)
+	UpdateOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64, request UpdateClientOriginRequest) error
+	DeleteOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) error
 }
 
 type CreateClientRequest struct {
@@ -49,4 +59,21 @@ type UpdateClientRequest struct {
 type ClientSecretResult struct {
 	Client domainusecasesshared.ClientView `json:"client"`
 	Secret string                          `json:"secret"`
+}
+
+type CreateClientOriginRequest struct {
+	Origin   string
+	IsActive *bool
+}
+
+type UpdateClientOriginRequest struct {
+	Origin   *string
+	IsActive *bool
+}
+
+type FilterClientOriginRequest struct {
+	Page     int64
+	Limit    int64
+	Search   *string
+	IsActive *bool
 }

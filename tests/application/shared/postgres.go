@@ -14,6 +14,7 @@ import (
 	domaincontractsutility "github.com/MateWorkspace/lockmate/internal/domain/contracts/utility"
 	infrastructurerepositoryclassicauth "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/classic_auth"
 	infrastructurerepositoryclient "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client"
+	infrastructurerepositoryclientorigin "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client_origin"
 	infrastructurerepositoryrole "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/role"
 	infrastructurerepositoryspace "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space"
 	infrastructurerepositoryspacemember "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space_member"
@@ -31,6 +32,7 @@ type PostgresFixture struct {
 	Space           domaincontractsrepository.Space
 	Role            domaincontractsrepository.Role
 	Client          domaincontractsrepository.Client
+	ClientOrigin    domaincontractsrepository.ClientOrigin
 	ClassicAuth     domaincontractsrepository.ClassicAuth
 	SpaceMember     domaincontractsrepository.SpaceMember
 	SpaceMemberRole domaincontractsrepository.SpaceMemberRole
@@ -101,6 +103,7 @@ func NewPostgresFixture(t *testing.T) *PostgresFixture {
 		Space:           infrastructurerepositoryspace.NewPostgresImpl(dt, &question, &dollar),
 		Role:            infrastructurerepositoryrole.NewPostgresImpl(dt, &question, &dollar),
 		Client:          infrastructurerepositoryclient.NewPostgresImpl(dt, &question, &dollar),
+		ClientOrigin:    infrastructurerepositoryclientorigin.NewPostgresImpl(dt, &question, &dollar),
 		ClassicAuth:     infrastructurerepositoryclassicauth.NewPostgresImpl(dt, &question, &dollar),
 		SpaceMember:     infrastructurerepositoryspacemember.NewPostgresImpl(dt, &question, &dollar),
 		SpaceMemberRole: infrastructurerepositoryspacememberrole.NewPostgresImpl(dt, &question, &dollar),

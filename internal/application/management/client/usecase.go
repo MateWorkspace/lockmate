@@ -17,16 +17,17 @@ import (
 const tagPath = "management/client"
 
 type usecase struct {
-	user        domaincontractsrepository.User
-	space       domaincontractsrepository.Space
-	spaceMember domaincontractsrepository.SpaceMember
-	client      domaincontractsrepository.Client
-	guard       domaincontractsutility.PermissionGuard
-	validator   domaincontractsutility.Validator
-	logger      domaincontractsutility.Logger
-	transactor  domaincontractsutility.Transactor
-	keygen      domaincontractsutility.Keygen
-	identity    *applicationshared.IdentityReader
+	user         domaincontractsrepository.User
+	space        domaincontractsrepository.Space
+	spaceMember  domaincontractsrepository.SpaceMember
+	client       domaincontractsrepository.Client
+	clientOrigin domaincontractsrepository.ClientOrigin
+	guard        domaincontractsutility.PermissionGuard
+	validator    domaincontractsutility.Validator
+	logger       domaincontractsutility.Logger
+	transactor   domaincontractsutility.Transactor
+	keygen       domaincontractsutility.Keygen
+	identity     *applicationshared.IdentityReader
 }
 
 func NewUsecaseImpl(
@@ -34,6 +35,7 @@ func NewUsecaseImpl(
 	space domaincontractsrepository.Space,
 	spaceMember domaincontractsrepository.SpaceMember,
 	client domaincontractsrepository.Client,
+	clientOrigin domaincontractsrepository.ClientOrigin,
 	guard domaincontractsutility.PermissionGuard,
 	validator domaincontractsutility.Validator,
 	logger domaincontractsutility.Logger,
@@ -42,16 +44,17 @@ func NewUsecaseImpl(
 	controlSpaceSlug string,
 ) domainusecasesmanagement.Client {
 	return &usecase{
-		user:        user,
-		space:       space,
-		spaceMember: spaceMember,
-		client:      client,
-		guard:       guard,
-		validator:   validator,
-		logger:      logger,
-		transactor:  transactor,
-		keygen:      keygen,
-		identity:    applicationshared.NewIdentityReader(user, space, spaceMember, controlSpaceSlug),
+		user:         user,
+		space:        space,
+		spaceMember:  spaceMember,
+		client:       client,
+		clientOrigin: clientOrigin,
+		guard:        guard,
+		validator:    validator,
+		logger:       logger,
+		transactor:   transactor,
+		keygen:       keygen,
+		identity:     applicationshared.NewIdentityReader(user, space, spaceMember, controlSpaceSlug),
 	}
 }
 
@@ -772,6 +775,1063 @@ func (u *usecase) DeleteById(ctx context.Context, caller *domainmodelsentity.Acc
 		"caller_space_id":        callerSpaceId,
 		"caller_space_member_id": callerSpaceMemberId,
 		"space_id":               spaceId,
+		"id":                     id,
+	})
+
+	return nil
+}
+
+func (u *usecase) CreateOrigin(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request domainusecasesmanagement.CreateClientOriginRequest) (int64, error) {
+	const tag = tagPath + "/CreateOrigin"
+
+	if err := u.guard.Check(caller, []string{applicationpermissions.ManagementClientCreateOrigin}); err != nil {
+		u.logger.Error(ctx, tag, "permission denied to create client origin", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return 0, err
+	}
+
+	callerUserId, callerSpaceId, callerSpaceMemberId := int64(0), int64(0), int64(0)
+	if caller != nil {
+		callerUserId = caller.UserId
+		callerSpaceId = caller.SpaceId
+		callerSpaceMemberId = caller.SpaceMemberId
+	}
+
+	var id int64
+	err := u.transactor.WithTx(ctx, func(ctx context.Context) error {
+		if _, err := u.identity.Management(ctx, caller, &spaceId); err != nil {
+			u.logger.Error(ctx, tag, "failed to authorize management scope to create client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if err := applicationshared.ValidateIds(spaceId, clientId); err != nil {
+			u.logger.Error(ctx, tag, "invalid identifiers to create client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if err := u.validator.ClientOrigin(request.Origin); err != nil {
+			u.logger.Error(ctx, tag, "invalid origin for client origin creation", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		client, err := u.client.ReadById(ctx, spaceId, clientId)
+		if err != nil {
+			u.logger.Error(ctx, tag, "failed to read client to create client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if client == nil {
+			err := domainmodelserror.NewError("client result missing while attempting to create client origin", domainmodelserror.Failure, nil)
+			u.logger.Error(ctx, tag, "client result missing while attempting to create client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if client.Id != clientId || client.SpaceId != spaceId || client.AuditDelete.At != nil {
+			err := domainmodelserror.NewError("client not found while attempting to create client origin", domainmodelserror.ClientNotFound, nil)
+			u.logger.Error(ctx, tag, "client not found while attempting to create client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		id, err = u.clientOrigin.Create(ctx, spaceId, domaincontractsrepository.CreateClientOriginArgs{
+			ClientId: clientId,
+			Origin:   request.Origin,
+			IsActive: request.IsActive,
+			By:       &caller.UserId,
+		})
+		if err != nil {
+			u.logger.Error(ctx, tag, "failed to create client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if id <= 0 {
+			err := domainmodelserror.NewError("client origin creation returned invalid identifier", domainmodelserror.Failure, nil)
+			u.logger.Error(ctx, tag, "client origin creation returned invalid identifier", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to complete client origin creation transaction", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return 0, err
+	}
+
+	u.logger.Info(ctx, tag, "created client origin", domainmodelslogger.Meta{
+		"caller_user_id":         callerUserId,
+		"caller_space_id":        callerSpaceId,
+		"caller_space_member_id": callerSpaceMemberId,
+		"space_id":               spaceId,
+		"client_id":              clientId,
+		"id":                     id,
+	})
+
+	return id, nil
+}
+
+func (u *usecase) ReadOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) (*domainmodelsentity.ClientOrigin, error) {
+	const tag = tagPath + "/ReadOriginById"
+
+	if err := u.guard.Check(caller, []string{applicationpermissions.ManagementClientReadOriginById}); err != nil {
+		u.logger.Error(ctx, tag, "permission denied to read client origin by id", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return nil, err
+	}
+
+	callerUserId, callerSpaceId, callerSpaceMemberId := int64(0), int64(0), int64(0)
+	if caller != nil {
+		callerUserId = caller.UserId
+		callerSpaceId = caller.SpaceId
+		callerSpaceMemberId = caller.SpaceMemberId
+	}
+
+	if _, err := u.identity.Management(ctx, caller, &spaceId); err != nil {
+		u.logger.Error(ctx, tag, "failed to authorize management scope to read client origin by id", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if err := applicationshared.ValidateIds(spaceId, clientId, id); err != nil {
+		u.logger.Error(ctx, tag, "invalid identifiers to read client origin by id", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	client, err := u.client.ReadById(ctx, spaceId, clientId)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to read client to read client origin by id", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if client == nil {
+		err := domainmodelserror.NewError("client result missing while attempting to read client origin by id", domainmodelserror.Failure, nil)
+		u.logger.Error(ctx, tag, "client result missing while attempting to read client origin by id", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if client.Id != clientId || client.SpaceId != spaceId || client.AuditDelete.At != nil {
+		err := domainmodelserror.NewError("client not found while attempting to read client origin by id", domainmodelserror.ClientNotFound, nil)
+		u.logger.Error(ctx, tag, "client not found while attempting to read client origin by id", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	item, err := u.clientOrigin.ReadById(ctx, spaceId, id)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to read origin record to read client origin by id", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if item == nil {
+		err := domainmodelserror.NewError("client origin result missing while attempting to read client origin by id", domainmodelserror.Failure, nil)
+		u.logger.Error(ctx, tag, "client origin result missing while attempting to read client origin by id", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if item.Id != id || item.ClientId != clientId || item.AuditDelete.At != nil {
+		err := domainmodelserror.NewError("client origin not found for requested client while attempting to read client origin by id", domainmodelserror.ClientOriginNotFound, nil)
+		u.logger.Error(ctx, tag, "client origin not found for requested client while attempting to read client origin by id", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	return item, nil
+}
+
+func (u *usecase) ReadOriginByValue(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, origin string) (*domainmodelsentity.ClientOrigin, error) {
+	const tag = tagPath + "/ReadOriginByValue"
+
+	if err := u.guard.Check(caller, []string{applicationpermissions.ManagementClientReadOriginByValue}); err != nil {
+		u.logger.Error(ctx, tag, "permission denied to read client origin by value", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return nil, err
+	}
+
+	callerUserId, callerSpaceId, callerSpaceMemberId := int64(0), int64(0), int64(0)
+	if caller != nil {
+		callerUserId = caller.UserId
+		callerSpaceId = caller.SpaceId
+		callerSpaceMemberId = caller.SpaceMemberId
+	}
+
+	if _, err := u.identity.Management(ctx, caller, &spaceId); err != nil {
+		u.logger.Error(ctx, tag, "failed to authorize management scope to read client origin by value", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if err := applicationshared.ValidateIds(spaceId, clientId); err != nil {
+		u.logger.Error(ctx, tag, "invalid identifiers to read client origin by value", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if err := u.validator.ClientOrigin(origin); err != nil {
+		u.logger.Error(ctx, tag, "invalid origin for client origin lookup", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	client, err := u.client.ReadById(ctx, spaceId, clientId)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to read client to read client origin by value", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if client == nil {
+		err := domainmodelserror.NewError("client result missing while attempting to read client origin by value", domainmodelserror.Failure, nil)
+		u.logger.Error(ctx, tag, "client result missing while attempting to read client origin by value", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if client.Id != clientId || client.SpaceId != spaceId || client.AuditDelete.At != nil {
+		err := domainmodelserror.NewError("client not found while attempting to read client origin by value", domainmodelserror.ClientNotFound, nil)
+		u.logger.Error(ctx, tag, "client not found while attempting to read client origin by value", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	item, err := u.clientOrigin.ReadByClientIdAndOrigin(ctx, spaceId, clientId, origin)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to read client origin by value", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if item == nil {
+		err := domainmodelserror.NewError("client origin result missing during value lookup", domainmodelserror.Failure, nil)
+		u.logger.Error(ctx, tag, "client origin result missing during value lookup", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if item.ClientId != clientId || item.Origin != origin || item.AuditDelete.At != nil {
+		err := domainmodelserror.NewError("client origin not found for requested client and value", domainmodelserror.ClientOriginNotFound, nil)
+		u.logger.Error(ctx, tag, "client origin not found for requested client and value", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	return item, nil
+}
+
+func (u *usecase) ReadOriginsByClientId(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64) ([]domainmodelsentity.ClientOrigin, error) {
+	const tag = tagPath + "/ReadOriginsByClientId"
+
+	if err := u.guard.Check(caller, []string{applicationpermissions.ManagementClientReadOriginsByClientId}); err != nil {
+		u.logger.Error(ctx, tag, "permission denied to list client origins", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return nil, err
+	}
+
+	callerUserId, callerSpaceId, callerSpaceMemberId := int64(0), int64(0), int64(0)
+	if caller != nil {
+		callerUserId = caller.UserId
+		callerSpaceId = caller.SpaceId
+		callerSpaceMemberId = caller.SpaceMemberId
+	}
+
+	if _, err := u.identity.Management(ctx, caller, &spaceId); err != nil {
+		u.logger.Error(ctx, tag, "failed to authorize management scope to list client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if err := applicationshared.ValidateIds(spaceId, clientId); err != nil {
+		u.logger.Error(ctx, tag, "invalid identifiers to list client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	client, err := u.client.ReadById(ctx, spaceId, clientId)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to read client to list client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if client == nil {
+		err := domainmodelserror.NewError("client result missing while attempting to list client origins", domainmodelserror.Failure, nil)
+		u.logger.Error(ctx, tag, "client result missing while attempting to list client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if client.Id != clientId || client.SpaceId != spaceId || client.AuditDelete.At != nil {
+		err := domainmodelserror.NewError("client not found while attempting to list client origins", domainmodelserror.ClientNotFound, nil)
+		u.logger.Error(ctx, tag, "client not found while attempting to list client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	items, err := u.clientOrigin.ReadByClientId(ctx, spaceId, clientId)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to list client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return nil, err
+	}
+
+	if items == nil {
+		items = make([]domainmodelsentity.ClientOrigin, 0)
+	}
+
+	return items, nil
+}
+
+func (u *usecase) ReadOriginsByFilter(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request domainusecasesmanagement.FilterClientOriginRequest) (domainusecasesshared.Page[domainmodelsentity.ClientOrigin], error) {
+	const tag = tagPath + "/ReadOriginsByFilter"
+
+	if err := u.guard.Check(caller, []string{applicationpermissions.ManagementClientReadOriginsByFilter}); err != nil {
+		u.logger.Error(ctx, tag, "permission denied to filter client origins", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{}, err
+	}
+
+	callerUserId, callerSpaceId, callerSpaceMemberId := int64(0), int64(0), int64(0)
+	if caller != nil {
+		callerUserId = caller.UserId
+		callerSpaceId = caller.SpaceId
+		callerSpaceMemberId = caller.SpaceMemberId
+	}
+
+	if _, err := u.identity.Management(ctx, caller, &spaceId); err != nil {
+		u.logger.Error(ctx, tag, "failed to authorize management scope to filter client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{}, err
+	}
+
+	if err := applicationshared.ValidateIds(spaceId, clientId); err != nil {
+		u.logger.Error(ctx, tag, "invalid identifiers to filter client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{}, err
+	}
+
+	if err := applicationshared.ValidatePagination(request.Page, request.Limit); err != nil {
+		u.logger.Error(ctx, tag, "invalid client origin pagination", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{}, err
+	}
+
+	client, err := u.client.ReadById(ctx, spaceId, clientId)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to read client to filter client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{}, err
+	}
+
+	if client == nil {
+		err := domainmodelserror.NewError("client result missing while attempting to filter client origins", domainmodelserror.Failure, nil)
+		u.logger.Error(ctx, tag, "client result missing while attempting to filter client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{}, err
+	}
+
+	if client.Id != clientId || client.SpaceId != spaceId || client.AuditDelete.At != nil {
+		err := domainmodelserror.NewError("client not found while attempting to filter client origins", domainmodelserror.ClientNotFound, nil)
+		u.logger.Error(ctx, tag, "client not found while attempting to filter client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{}, err
+	}
+
+	items, total, err := u.clientOrigin.ReadByFilter(ctx, spaceId, domaincontractsrepository.ClientOriginFilter{
+		Page:     request.Page,
+		Limit:    request.Limit,
+		ClientId: &clientId,
+		Search:   request.Search,
+		IsActive: request.IsActive,
+	})
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to filter client origins", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"err":                    err,
+		})
+
+		return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{}, err
+	}
+
+	if items == nil {
+		items = make([]domainmodelsentity.ClientOrigin, 0)
+	}
+
+	return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{Items: items, Total: total}, nil
+}
+
+func (u *usecase) UpdateOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64, request domainusecasesmanagement.UpdateClientOriginRequest) error {
+	const tag = tagPath + "/UpdateOriginById"
+
+	if err := u.guard.Check(caller, []string{applicationpermissions.ManagementClientUpdateOriginById}); err != nil {
+		u.logger.Error(ctx, tag, "permission denied to update client origin", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return err
+	}
+
+	callerUserId, callerSpaceId, callerSpaceMemberId := int64(0), int64(0), int64(0)
+	if caller != nil {
+		callerUserId = caller.UserId
+		callerSpaceId = caller.SpaceId
+		callerSpaceMemberId = caller.SpaceMemberId
+	}
+
+	err := u.transactor.WithTx(ctx, func(ctx context.Context) error {
+		if _, err := u.identity.Management(ctx, caller, &spaceId); err != nil {
+			u.logger.Error(ctx, tag, "failed to authorize management scope to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if err := applicationshared.ValidateIds(spaceId, clientId, id); err != nil {
+			u.logger.Error(ctx, tag, "invalid identifiers to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if request.Origin != nil {
+			if err := u.validator.ClientOrigin(*request.Origin); err != nil {
+				u.logger.Error(ctx, tag, "invalid replacement client origin", domainmodelslogger.Meta{
+					"caller_user_id":         callerUserId,
+					"caller_space_id":        callerSpaceId,
+					"caller_space_member_id": callerSpaceMemberId,
+					"space_id":               spaceId,
+					"client_id":              clientId,
+					"id":                     id,
+					"err":                    err,
+				})
+
+				return err
+			}
+
+		}
+
+		client, err := u.client.ReadById(ctx, spaceId, clientId)
+		if err != nil {
+			u.logger.Error(ctx, tag, "failed to read client to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if client == nil {
+			err := domainmodelserror.NewError("client result missing while attempting to update client origin", domainmodelserror.Failure, nil)
+			u.logger.Error(ctx, tag, "client result missing while attempting to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if client.Id != clientId || client.SpaceId != spaceId || client.AuditDelete.At != nil {
+			err := domainmodelserror.NewError("client not found while attempting to update client origin", domainmodelserror.ClientNotFound, nil)
+			u.logger.Error(ctx, tag, "client not found while attempting to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		item, err := u.clientOrigin.ReadById(ctx, spaceId, id)
+		if err != nil {
+			u.logger.Error(ctx, tag, "failed to read origin record to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if item == nil {
+			err := domainmodelserror.NewError("client origin result missing while attempting to update client origin", domainmodelserror.Failure, nil)
+			u.logger.Error(ctx, tag, "client origin result missing while attempting to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if item.Id != id || item.ClientId != clientId || item.AuditDelete.At != nil {
+			err := domainmodelserror.NewError("client origin not found for requested client while attempting to update client origin", domainmodelserror.ClientOriginNotFound, nil)
+			u.logger.Error(ctx, tag, "client origin not found for requested client while attempting to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if err := u.clientOrigin.UpdateById(ctx, spaceId, id, domaincontractsrepository.UpdateClientOriginArgs{Origin: request.Origin, IsActive: request.IsActive, By: &caller.UserId}); err != nil {
+			u.logger.Error(ctx, tag, "failed to update client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to complete client origin update transaction", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return err
+	}
+
+	if request.Origin != nil || request.IsActive != nil {
+		u.logger.Info(ctx, tag, "updated client origin", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+		})
+	}
+
+	return nil
+}
+
+func (u *usecase) DeleteOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) error {
+	const tag = tagPath + "/DeleteOriginById"
+
+	if err := u.guard.Check(caller, []string{applicationpermissions.ManagementClientDeleteOriginById}); err != nil {
+		u.logger.Error(ctx, tag, "permission denied to delete client origin", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return err
+	}
+
+	callerUserId, callerSpaceId, callerSpaceMemberId := int64(0), int64(0), int64(0)
+	if caller != nil {
+		callerUserId = caller.UserId
+		callerSpaceId = caller.SpaceId
+		callerSpaceMemberId = caller.SpaceMemberId
+	}
+
+	err := u.transactor.WithTx(ctx, func(ctx context.Context) error {
+		if _, err := u.identity.Management(ctx, caller, &spaceId); err != nil {
+			u.logger.Error(ctx, tag, "failed to authorize management scope to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if err := applicationshared.ValidateIds(spaceId, clientId, id); err != nil {
+			u.logger.Error(ctx, tag, "invalid identifiers to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		client, err := u.client.ReadById(ctx, spaceId, clientId)
+		if err != nil {
+			u.logger.Error(ctx, tag, "failed to read client to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if client == nil {
+			err := domainmodelserror.NewError("client result missing while attempting to delete client origin", domainmodelserror.Failure, nil)
+			u.logger.Error(ctx, tag, "client result missing while attempting to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if client.Id != clientId || client.SpaceId != spaceId || client.AuditDelete.At != nil {
+			err := domainmodelserror.NewError("client not found while attempting to delete client origin", domainmodelserror.ClientNotFound, nil)
+			u.logger.Error(ctx, tag, "client not found while attempting to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		item, err := u.clientOrigin.ReadById(ctx, spaceId, id)
+		if err != nil {
+			u.logger.Error(ctx, tag, "failed to read origin record to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if item == nil {
+			err := domainmodelserror.NewError("client origin result missing while attempting to delete client origin", domainmodelserror.Failure, nil)
+			u.logger.Error(ctx, tag, "client origin result missing while attempting to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if item.Id != id || item.ClientId != clientId || item.AuditDelete.At != nil {
+			err := domainmodelserror.NewError("client origin not found for requested client while attempting to delete client origin", domainmodelserror.ClientOriginNotFound, nil)
+			u.logger.Error(ctx, tag, "client origin not found for requested client while attempting to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		if err := u.clientOrigin.DeleteById(ctx, spaceId, id, &caller.UserId); err != nil {
+			u.logger.Error(ctx, tag, "failed to delete client origin", domainmodelslogger.Meta{
+				"caller_user_id":         callerUserId,
+				"caller_space_id":        callerSpaceId,
+				"caller_space_member_id": callerSpaceMemberId,
+				"space_id":               spaceId,
+				"client_id":              clientId,
+				"id":                     id,
+				"err":                    err,
+			})
+
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to complete client origin deletion transaction", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"client_id":              clientId,
+			"id":                     id,
+			"err":                    err,
+		})
+
+		return err
+	}
+
+	u.logger.Info(ctx, tag, "deleted client origin", domainmodelslogger.Meta{
+		"caller_user_id":         callerUserId,
+		"caller_space_id":        callerSpaceId,
+		"caller_space_member_id": callerSpaceMemberId,
+		"space_id":               spaceId,
+		"client_id":              clientId,
 		"id":                     id,
 	})
 
