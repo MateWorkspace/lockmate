@@ -12,14 +12,14 @@ these adapters. Utilities return domain models and errors through their contract
 - `token/jwt.go`: access and refresh JWT generation and validation.
 - `validator/validator.go` and `utils.go`: field validation and shared helpers.
 - `permission_guard/claims.go`: permission checks against access claims.
-- `tracer/context.go`: context injection and extraction of application traces.
+- `tracer/context.go`: UUIDv7 event generation and context injection/extraction.
 - `logger/slog.go` and `normalize.go`: slog output and metadata normalization.
 
 Use `infrastructureutility<capability>` package names, with concatenated words
 for multiword capabilities. Concrete structs are private and dependencies are
 explicit fields. Constructors follow `New<Implementation>Impl` and return the
-domain interface. The transactor constructor directly returns the compatible
-pgxdt implementation.
+domain interface. The transactor wrapper preserves callback errors and maps
+strict pgxdt lifecycle failures into domain classifications.
 
 Use explicit domain import aliases, constructor-before-method ordering, early
 returns, and blank lines between validation, computation, and return steps.
@@ -31,12 +31,15 @@ helper package for code used by only one utility. Format Go changes with gofmt.
 Tracer uses a private context key and stores the domain trace as a value.
 Injection derives a context preserving cancellation and deadlines; extraction
 returns a copy or the domain trace-not-found error. Do not generate trace IDs
-inside this adapter.
+at presentation. GenerateEventId uses UUIDv7 and preserves generation failures
+as TraceEventIdFailed with their native cause.
 
-Transactor delegates to `mate-golang/pgxdt`. Repositories and transactor must use
-the same execution wrapper. Pass the callback's context through every operation
-in a transaction. Nested calls reuse the existing transaction without savepoints;
-propagate errors so the outer callback can roll back. Preserve callback errors.
+Transactor wraps `mate-golang/pgxdt.NewTransactor`. Repositories and transactor use
+the same pool. Pass the callback's context through every operation
+in a transaction. Application nesting is rejected as BadState; repository
+NewPgxdt calls retain reuse without savepoints. Preserve callback errors unchanged;
+classify lifecycle deadlines as Timeout, cancellation as BadState, and other
+driver failures as Failure, preserving native causes. Propagate errors to roll back.
 
 Logger uses slog exclusively. Configure JSON or text output through the supplied
 handler. Respect the domain level threshold, including `NONE`; ensure the handler

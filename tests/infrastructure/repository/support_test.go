@@ -60,7 +60,7 @@ func newFixture(t *testing.T) *fixture {
 	admin, err := pgxpool.New(ctx, url)
 	require(t, err)
 	schema := "repo_" + regexp.MustCompile("-").ReplaceAllString(uuid.NewString(), "")
-	_, err = admin.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public")
+	_, err = admin.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtext('lockmate/test/extensions')); CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public")
 	require(t, err)
 	_, err = admin.Exec(ctx, "CREATE SCHEMA "+schema)
 	require(t, err)

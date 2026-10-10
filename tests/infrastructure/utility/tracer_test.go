@@ -72,3 +72,18 @@ func TestTracerReplacementAndZeroValue(t *testing.T) {
 		t.Fatal("replacement mutated the parent trace")
 	}
 }
+
+func TestTracerGeneratesFreshV7EventIds(t *testing.T) {
+	tracer := infrastructureutilitytracer.NewContextImpl()
+	first, err := tracer.GenerateEventId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := tracer.GenerateEventId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == uuid.Nil || first == second || first.Version() != 7 || second.Version() != 7 {
+		t.Fatal("expected distinct nonzero UUIDv7 event identifiers")
+	}
+}

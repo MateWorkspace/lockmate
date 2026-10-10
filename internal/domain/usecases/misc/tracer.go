@@ -3,13 +3,11 @@ package domainusecasesmisc
 import (
 	"context"
 
-	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
+	"github.com/google/uuid"
 )
 
-// Tracer exposes trace injection to presentation through an application usecase.
-// Application delegates to the tracer utility contract, preserving the parent
-// context's cancellation and deadlines. Trace values are diagnostic metadata,
-// never authenticated identity.
+// Tracer generates an event ID internally and injects external diagnostic metadata.
+// The derived context preserves parent values, cancellation, and deadlines.
 type Tracer interface {
-	Inject(ctx context.Context, trace domainmodelsapp.Trace) (newCtx context.Context)
+	Inject(ctx context.Context, clientSlug string, clientExecId uuid.UUID) (newCtx context.Context, err error)
 }

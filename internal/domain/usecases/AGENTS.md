@@ -6,10 +6,9 @@ Define application behavior through interfaces and request/result values.
 Implementation belongs in application; domain usecases must not import
 infrastructure, transport bindings, database drivers, or provider SDKs.
 
-The current Go implementation provides declarations only. Rules below are
-requirements for future application implementations, not authorization enforced
-by these interfaces. Application, Google adapters/configuration, presentation,
-composition, and seed definitions are separate follow-up work.
+Application implements the interfaces and enforces the rules below. Interfaces
+alone do not enforce authorization. Google adapters/configuration, presentation,
+composition, and seed definitions remain separate follow-up work.
 
 ## Layout and style
 
@@ -50,14 +49,16 @@ Preferences replace JSON values; avatar paths change metadata without storage I/
 
 Misc usecases provide application entry points for small utility operations that
 presentation needs. Presentation calls the usecase rather than a utility contract
-or concrete infrastructure adapter. Future application implementations delegate
+or concrete infrastructure adapter. Application implementations delegate
 through injected domain utility contracts.
 
-Misc Tracer mirrors only the utility's Inject operation. Presentation maps trace
-metadata into the domain Trace value, injects it through this usecase, and passes
-the returned context to subsequent application calls. Preserve parent cancellation
-and deadlines; do not generate IDs, authenticate callers, or emit logs here.
-Trace extraction remains an internal utility operation. Add other helpers only
+Misc Tracer receives only client slug and execution UUID from presentation. It
+generates a fresh event UUID through the tracer utility, assembles the domain
+Trace, and returns the injected context plus an error. Presentation cannot choose
+the event UUID. Preserve parent values, cancellation, and deadlines; empty slug
+and zero execution UUID remain absent metadata. Generation failure does not
+inject and emits one sanitized error; success stays quiet. Trace extraction
+remains an internal utility operation. Add other helpers only
 when presentation has a concrete need; keep unrelated helpers in separate files.
 
 ## Client and session authentication
@@ -143,7 +144,7 @@ add/delete authentication methods, or set verification flags.
 
 ## Management and permissions
 
-Control-space slug comes from future application options, defaulting to `lockmate`.
+Control-space slug comes from management constructor arguments, defaulting to `lockmate`.
 Resolve it by immutable slug; never grant authority just because a role is named
 super or admin. Global User, Space, ClassicAuth, and GoogleAuth management requires
 control-space permissions. Scoped management allows either target-space authority
@@ -193,7 +194,7 @@ repository's atomic dependent cleanup.
 Monitoring covers current records, authentication summaries, memberships, and
 grants, not historical logins or persisted sessions.
 
-## Dependencies, errors, and future application logging
+## Dependencies, errors, and application logging
 
 Use matching repository contracts, Validator, PermissionGuard, Logger, and
 Transactor. Client/secret operations also use Keygen; classic credentials use
@@ -204,15 +205,16 @@ into context models or import concrete adapters into application.
 
 Pass the transaction callback context to every repository operation. Propagate
 errors to roll back, including nested failures. Credential-producing feature
-operations own their top-level commit boundary and must be called outside an
-outer transaction so returned tokens or raw secrets represent committed writes.
+operations own their top-level commit boundary. The strict application transactor
+rejects an existing transaction with BadState; reusable repository transactions
+still compose within its callback. Returned credentials represent committed writes.
 
 Reuse domain errors and preserve native Source. Classify through errors.Is and
 inspect with errors.As. Public responses use a safe Message/classification, never
 the full Error() source chain. Never log request structs, passwords, hashes,
 tokens, raw secrets, OAuth codes/state/bindings, or provider token responses.
 
-Future application implementations emit one error log per failed operation.
+Application implementations emit one sanitized error log per failed operation.
 Helpers do not duplicate it. Log successful CREATE/UPDATE/DELETE operations only
 after commit, including registration, enrollment, password updates, contact sync
 when changed, and secret rotation. Routine reads, successful authentication
@@ -226,7 +228,7 @@ domain dependency direction, and absence of hashes/audit override fields from
 feature requests and results. Interface declarations alone cannot prove runtime
 business behavior.
 
-When application is implemented, test registration token issuance and rollback;
+Application tests cover registration token issuance and rollback;
 first Google registration; automatic enrollment once; suspended membership
 denial; callback replay/binding mismatch; concurrent identity/membership creation;
 grant refresh without enrollment; old-password requirements versus admin reset;

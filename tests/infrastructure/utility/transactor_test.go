@@ -48,10 +48,14 @@ func TestTransactorPostgres(t *testing.T) {
 	db := pgxdt.NewPgxdt(pool)
 	transactor := infrastructureutilitytransactor.NewPgxdtImpl(pgxdt.NewTransactor(pool))
 	if err := transactor.WithTx(ctx, func(txCtx context.Context) error {
+		nestedErr := transactor.WithTx(txCtx, func(context.Context) error { t.Fatal("strict nested callback ran"); return nil })
+		if !errors.Is(nestedErr, pgxdt.ErrTransactionAlreadyActive) {
+			t.Fatalf("nested rejection lost: %v", nestedErr)
+		}
 		if _, err := db.Exec(txCtx, "INSERT INTO "+table+" VALUES (1)"); err != nil {
 			return err
 		}
-		return transactor.WithTx(txCtx, func(nested context.Context) error {
+		return db.WithTx(txCtx, func(nested context.Context) error {
 			var count int
 			if err := db.QueryRow(nested, "SELECT count(*) FROM "+table).Scan(&count); err != nil {
 				return err
@@ -70,7 +74,7 @@ func TestTransactorPostgres(t *testing.T) {
 		if _, err := db.Exec(txCtx, "INSERT INTO "+table+" VALUES (3)"); err != nil {
 			return err
 		}
-		return transactor.WithTx(txCtx, func(context.Context) error { return want })
+		return db.WithTx(txCtx, func(context.Context) error { return want })
 	}); err != want {
 		t.Fatalf("callback error changed: %v", err)
 	}

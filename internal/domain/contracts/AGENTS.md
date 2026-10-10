@@ -66,13 +66,18 @@ use OR within the requested space.
 
 `Transactor.WithTx` passes the transaction-aware context to its callback. Every
 repository call within that callback must receive that context. Propagate failed
-operations so the transaction can roll back; nested transactions reuse the
-existing transaction and do not promise savepoints.
+operations so the transaction can roll back. Feature transactors reject an
+attached transaction; repository helpers reuse the callback transaction without
+savepoints. The infrastructure adapter classifies nesting as BadState.
 
 Token contracts use domain claims, and permission checks receive authenticated
 access claims. Validation and credential generation do not perform persistence.
 Logger calls receive an explicit tag; tracer injection and extraction carry the
 domain trace through context.
+
+Tracer also generates fresh event UUIDs through GenerateEventId. The misc
+application usecase accepts only external client slug/execution UUID and assembles
+the trace internally; its Inject returns context and error.
 
 GoogleOAuth owns provider verification and transient authorization attempts,
 including single-use state and browser/session binding. Return only verified

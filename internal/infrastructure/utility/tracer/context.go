@@ -2,6 +2,7 @@ package infrastructureutilitytracer
 
 import (
 	"context"
+	"github.com/google/uuid"
 
 	domaincontractsutility "github.com/MateWorkspace/lockmate/internal/domain/contracts/utility"
 	domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models/app"
@@ -14,6 +15,14 @@ type contextImpl struct{}
 
 func NewContextImpl() domaincontractsutility.Tracer {
 	return &contextImpl{}
+}
+
+func (t *contextImpl) GenerateEventId() (uuid.UUID, error) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return uuid.Nil, domainmodelserror.NewError("failed to generate trace event id", domainmodelserror.TraceEventIdFailed, err)
+	}
+	return id, nil
 }
 
 func (t *contextImpl) Inject(ctx context.Context, trace domainmodelsapp.Trace) context.Context {
