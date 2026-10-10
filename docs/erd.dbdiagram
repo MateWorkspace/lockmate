@@ -10,50 +10,56 @@
       {
         "name": "spaces",
         "schemaName": "public",
-        "x": -656.2872829159419,
-        "y": 992.774076986126
+        "x": -679.5339844147195,
+        "y": 966.6215378000012
       },
       {
         "name": "permissions",
         "schemaName": "public",
-        "x": 455.93024155616604,
-        "y": -295.03810397803477
+        "x": 464.6477546182076,
+        "y": -132.3111934865907
       },
       {
         "name": "roles",
         "schemaName": "public",
-        "x": 455.93024155616604,
-        "y": 402.08300151232766
+        "x": 464.6477546182076,
+        "y": 564.8099120037717
       },
       {
         "name": "role_permission",
         "schemaName": "public",
-        "x": 455.93024155616604,
-        "y": 148.65124213445569
+        "x": 464.6477546182076,
+        "y": 311.37815262589976
       },
       {
         "name": "users",
         "schemaName": "public",
-        "x": -165.4336548762032,
-        "y": 1294.4362826291149
+        "x": 889.8841881054238,
+        "y": 1590.831726738531
       },
       {
         "name": "space_members",
         "schemaName": "public",
-        "x": 252.77388182773154,
-        "y": 1150.8949301687549
+        "x": 450.86960704193007,
+        "y": 1171.235793980186
       },
       {
-        "name": "member_role",
+        "name": "classic_auths",
         "schemaName": "public",
-        "x": -297.95831992676113,
-        "y": 544.3309579483026
+        "x": 430.9947746265039,
+        "y": 1652.8845027580876
       },
       {
-        "name": "api_keys",
+        "name": "space_member_role",
         "schemaName": "public",
-        "x": 908.1505089903075,
-        "y": 888.3248501525061
+        "x": -318.8415146043583,
+        "y": 600.971259938396
+      },
+      {
+        "name": "clients",
+        "schemaName": "public",
+        "x": -322.8087997606083,
+        "y": 1158.892095909061
       }
     ],
     "tableGroupCollapseStates": [],
@@ -235,6 +241,81 @@
           "id"
         ],
         "secondTableName": "space_members",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "classic_auths",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "space_id"
+        ],
+        "firstTableName": "clients",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "id"
+        ],
+        "secondTableName": "spaces",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "space_id"
+        ],
+        "firstTableName": "space_member_role",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "id"
+        ],
+        "secondTableName": "spaces",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "space_member_id"
+        ],
+        "firstTableName": "space_member_role",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "id"
+        ],
+        "secondTableName": "space_members",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "role_id"
+        ],
+        "firstTableName": "space_member_role",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "id"
+        ],
+        "secondTableName": "roles",
         "secondSchemaName": "public",
         "secondRelation": "1",
         "checkPoints": []

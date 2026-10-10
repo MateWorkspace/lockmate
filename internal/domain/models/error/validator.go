@@ -1,0 +1,67 @@
+package domainmodelserror
+
+import "errors"
+
+var (
+	PermissionSlugInvalid  = errors.New("PERMISSION_SLUG_INVALID")
+	PermissionSlugTooLong  = errors.New("PERMISSION_SLUG_TOO_LONG")
+	PermissionSlugTooShort = errors.New("PERMISSION_SLUG_TOO_SHORT")
+	PermissionNameInvalid  = errors.New("PERMISSION_NAME_INVALID")
+	PermissionNameTooLong  = errors.New("PERMISSION_NAME_TOO_LONG")
+	PermissionNameTooShort = errors.New("PERMISSION_NAME_TOO_SHORT")
+	PermissionDescInvalid  = errors.New("PERMISSION_DESC_INVALID")
+	PermissionDescTooLong  = errors.New("PERMISSION_DESC_TOO_LONG")
+
+	RoleSlugInvalid  = errors.New("ROLE_SLUG_INVALID")
+	RoleSlugTooLong  = errors.New("ROLE_SLUG_TOO_LONG")
+	RoleSlugTooShort = errors.New("ROLE_SLUG_TOO_SHORT")
+	RoleNameInvalid  = errors.New("ROLE_NAME_INVALID")
+	RoleNameTooLong  = errors.New("ROLE_NAME_TOO_LONG")
+	RoleNameTooShort = errors.New("ROLE_NAME_TOO_SHORT")
+	RoleDescInvalid  = errors.New("ROLE_DESC_INVALID")
+	RoleDescTooLong  = errors.New("ROLE_DESC_TOO_LONG")
+
+	UserNameTooLong      = errors.New("USER_NAME_TOO_LONG")
+	UserNameTooShort     = errors.New("USER_NAME_TOO_SHORT")
+	UserBioInvalid       = errors.New("USER_BIO_INVALID")
+	UserBioTooLong       = errors.New("USER_BIO_TOO_LONG")
+	UserUsernameInvalid  = errors.New("USER_USERNAME_INVALID")
+	UserUsernameTooLong  = errors.New("USER_USERNAME_TOO_LONG")
+	UserUsernameTooShort = errors.New("USER_USERNAME_TOO_SHORT")
+	UserPasswordInvalid  = errors.New("USER_PASSWORD_INVALID")
+	UserPasswordTooLong  = errors.New("USER_PASSWORD_TOO_LONG")
+	UserPasswordTooShort = errors.New("USER_PASSWORD_TOO_SHORT")
+	UserEmailInvalid     = errors.New("USER_EMAIL_INVALID")
+	UserEmailTooLong     = errors.New("USER_EMAIL_TOO_LONG")
+	UserEmailTooShort    = errors.New("USER_EMAIL_TOO_SHORT")
+	UserPhoneInvalid     = errors.New("USER_PHONE_INVALID")
+	UserPhoneTooLong     = errors.New("USER_PHONE_TOO_LONG")
+	UserPhoneTooShort    = errors.New("USER_PHONE_TOO_SHORT")
+
+	UserApiKeyNameInvalid  = errors.New("API_KEY_NAME_INVALID")
+	UserApiKeyNameTooLong  = errors.New("API_KEY_NAME_TOO_LONG")
+	UserApiKeyNameTooShort = errors.New("API_KEY_NAME_TOO_SHORT")
+	UserApiKeyDescInvalid  = errors.New("API_KEY_DESC_INVALID")
+	UserApiKeyDescTooLong  = errors.New("API_KEY_DESC_TOO_LONG")
+
+	SpaceSlugInvalid  = errors.New("SPACE_SLUG_INVALID")
+	SpaceSlugTooLong  = errors.New("SPACE_SLUG_TOO_LONG")
+	SpaceSlugTooShort = errors.New("SPACE_SLUG_TOO_SHORT")
+	SpaceNameInvalid  = errors.New("SPACE_NAME_INVALID")
+	SpaceNameTooLong  = errors.New("SPACE_NAME_TOO_LONG")
+	SpaceNameTooShort = errors.New("SPACE_NAME_TOO_SHORT")
+
+	ClientSlugInvalid  = errors.New("CLIENT_SLUG_INVALID")
+	ClientSlugTooLong  = errors.New("CLIENT_SLUG_TOO_LONG")
+	ClientSlugTooShort = errors.New("CLIENT_SLUG_TOO_SHORT")
+	ClientNameInvalid  = errors.New("CLIENT_NAME_INVALID")
+	ClientNameTooLong  = errors.New("CLIENT_NAME_TOO_LONG")
+	ClientNameTooShort = errors.New("CLIENT_NAME_TOO_SHORT")
+	ClientDescInvalid  = errors.New("CLIENT_DESC_INVALID")
+	ClientDescTooLong  = errors.New("CLIENT_DESC_TOO_LONG")
+
+	SpaceDescInvalid = errors.New("SPACE_DESC_INVALID")
+	SpaceDescTooLong = errors.New("SPACE_DESC_TOO_LONG")
+)
+
+var UserNameInvalid = errors.New("USER_NAME_INVALID")

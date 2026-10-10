@@ -2,17 +2,19 @@ Project lockmate {
     database_type: 'PostgreSQL'
     Note: '''
 Intended space-aware schema for Lockmate. Users share one identity across projects;
-roles, permissions, memberships, and API keys are scoped to a space.
-Migrations, persistent Rust entities, and repositories implement this schema.
+roles, permissions, memberships, and application clients are scoped to a space.
+This ERD guides the rewritten Go service; migrations and code will follow.
 Partial indexes and PostgreSQL GIN operator classes are documented in index notes
-and implemented in SQL migrations.
+for implementation in future SQL migrations.
 References use individual IDs. Application validation must ensure that linked
-roles, permissions, memberships, and API keys belong to the same space.
+roles, permissions, and memberships belong to the same space. Client authentication
+identifies the calling application; user access still requires an eligible
+membership and permissions in the client's space.
 '''
 }
 
 Table spaces [headercolor: #059669] {
-    Note: 'Project authorization boundary. Disabling a space blocks access to its memberships and API keys.'
+    Note: 'Project authorization boundary. Disabling or deleting a space blocks client authentication and membership access.'
 
     id          BIGINT      [pk, increment]
     slug        TEXT        [not null, note: 'Stable project identifier, such as taskmate or financemate.']
@@ -101,18 +103,37 @@ Table role_permission [headercolor: #A78BFA] {
 }
 
 Table users [headercolor: #2563EB] {
-    Note: 'Global accounts and credentials shared across spaces.'
+    Note: 'Global profiles shared across spaces. Classic and Google authentication are optional and can coexist; other authentication methods can reference this identity independently.'
+
+    id          BIGINT      [pk, increment]
+    name        TEXT        [not null]
+    bio         TEXT        [not null, default: '']
+    avatar_path TEXT        [note: 'Object-storage key for the shared profile avatar.']
+    preferences JSONB       [not null, default: `'{}'::jsonb`]
+    created_at  TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at  TIMESTAMPTZ
+    deleted_at  TIMESTAMPTZ
+    created_by  BIGINT
+    updated_by  BIGINT
+    deleted_by  BIGINT
+
+    Indexes {
+        name       [name: 'idx_users_name_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        deleted_at [name: 'idx_users_deleted_at']
+    }
+}
+
+Table classic_auths [headercolor: #3B82F6] {
+    Note: 'Optional global username/password authentication. A user has at most one nondeleted record. Authentication requires both the credentials and user to be nondeleted. Changing or clearing email or phone resets its verification flag. Credentials are not deleted through cascading user deletion.'
 
     id                BIGINT      [pk, increment]
-    name              TEXT        [not null]
-    bio               TEXT        [not null, default: '']
+    user_id           BIGINT      [not null]
     username          TEXT        [not null]
     email             TEXT
     phone             TEXT
-    password_hash     TEXT        [not null]
+    password_hash     TEXT        [not null, note: 'Store only the password hash, never the raw password.']
     is_email_verified BOOLEAN     [not null, default: false]
     is_phone_verified BOOLEAN     [not null, default: false]
-    avatar_path       TEXT        [note: 'Object-storage key for the shared profile avatar.']
     preferences       JSONB       [not null, default: `'{}'::jsonb`]
     created_at        TIMESTAMPTZ [not null, default: `NOW()`]
     updated_at        TIMESTAMPTZ
@@ -122,16 +143,40 @@ Table users [headercolor: #2563EB] {
     deleted_by        BIGINT
 
     Indexes {
-        name              [name: 'idx_users_name_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
-        username          [unique, name: 'uq_users_username', note: 'Partial unique index: WHERE deleted_at IS NULL']
-        username          [name: 'idx_users_username_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
-        email             [unique, name: 'uq_users_email', note: 'Partial unique index: WHERE deleted_at IS NULL']
-        email             [name: 'idx_users_email_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
-        phone             [unique, name: 'uq_users_phone', note: 'Partial unique index: WHERE deleted_at IS NULL']
-        phone             [name: 'idx_users_phone_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
-        is_email_verified [name: 'idx_users_is_email_verified']
-        is_phone_verified [name: 'idx_users_is_phone_verified']
-        deleted_at        [name: 'idx_users_deleted_at']
+        user_id           [unique, name: 'uq_classic_auths_user_id', note: 'Partial unique index: WHERE deleted_at IS NULL; zero or one nondeleted classic-auth record per user.']
+        username          [unique, name: 'uq_classic_auths_username', note: 'Partial unique index: WHERE deleted_at IS NULL; globally unique among nondeleted credentials.']
+        username          [name: 'idx_classic_auths_username_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        email             [unique, name: 'uq_classic_auths_email', note: 'Partial unique index: WHERE deleted_at IS NULL; nullable contacts allow multiple NULL values.']
+        email             [name: 'idx_classic_auths_email_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        phone             [unique, name: 'uq_classic_auths_phone', note: 'Partial unique index: WHERE deleted_at IS NULL; nullable contacts allow multiple NULL values.']
+        phone             [name: 'idx_classic_auths_phone_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
+        is_email_verified [name: 'idx_classic_auths_is_email_verified']
+        is_phone_verified [name: 'idx_classic_auths_is_phone_verified']
+        deleted_at        [name: 'idx_classic_auths_deleted_at']
+    }
+}
+
+Table google_auths [headercolor: #60A5FA] {
+    Note: 'Optional global Google sign-in identity. A user has at most one nondeleted Google account link, independent of classic credentials. Match accounts by the validated Google subject, never by email alone; linking to an existing user requires explicit account ownership verification. Authentication requires both the link and user to be nondeleted. Synchronize email and its verification flag from validated Google claims on sign-in without overwriting classic-auth contacts. Provider tokens are not persisted for sign-in.'
+
+    id                BIGINT      [pk, increment]
+    user_id           BIGINT      [not null]
+    subject           TEXT        [not null, note: 'Google ID-token sub claim: stable account identifier; store as text and treat as immutable.']
+    email             TEXT        [not null, note: 'Latest Google email from the requested email scope; may change and is not an account identifier.']
+    is_email_verified BOOLEAN     [not null, default: false, note: 'Latest email_verified claim from Google.']
+    preferences       JSONB       [not null, default: `'{}'::jsonb`]
+    created_at        TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at        TIMESTAMPTZ
+    deleted_at        TIMESTAMPTZ
+    created_by        BIGINT
+    updated_by        BIGINT
+    deleted_by        BIGINT
+
+    Indexes {
+        user_id    [unique, name: 'uq_google_auths_user_id', note: 'Partial unique index: WHERE deleted_at IS NULL; zero or one nondeleted Google account link per user.']
+        subject    [unique, name: 'uq_google_auths_subject', note: 'Partial unique index: WHERE deleted_at IS NULL; a Google account can be linked to only one user at a time.']
+        email      [name: 'idx_google_auths_email_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops; email is searchable, not unique.']
+        deleted_at [name: 'idx_google_auths_deleted_at']
     }
 }
 
@@ -157,46 +202,46 @@ Table space_members [headercolor: #0891B2] {
     }
 }
 
-Table member_role [headercolor: #22D3EE] {
+Table space_member_role [headercolor: #22D3EE] {
     Note: 'A membership can receive multiple roles from its own space. Effective permissions are the union of the assigned roles. Assignments are deleted physically.'
 
-    id         BIGINT      [pk, increment]
-    space_id   BIGINT      [not null]
-    member_id  BIGINT      [not null]
-    role_id    BIGINT      [not null]
-    created_at TIMESTAMPTZ [not null, default: `NOW()`]
-    created_by BIGINT
+    id              BIGINT      [pk, increment]
+    space_id        BIGINT      [not null]
+    space_member_id BIGINT      [not null]
+    role_id         BIGINT      [not null]
+    created_at      TIMESTAMPTZ [not null, default: `NOW()`]
+    created_by      BIGINT
 
     Indexes {
-        (space_id, member_id, role_id) [unique, name: 'uq_member_role_space_member_role']
-        (space_id, role_id)            [name: 'idx_member_role_space_id_role_id']
+        (space_id, space_member_id, role_id) [unique, name: 'uq_space_member_role_space_member_role']
+        (space_id, role_id)                   [name: 'idx_space_member_role_space_id_role_id']
     }
 }
 
-Table api_keys [headercolor: #D97706] {
-    Note: 'A user API key grants access only through its active space membership. Store the hash, never the raw key.'
+Table clients [headercolor: #D97706] {
+    Note: 'Consuming applications, each owned by one space. Authenticate using the stable slug and supplied secret. A client identifies the application and does not grant user roles or permissions. Disabled or deleted clients, or disabled or deleted parent spaces, cannot authenticate. One current secret is stored; rotation replaces its hash and redaction without secret history or overlapping secrets.'
 
-    id          BIGINT      [pk, increment]
-    space_id    BIGINT      [not null]
-    member_id   BIGINT      [not null]
-    name        TEXT        [not null]
-    description TEXT        [not null, default: '']
-    hash        TEXT        [not null]
-    redacted    TEXT        [not null]
-    preferences JSONB       [not null, default: `'{}'::jsonb`]
-    created_at  TIMESTAMPTZ [not null, default: `NOW()`]
-    updated_at  TIMESTAMPTZ
-    deleted_at  TIMESTAMPTZ
-    created_by  BIGINT
-    updated_by  BIGINT
-    deleted_by  BIGINT
+    id                  BIGINT      [pk, increment]
+    space_id            BIGINT      [not null]
+    slug                TEXT        [not null, note: 'Immutable public client identifier, such as taskmate-web; globally unique and reserved after soft deletion.']
+    name                TEXT        [not null, note: 'Display name; need not be unique.']
+    description         TEXT        [not null, default: '']
+    secret_key_hash     TEXT        [not null, note: 'Verify the supplied secret against this hash; never store the raw secret. Not a lookup identifier.']
+    secret_key_redacted TEXT        [not null, note: 'Display only: show four leading and four trailing characters with the middle masked. Not a lookup identifier.']
+    is_active           BOOLEAN     [not null, default: true]
+    preferences         JSONB       [not null, default: `'{}'::jsonb`]
+    created_at          TIMESTAMPTZ [not null, default: `NOW()`]
+    updated_at          TIMESTAMPTZ
+    deleted_at          TIMESTAMPTZ
+    created_by          BIGINT
+    updated_by          BIGINT
+    deleted_by          BIGINT
 
     Indexes {
-        (space_id, member_id) [name: 'idx_api_keys_space_id_member_id']
-        name                  [name: 'idx_api_keys_name_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
-        hash                  [unique, name: 'uq_api_keys_hash', note: 'Partial unique index: WHERE deleted_at IS NULL']
-        redacted              [name: 'idx_api_keys_redacted_trgm', note: 'PostgreSQL GIN index using gin_trgm_ops']
-        deleted_at            [name: 'idx_api_keys_deleted_at']
+        slug       [unique, name: 'uq_clients_slug', note: 'Stable identifier; reserved even after soft deletion.']
+        space_id   [name: 'idx_clients_space_id']
+        name       [name: 'idx_clients_name_trgm', note: 'Partial PostgreSQL GIN index using gin_trgm_ops: WHERE deleted_at IS NULL']
+        deleted_at [name: 'idx_clients_deleted_at']
     }
 }
 
@@ -205,20 +250,23 @@ Ref: permissions.space_id > spaces.id
 Ref: roles.space_id > spaces.id
 Ref: space_members.space_id > spaces.id
 Ref: space_members.user_id > users.id
+Ref: classic_auths.user_id > users.id
+Ref: google_auths.user_id > users.id
+Ref: clients.space_id > spaces.id
 
-// Role grants, membership assignments, and space-scoped credentials.
+// Role grants and membership assignments.
 Ref: role_permission.space_id > spaces.id
 Ref: role_permission.role_id > roles.id [delete: cascade]
 Ref: role_permission.permission_id > permissions.id [delete: cascade]
-Ref: member_role.space_id > spaces.id
-Ref: member_role.member_id > space_members.id [delete: cascade]
-Ref: member_role.role_id > roles.id [delete: cascade]
-Ref: api_keys.space_id > spaces.id
-Ref: api_keys.member_id > space_members.id
+Ref: space_member_role.space_id > spaces.id
+Ref: space_member_role.space_member_id > space_members.id [delete: cascade]
+Ref: space_member_role.role_id > roles.id [delete: cascade]
 
 TableGroup identity [color: #2563EB] {
     users
-    Note: 'Shared identity across all Mate projects.'
+    classic_auths
+    google_auths
+    Note: 'Shared profiles with optional classic and Google authentication across all Mate projects.'
 }
 
 TableGroup space_authorization [color: #7C3AED] {
@@ -231,7 +279,11 @@ TableGroup space_authorization [color: #7C3AED] {
 
 TableGroup membership_access [color: #0891B2] {
     space_members
-    member_role
-    api_keys
-    Note: 'Project access, role assignments, and user API credentials.'
+    space_member_role
+    Note: 'Project memberships and their role assignments.'
+}
+
+TableGroup application_clients [color: #D97706] {
+    clients
+    Note: 'Space-owned consuming applications with hashed client secrets.'
 }
