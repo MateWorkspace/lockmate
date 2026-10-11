@@ -14,6 +14,12 @@ type Env struct {
 	PortGrpcServer uint16
 	PortHttpServer uint16
 
+	HttpServerReadHeaderTimeout time.Duration
+	HttpServerReadTimeout       time.Duration
+	HttpServerWriteTimeout      time.Duration
+	HttpServerIdleTimeout       time.Duration
+	HttpServerShutdownTimeout   time.Duration
+
 	PostgresHost           string
 	PostgresPort           uint16
 	PostgresUsername       string

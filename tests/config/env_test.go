@@ -24,6 +24,8 @@ func setupEnvironment(t *testing.T) {
 	for _, key := range []string{
 		"LOCKMATE_LOGGER_FORMAT", "LOCKMATE_LOGGER_LEVEL", "LOCKMATE_LOGGER_USE_TRACE",
 		"LOCKMATE_PORT_GRPC_SERVER", "LOCKMATE_PORT_HTTP_SERVER",
+		"LOCKMATE_HTTP_SERVER_READ_HEADER_TIMEOUT", "LOCKMATE_HTTP_SERVER_READ_TIMEOUT",
+		"LOCKMATE_HTTP_SERVER_WRITE_TIMEOUT", "LOCKMATE_HTTP_SERVER_IDLE_TIMEOUT", "LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT",
 		"LOCKMATE_POSTGRES_HOST", "LOCKMATE_POSTGRES_PORT", "LOCKMATE_POSTGRES_USERNAME",
 		"LOCKMATE_POSTGRES_PASSWORD", "LOCKMATE_POSTGRES_DATABASE", "LOCKMATE_POSTGRES_SSL_MODE",
 		"LOCKMATE_POSTGRES_MAX_CONNECTIONS", "LOCKMATE_POSTGRES_CONNECT_TIMEOUT",
@@ -167,5 +169,30 @@ func TestMalformedDotenvReturnsDomainError(t *testing.T) {
 	err := config.LoadEnv()
 	if !errors.Is(err, domainmodelserror.EnvironmentInvalid) || strings.Contains(err.Error(), "private-unclosed-secret") {
 		t.Fatalf("incorrect dotenv error: %v", err)
+	}
+}
+
+func TestHTTPTimeoutEnvironment(t *testing.T) {
+	setupEnvironment(t)
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if config.Env.HttpServerReadHeaderTimeout != 5*time.Second || config.Env.HttpServerReadTimeout != 15*time.Second || config.Env.HttpServerWriteTimeout != 30*time.Second || config.Env.HttpServerIdleTimeout != 60*time.Second || config.Env.HttpServerShutdownTimeout != 10*time.Second {
+		t.Fatal("incorrect HTTP defaults")
+	}
+	t.Setenv("LOCKMATE_HTTP_SERVER_READ_HEADER_TIMEOUT", "2s")
+	t.Setenv("LOCKMATE_HTTP_SERVER_READ_TIMEOUT", "20")
+	t.Setenv("LOCKMATE_HTTP_SERVER_WRITE_TIMEOUT", "40s")
+	t.Setenv("LOCKMATE_HTTP_SERVER_IDLE_TIMEOUT", "120s")
+	t.Setenv("LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT", "30s")
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if config.Env.HttpServerReadHeaderTimeout != 2*time.Second || config.Env.HttpServerReadTimeout != 20*time.Second || config.Env.HttpServerWriteTimeout != 40*time.Second || config.Env.HttpServerIdleTimeout != 120*time.Second || config.Env.HttpServerShutdownTimeout != 30*time.Second {
+		t.Fatal("HTTP overrides ignored")
+	}
+	t.Setenv("LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT", "0s")
+	if err := config.LoadEnv(); !errors.Is(err, domainmodelserror.EnvironmentInvalid) {
+		t.Fatalf("invalid shutdown timeout accepted: %v", err)
 	}
 }

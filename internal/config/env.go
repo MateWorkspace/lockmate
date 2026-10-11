@@ -22,6 +22,12 @@ var Env = domainmodelsapp.Env{
 	PortGrpcServer: 50051,
 	PortHttpServer: 50050,
 
+	HttpServerReadHeaderTimeout: 5 * time.Second,
+	HttpServerReadTimeout:       15 * time.Second,
+	HttpServerWriteTimeout:      30 * time.Second,
+	HttpServerIdleTimeout:       60 * time.Second,
+	HttpServerShutdownTimeout:   10 * time.Second,
+
 	PostgresHost:           "127.0.0.1",
 	PostgresPort:           5432,
 	PostgresUsername:       "postgres",
@@ -50,6 +56,12 @@ func LoadEnv() error {
 	Env.PortGrpcServer = envGetUint16("LOCKMATE_PORT_GRPC_SERVER", Env.PortGrpcServer)
 	Env.PortHttpServer = envGetUint16("LOCKMATE_PORT_HTTP_SERVER", Env.PortHttpServer)
 
+	Env.HttpServerReadHeaderTimeout = envGetDuration("LOCKMATE_HTTP_SERVER_READ_HEADER_TIMEOUT", Env.HttpServerReadHeaderTimeout)
+	Env.HttpServerReadTimeout = envGetDuration("LOCKMATE_HTTP_SERVER_READ_TIMEOUT", Env.HttpServerReadTimeout)
+	Env.HttpServerWriteTimeout = envGetDuration("LOCKMATE_HTTP_SERVER_WRITE_TIMEOUT", Env.HttpServerWriteTimeout)
+	Env.HttpServerIdleTimeout = envGetDuration("LOCKMATE_HTTP_SERVER_IDLE_TIMEOUT", Env.HttpServerIdleTimeout)
+	Env.HttpServerShutdownTimeout = envGetDuration("LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT", Env.HttpServerShutdownTimeout)
+
 	Env.PostgresHost = envGetString("LOCKMATE_POSTGRES_HOST", Env.PostgresHost)
 	Env.PostgresPort = envGetUint16("LOCKMATE_POSTGRES_PORT", Env.PostgresPort)
 	Env.PostgresUsername = envGetString("LOCKMATE_POSTGRES_USERNAME", Env.PostgresUsername)
@@ -71,6 +83,22 @@ func LoadEnv() error {
 }
 
 func validate() error {
+	if Env.HttpServerReadHeaderTimeout < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_HTTP_SERVER_READ_HEADER_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+	if Env.HttpServerReadTimeout < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_HTTP_SERVER_READ_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+	if Env.HttpServerWriteTimeout < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_HTTP_SERVER_WRITE_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+	if Env.HttpServerIdleTimeout < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_HTTP_SERVER_IDLE_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+	if Env.HttpServerShutdownTimeout < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
 	if strings.TrimSpace(Env.TokenAccessSecret) == "" {
 		return domainmodelserror.NewError("LOCKMATE_TOKEN_ACCESS_SECRET is required", domainmodelserror.EnvironmentRequired, nil)
 	}

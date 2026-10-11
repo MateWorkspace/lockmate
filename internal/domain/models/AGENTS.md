@@ -59,7 +59,8 @@ and permission slugs. Keep them usable for users without classic authentication.
 `app.Trace` contains `EventId`, `ClientExecId`, and `ClientSlug` with snake_case
 JSON tags. Context storage belongs to the tracer adapter, not the trace model.
 Keep environment parsing and defaults in configuration code. `app.Env` contains
-logger settings, server ports, PostgreSQL settings, JWT secrets/lifetimes, bcrypt
+logger settings, server ports and HTTP lifecycle timeouts, PostgreSQL settings,
+JWT secrets/lifetimes, bcrypt
 cost, and the management control-space slug. Domain fields use standard Go types,
 including time.Duration, uint16 ports, and an int32 PostgreSQL connection limit.
 Do not include driver-specific configuration objects or log the entire Env model.

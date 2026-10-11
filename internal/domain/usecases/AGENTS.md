@@ -7,8 +7,9 @@ Implementation belongs in application; domain usecases must not import
 infrastructure, transport bindings, database drivers, or provider SDKs.
 
 Application implements the interfaces and enforces the rules below. Interfaces
-alone do not enforce authorization. Google adapters/configuration, presentation,
-composition, and seed definitions remain separate follow-up work.
+alone do not enforce authorization. Google adapters/configuration and seed definitions remain separate follow-up work.
+Gin presentation and main composition expose the implemented classic, profile,
+and management operations.
 
 ## Layout and style
 
