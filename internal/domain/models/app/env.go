@@ -20,6 +20,7 @@ type Env struct {
 	HttpServerWriteTimeout      time.Duration
 	HttpServerIdleTimeout       time.Duration
 	HttpServerShutdownTimeout   time.Duration
+	GrpcServerShutdownTimeout   time.Duration
 
 	PostgresHost           string
 	PostgresPort           uint16

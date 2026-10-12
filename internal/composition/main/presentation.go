@@ -6,11 +6,14 @@ import (
 	"github.com/MateWorkspace/lockmate/internal/config"
 	presentationcronjob "github.com/MateWorkspace/lockmate/internal/presentation/cron/job"
 	presentationcronrunner "github.com/MateWorkspace/lockmate/internal/presentation/cron/runner"
+	presentationgrpcinterceptor "github.com/MateWorkspace/lockmate/internal/presentation/grpc/interceptor"
+	presentationgrpcregister "github.com/MateWorkspace/lockmate/internal/presentation/grpc/register"
 	presentationhttphandlerauth "github.com/MateWorkspace/lockmate/internal/presentation/http/handler/auth"
 	presentationhttphandlermanagement "github.com/MateWorkspace/lockmate/internal/presentation/http/handler/management"
 	presentationhttphandlerprofile "github.com/MateWorkspace/lockmate/internal/presentation/http/handler/profile"
 	presentationhttphandlerversion "github.com/MateWorkspace/lockmate/internal/presentation/http/handler/version"
 	presentationhttproute "github.com/MateWorkspace/lockmate/internal/presentation/http/route"
+	"google.golang.org/grpc"
 )
 
 // presentation owns the HTTP routes and the cron scheduler lifecycle.
@@ -54,7 +57,48 @@ func (l *launcher) newPresentation(ctx context.Context) error {
 		return err
 	}
 
+	l.newGrpcServer()
+
 	l.pres = &presentation{cronStop: cronStop}
 
 	return nil
+}
+
+func (l *launcher) newGrpcServer() {
+	server := grpc.NewServer(presentationgrpcinterceptor.Unary(presentationgrpcinterceptor.Args{
+		Client:         l.app.authClient,
+		Session:        l.app.authSession,
+		Tracer:         l.app.miscTracer,
+		IpAllowlist:    l.app.miscIpAllowlist,
+		TrustedProxies: config.Env.TrustedProxies,
+		ClientIpHeader: config.Env.ClientIpHeader,
+	}))
+
+	presentationgrpcregister.RegisterAuth(server, presentationgrpcregister.AuthDependencies{
+		Session: l.app.authSession,
+		Handoff: l.app.authHandoff,
+		Google:  l.app.authGoogle,
+	})
+	presentationgrpcregister.RegisterProfile(server, presentationgrpcregister.ProfileDependencies{
+		Account:  l.app.profileAccount,
+		Security: l.app.profileSecurity,
+	})
+	presentationgrpcregister.RegisterManagement(server, presentationgrpcregister.ManagementDependencies{
+		Space:           l.app.managementSpace,
+		Permission:      l.app.managementPermission,
+		Role:            l.app.managementRole,
+		User:            l.app.managementUser,
+		ClassicAuth:     l.app.managementClassicAuth,
+		GoogleAuth:      l.app.managementGoogleAuth,
+		Client:          l.app.managementClient,
+		SpaceMember:     l.app.managementSpaceMember,
+		RolePermission:  l.app.managementRolePermission,
+		SpaceMemberRole: l.app.managementSpaceMemberRole,
+	})
+	presentationgrpcregister.RegisterMisc(server, presentationgrpcregister.MiscDependencies{
+		Jwks:    l.app.miscJwks,
+		Version: config.App,
+	})
+
+	l.drv.grpcServer = server
 }

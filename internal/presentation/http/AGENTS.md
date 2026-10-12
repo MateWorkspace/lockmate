@@ -52,7 +52,7 @@ exactly, never trimmed, dumped, logged, or included in error responses.
 
 The IPAllowlist middleware runs after client authentication because the allowlist
 is scoped to the authenticated client. It resolves the caller IP through
-`middleware/clientip` semantics: forwarded headers (LOCKMATE_CLIENT_IP_HEADER,
+`presentation/shared` semantics: forwarded headers (LOCKMATE_CLIENT_IP_HEADER,
 typically CF-Connecting-IP behind cloudflared/Cloudflare or X-Forwarded-For
 behind nginx/Caddy) are honored only when the direct peer is a configured
 trusted proxy (LOCKMATE_TRUSTED_PROXIES); otherwise the socket peer is used, with

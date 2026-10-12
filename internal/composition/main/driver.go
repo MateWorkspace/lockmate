@@ -15,12 +15,15 @@ import (
 	domainmodelslogger "github.com/MateWorkspace/lockmate/internal/domain/models/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
 )
 
 type driver struct {
 	slogLogger   *slog.Logger
 	gin          *gin.Engine
 	httpServer   *http.Server
+	grpcListener net.Listener
+	grpcServer   *grpc.Server
 	postgresPool *pgxpool.Pool
 }
 
@@ -57,10 +60,18 @@ func (l *launcher) newDriver(ctx context.Context) error {
 		IdleTimeout:       config.Env.HttpServerIdleTimeout,
 	}
 
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Env.PortGrpcServer))
+	if err != nil {
+		logger.ErrorContext(ctx, "failed to initialize gRPC listener", "tag", tag, "err", err)
+		pool.Close()
+		return err
+	}
+
 	l.drv = &driver{
 		slogLogger:   logger,
 		gin:          engine,
 		httpServer:   server,
+		grpcListener: grpcListener,
 		postgresPool: pool,
 	}
 
@@ -101,6 +112,12 @@ func newPostgresPool(ctx context.Context) (*pgxpool.Pool, error) {
 }
 
 func (d *driver) cleanup() {
+	if d.grpcServer != nil {
+		d.grpcServer.Stop()
+	}
+	if d.grpcListener != nil {
+		_ = d.grpcListener.Close()
+	}
 	if d.postgresPool != nil {
 		d.postgresPool.Close()
 	}

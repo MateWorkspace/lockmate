@@ -11,15 +11,16 @@ Keep business rules and request handling in their existing layers.
 configuration and embedded seed definitions first, then initialize driver,
 infrastructure, and application. Seed before presentation and cron startup. Use private structs holding each layer's dependencies.
 
-- driver.go: slog JSON/text output, PostgreSQL pool, Gin engine, and http.Server.
+- driver.go: slog JSON/text output, PostgreSQL pool, Gin engine + http.Server, and
+  the gRPC listener + server.
 - infrastructure.go: interface-typed repositories and utility adapters.
 - application.go: interface-typed usecases and explicit constructor wiring.
 - seeder.go: clone embedded user/client definitions and inject runtime credentials
   from config.Env before constructor wiring; never mutate global SeedData.
-- presentation.go: handlers, middleware usecase dependencies, route setup, and
-  the cron scheduler lifecycle started alongside HTTP.
-- launcher.go: signal handling and lifecycle; RunServer provides a testable HTTP
-  serving/draining boundary without prematurely closing application resources.
+- presentation.go: HTTP handlers, middleware usecase dependencies, route setup,
+  gRPC interceptor + service registration, and the cron scheduler lifecycle.
+- launcher.go: signal handling and lifecycle; RunServers serves HTTP and gRPC
+  concurrently and drains both; RunServer provides a testable HTTP boundary.
 
 Follow concatenated package names, explicit import aliases, existing Id spelling,
 and readable blank lines. No reflection, service locator, or dependency container.
@@ -29,12 +30,13 @@ replace its rejection of nested application transactions.
 ## Runtime
 
 Use config.Env and config.App; never parse environment variables elsewhere.
-Create only slog, PostgreSQL, and HTTP dependencies currently implemented. HTTP
-binds the configured PortHttpServer with typed read-header/read/write/idle/shutdown
-timeouts. Disable implicit trusted proxies and Gin's default request logger.
+Create only slog, PostgreSQL, HTTP, and gRPC dependencies currently implemented.
+HTTP binds PortHttpServer; gRPC binds PortGrpcServer, both with typed shutdown
+timeouts. Disable implicit trusted proxies and Gin's default request logger. The
+gRPC server uses the shared interceptor chain (client auth, IP allowlist, bearer).
 
-Startup failures return 1; normal signal shutdown returns 0. HTTP drains before
-PostgreSQL closes. Force-close HTTP connections when the shutdown timeout expires.
+Startup failures return 1; normal signal shutdown returns 0. HTTP and gRPC drain
+before PostgreSQL closes. Force-close servers when the shutdown timeout expires.
 Use explicit infrastructure logger calls after infrastructure initialization;
 bootstrap configuration and driver failures use slog directly. Do not dump
 configuration or connection strings. Docker entrypoint applies migrations before
@@ -53,8 +55,9 @@ variables outside config.
 
 Embedded seed definitions provision the control-space baseline. Its slug comes
 from seederdata.SeedData.Space.Slug and is passed to management constructors even
-when seeding is disabled. Google OAuth and handoff wiring are included; gRPC and
-Redis remain outside this composition. Future additions must follow the same layer boundaries.
+when seeding is disabled. Google OAuth and handoff wiring are included; HTTP and
+gRPC share the same usecases. Redis remains outside this composition. Future
+additions must follow the same layer boundaries.
 
 Run make swagger after annotation changes. Verify go test -race ./..., go vet
 ./..., and go build ./.... Tests for lifecycle and startup failures live under

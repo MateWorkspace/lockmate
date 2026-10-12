@@ -36,6 +36,7 @@ The current scoped guides are:
   [utility](internal/infrastructure/utility/AGENTS.md).
 - Seed definitions: [embedded JSON](database/seeder/AGENTS.md).
 - Delivery and wiring: [HTTP presentation](internal/presentation/http/AGENTS.md),
+  [gRPC presentation](internal/presentation/grpc/AGENTS.md),
   [cron presentation](internal/presentation/cron/AGENTS.md), and
   [composition](internal/composition/AGENTS.md).
 
@@ -61,6 +62,10 @@ align all affected layers rather than introducing isolated conventions.
   repositories separate query building from execution and error handling.
 - `internal/presentation/http/`: Gin handlers, DTOs, response mapping, routes,
   middleware, and transport helpers.
+- `internal/presentation/grpc/`: gRPC servers, mappers, interceptors, and
+  registration, re-exposing the same usecases over metadata-authenticated gRPC.
+- `internal/presentation/shared/`: trusted identity context values and caller IP
+  resolution shared by the HTTP and gRPC presentations.
 - `internal/presentation/cron/`: scheduled maintenance jobs and the cron runner,
   wired by presentation composition alongside HTTP.
 - `internal/composition/main/`: explicit driver, infrastructure, application,
@@ -136,7 +141,9 @@ the control-space slug, including management authorization; there is no slug env
 setting. Seed credentials come from required LOCKMATE_SEEDER_* variables when
 seeding is enabled, with no embedded defaults. The cron presentation creates and
 rotates the ES256 access-token signing key and purges expired records at startup
-and on schedule, while expiration is also enforced during consumption. gRPC presentation, Redis integration, hosted login UI, OTP/recovery, and logout/revocation remain future work.
+and on schedule, while expiration is also enforced during consumption. The gRPC
+presentation mirrors the HTTP application over metadata-authenticated plaintext
+HTTP/2. Redis integration, hosted login UI, OTP/recovery, and logout/revocation remain future work.
 
 For Go changes, run from this repository:
 
@@ -164,8 +171,9 @@ DOCKER_COMPOSE_CONTAINER_NAME selects the container name; DOCKER_COMPOSE_HTTP_HO
 and DOCKER_COMPOSE_GRPC_HOST_PORT select published host ports. Container targets
 come from LOCKMATE_PORT_HTTP_SERVER and LOCKMATE_PORT_GRPC_SERVER. These settings
 also determine image EXPOSE metadata during Compose builds. The application and
-health check use runtime server ports. The gRPC mapping reserves a port; there is
-no gRPC listener yet. Keep cloudflared pointed at the published HTTP host port.
+health check use runtime server ports. The gRPC listener serves the mirrored
+application on the same host port; a TLS terminator may run in front. Keep
+cloudflared pointed at the published host ports.
 
 The image runs a static Go binary as a non-root user, with CA certificates for
 Google requests and an HTTP version-endpoint health check. Secrets are supplied

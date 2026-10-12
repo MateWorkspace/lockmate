@@ -17,11 +17,15 @@ require (
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/crypto v0.57.0
 	golang.org/x/oauth2 v0.37.0
+	google.golang.org/grpc v1.81.1
 )
 
+require google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
+
 require (
-	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
+	github.com/MateWorkspace/lockmate-proto v0.0.0
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
@@ -66,8 +70,10 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 replace github.com/MateWorkspace/mate-golang => ../mate-golang
+
+replace github.com/MateWorkspace/lockmate-proto => ../lockmate-proto

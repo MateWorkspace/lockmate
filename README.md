@@ -17,6 +17,8 @@ Built with Go, Gin, and PostgreSQL.
 - Administration of users, spaces, memberships, roles, permissions, and clients.
 - Per-client caller IP allowlists with trusted-proxy client IP resolution.
 - Client callback URLs and single-use authentication handoffs to application backends.
+- A gRPC server mirroring the HTTP application, with client credentials and the
+  caller IP allowlist carried in gRPC metadata (contracts in `../lockmate-proto`).
 - Swagger API documentation and structured logging.
 
 ## Get started

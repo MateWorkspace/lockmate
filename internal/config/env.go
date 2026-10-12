@@ -30,6 +30,7 @@ var Env = domainmodelsapp.Env{
 	HttpServerWriteTimeout:      30 * time.Second,
 	HttpServerIdleTimeout:       60 * time.Second,
 	HttpServerShutdownTimeout:   10 * time.Second,
+	GrpcServerShutdownTimeout:   10 * time.Second,
 
 	PostgresHost:           "127.0.0.1",
 	PostgresPort:           5432,
@@ -79,6 +80,7 @@ func LoadEnv() error {
 	Env.HttpServerWriteTimeout = envGetDuration("LOCKMATE_HTTP_SERVER_WRITE_TIMEOUT", Env.HttpServerWriteTimeout)
 	Env.HttpServerIdleTimeout = envGetDuration("LOCKMATE_HTTP_SERVER_IDLE_TIMEOUT", Env.HttpServerIdleTimeout)
 	Env.HttpServerShutdownTimeout = envGetDuration("LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT", Env.HttpServerShutdownTimeout)
+	Env.GrpcServerShutdownTimeout = envGetDuration("LOCKMATE_GRPC_SERVER_SHUTDOWN_TIMEOUT", Env.GrpcServerShutdownTimeout)
 
 	Env.PostgresHost = envGetString("LOCKMATE_POSTGRES_HOST", Env.PostgresHost)
 	Env.PostgresPort = envGetUint16("LOCKMATE_POSTGRES_PORT", Env.PostgresPort)
@@ -143,6 +145,9 @@ func validate() error {
 	}
 	if Env.HttpServerShutdownTimeout < time.Second {
 		return domainmodelserror.NewError("LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+	if Env.GrpcServerShutdownTimeout < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_GRPC_SERVER_SHUTDOWN_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
 	}
 
 	if len(Env.SigningKeyEncryptionKey) != 32 {

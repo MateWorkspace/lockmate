@@ -66,7 +66,7 @@ users without classic authentication.
 `app.Trace` contains `EventId`, `ClientExecId`, and `ClientSlug` with snake_case
 JSON tags. Context storage belongs to the tracer adapter, not the trace model.
 Keep environment parsing and defaults in configuration code. `app.Env` contains
-logger settings, server ports and HTTP lifecycle timeouts, PostgreSQL settings,
+logger settings, server ports and HTTP/gRPC lifecycle timeouts, PostgreSQL settings,
 JWT secrets/lifetimes, bcrypt
 cost, the startup seeder toggle, three seed passwords, the seed client secret,
 the signing-key encryption keys and rotation/retention/reconcile intervals. Control-space slug comes from space.json,

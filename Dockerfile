@@ -4,13 +4,15 @@ FROM golang:1.26.5-alpine AS builder
 
 WORKDIR /src/lockmate
 
-# Compose supplies the sibling module as a named build context.
+# Compose supplies the sibling modules as named build contexts.
 COPY --from=mate-golang go.mod go.sum /src/mate-golang/
+COPY --from=lockmate-proto go.mod go.sum /src/lockmate-proto/
 COPY go.mod go.sum ./
 
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
 COPY --from=mate-golang pgxdt /src/mate-golang/pgxdt
+COPY --from=lockmate-proto gen /src/lockmate-proto/gen
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1

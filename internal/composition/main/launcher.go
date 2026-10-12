@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	seederdata "github.com/MateWorkspace/lockmate/database/seeder"
 	"github.com/MateWorkspace/lockmate/internal/config"
 	domainmodelslogger "github.com/MateWorkspace/lockmate/internal/domain/models/logger"
+	"google.golang.org/grpc"
 )
 
 const path = "main"
@@ -65,19 +67,84 @@ func Launch() int {
 	}
 	defer l.pres.stop()
 
-	l.infra.logger.Info(ctx, path+"/Launch", "HTTP service starting", domainmodelslogger.Meta{
-		"port": config.Env.PortHttpServer,
+	l.infra.logger.Info(ctx, path+"/Launch", "service starting", domainmodelslogger.Meta{
+		"http_port": config.Env.PortHttpServer,
+		"grpc_port": config.Env.PortGrpcServer,
 	})
 
-	if err := RunServer(ctx, l.drv.httpServer, config.Env.HttpServerShutdownTimeout); err != nil {
-		l.infra.logger.Error(context.Background(), path+"/Launch", "HTTP service failed", domainmodelslogger.Meta{
+	if err := RunServers(ctx, l.drv.httpServer, l.drv.grpcServer, l.drv.grpcListener, config.Env.HttpServerShutdownTimeout, config.Env.GrpcServerShutdownTimeout); err != nil {
+		l.infra.logger.Error(context.Background(), path+"/Launch", "service failed", domainmodelslogger.Meta{
 			"err": err,
 		})
 		return 1
 	}
 
-	l.infra.logger.Info(context.Background(), path+"/Launch", "HTTP service stopped", nil)
+	l.infra.logger.Info(context.Background(), path+"/Launch", "service stopped", nil)
 	return 0
+}
+
+// RunServers serves HTTP and gRPC concurrently and drains both on cancellation.
+func RunServers(ctx context.Context, httpServer *http.Server, grpcServer *grpc.Server, grpcListener net.Listener, httpShutdownTimeout, grpcShutdownTimeout time.Duration) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	httpResult := make(chan error, 1)
+	grpcResult := make(chan error, 1)
+	go func() {
+		httpResult <- httpServer.ListenAndServe()
+	}()
+	go func() {
+		grpcResult <- grpcServer.Serve(grpcListener)
+	}()
+
+	select {
+	case err := <-httpResult:
+		stopGrpc(grpcServer, grpcShutdownTimeout)
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+
+	case err := <-grpcResult:
+		_ = httpServer.Close()
+		<-httpResult
+		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
+			return nil
+		}
+		return err
+
+	case <-ctx.Done():
+		shutdownHTTP(httpServer, httpResult, httpShutdownTimeout)
+		stopGrpc(grpcServer, grpcShutdownTimeout)
+		<-grpcResult
+		return nil
+	}
+}
+
+func shutdownHTTP(server *http.Server, result chan error, timeout time.Duration) {
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		_ = server.Close()
+	}
+	<-result
+}
+
+func stopGrpc(server *grpc.Server, timeout time.Duration) {
+	done := make(chan struct{})
+	go func() {
+		server.GracefulStop()
+		close(done)
+	}()
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-done:
+	case <-timer.C:
+		server.Stop()
+	}
 }
 
 func RunServer(ctx context.Context, server *http.Server, shutdownTimeout time.Duration) error {

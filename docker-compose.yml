@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       additional_contexts:
         mate-golang: ../mate-golang
+        lockmate-proto: ../lockmate-proto
       args:
         LOCKMATE_PORT_HTTP_SERVER: ${LOCKMATE_PORT_HTTP_SERVER:-10701}
         LOCKMATE_PORT_GRPC_SERVER: ${LOCKMATE_PORT_GRPC_SERVER:-10702}

@@ -4,29 +4,21 @@ import (
 	"context"
 
 	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
-)
-
-type contextKey uint8
-
-const (
-	clientIdentityContextKey contextKey = iota
-	accessClaimsContextKey
+	presentationshared "github.com/MateWorkspace/lockmate/internal/presentation/shared"
 )
 
 func InjectClientIdentity(ctx context.Context, client *domainmodelsentity.ClientIdentity) context.Context {
-	return context.WithValue(ctx, clientIdentityContextKey, client)
+	return presentationshared.InjectClientIdentity(ctx, client)
 }
 
 func ClientIdentity(ctx context.Context) *domainmodelsentity.ClientIdentity {
-	client, _ := ctx.Value(clientIdentityContextKey).(*domainmodelsentity.ClientIdentity)
-	return client
+	return presentationshared.ClientIdentity(ctx)
 }
 
 func InjectAccessClaims(ctx context.Context, claims *domainmodelsentity.AccessClaims) context.Context {
-	return context.WithValue(ctx, accessClaimsContextKey, claims)
+	return presentationshared.InjectAccessClaims(ctx, claims)
 }
 
 func AccessClaims(ctx context.Context) *domainmodelsentity.AccessClaims {
-	claims, _ := ctx.Value(accessClaimsContextKey).(*domainmodelsentity.AccessClaims)
-	return claims
+	return presentationshared.AccessClaims(ctx)
 }
