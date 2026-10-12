@@ -37,12 +37,13 @@ explicit warning and returns its error. Cleanup does not authenticate records;
 expiration is always enforced during use. The cron presentation owns the schedule.
 
 signing_key/usecase.go implements Reconcile through the SigningKey repository and
-Secret utility inside a strict transaction. It re-seals keys whose fingerprint
-differs from the current key-encryption key, creates the active key when missing,
-rotates the active key once older than the configured interval, and soft-deletes
-retiring keys past retention. Keypair generation and sealing precede persistence;
-conflicts retry once. It logs committed creations, rotations, re-seals, and
-retirement counts.
+Secret utility. It re-seals keys whose fingerprint differs from the current
+key-encryption key, creates the active key when missing, rotates the active key
+once older than the configured rotation interval, and soft-deletes retiring keys
+past retention. Creation and rotation own a strict transaction with a
+single-conflict retry; re-seal and cleanup are individual statements. Composition
+runs Reconcile on the signing-key reconcile interval. It logs committed
+creations, rotations, re-seals, and retirement counts.
 
 jwks/usecase.go returns the active and retiring public JWKs from the SigningKey
 repository. It performs no authentication, permissions, or transactions; the

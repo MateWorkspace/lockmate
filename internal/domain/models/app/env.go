@@ -37,6 +37,7 @@ type Env struct {
 	SigningKeyEncryptionKeyPrevious []byte
 	SigningKeyRotationInterval      time.Duration
 	SigningKeyRetentionInterval     time.Duration
+	SigningKeyReconcileInterval     time.Duration
 
 	SeederEnabled         bool
 	SeederSuperPassword   string

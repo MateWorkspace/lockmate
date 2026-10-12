@@ -45,7 +45,7 @@ func (l *launcher) newPresentation(ctx context.Context) error {
 	cronStop, err := presentationcronrunner.Run(ctx, presentationcronrunner.Args{
 		Timeout: config.Env.PostgresConnectTimeout,
 		Jobs: []presentationcronrunner.Schedule{
-			{Name: "signing_key", Interval: config.Env.SigningKeyRotationInterval, Run: presentationcronjob.SigningKey(l.app.miscSigningKey)},
+			{Name: "signing_key", Interval: config.Env.SigningKeyReconcileInterval, Run: presentationcronjob.SigningKey(l.app.miscSigningKey)},
 			{Name: "auth_flow", Interval: config.Env.AuthFlowCleanupInterval, Optional: true, Run: presentationcronjob.AuthFlow(l.app.miscAuthFlow)},
 		},
 	})

@@ -45,6 +45,7 @@ var Env = domainmodelsapp.Env{
 
 	SigningKeyRotationInterval:  720 * time.Hour,
 	SigningKeyRetentionInterval: time.Hour,
+	SigningKeyReconcileInterval: time.Hour,
 
 	SeederEnabled:      true,
 	PasswordBcryptCost: bcrypt.DefaultCost,
@@ -95,6 +96,7 @@ func LoadEnv() error {
 	Env.SigningKeyEncryptionKeyPrevious = envGetBase64("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY_PREVIOUS", Env.SigningKeyEncryptionKeyPrevious)
 	Env.SigningKeyRotationInterval = envGetDuration("LOCKMATE_SIGNING_KEY_ROTATION_INTERVAL", Env.SigningKeyRotationInterval)
 	Env.SigningKeyRetentionInterval = envGetDuration("LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL", Env.SigningKeyRetentionInterval)
+	Env.SigningKeyReconcileInterval = envGetDuration("LOCKMATE_SIGNING_KEY_RECONCILE_INTERVAL", Env.SigningKeyReconcileInterval)
 
 	Env.PasswordBcryptCost = envGetInt("LOCKMATE_PASSWORD_BCRYPT_COST", Env.PasswordBcryptCost)
 	Env.SeederEnabled = envGetBool("LOCKMATE_SEEDER_ENABLED", Env.SeederEnabled)
@@ -153,6 +155,14 @@ func validate() error {
 
 	if Env.SigningKeyRetentionInterval < Env.TokenAccessDuration {
 		return domainmodelserror.NewError("LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL must be at least the access-token duration", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.SigningKeyReconcileInterval < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_SIGNING_KEY_RECONCILE_INTERVAL must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.SigningKeyReconcileInterval > Env.SigningKeyRotationInterval {
+		return domainmodelserror.NewError("LOCKMATE_SIGNING_KEY_RECONCILE_INTERVAL must not exceed LOCKMATE_SIGNING_KEY_ROTATION_INTERVAL", domainmodelserror.EnvironmentInvalid, nil)
 	}
 
 	if strings.TrimSpace(Env.TokenRefreshSecret) == "" {

@@ -69,7 +69,7 @@ Keep environment parsing and defaults in configuration code. `app.Env` contains
 logger settings, server ports and HTTP lifecycle timeouts, PostgreSQL settings,
 JWT secrets/lifetimes, bcrypt
 cost, the startup seeder toggle, three seed passwords, the seed client secret,
-the signing-key encryption keys and rotation/retention intervals. Control-space slug comes from space.json,
+the signing-key encryption keys and rotation/retention/reconcile intervals. Control-space slug comes from space.json,
 not the environment. Domain fields use standard Go types,
 including time.Duration, uint16 ports, and an int32 PostgreSQL connection limit.
 Do not include driver-specific configuration objects or log the entire Env model.

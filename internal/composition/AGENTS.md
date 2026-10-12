@@ -44,10 +44,12 @@ seeder when config.Env.SeederEnabled is true, and fail startup on seeding errors
 After seeding, `presentation.go` registers the HTTP routes and starts the cron
 presentation through `presentation/cron/runner.Run`, which runs each job once
 synchronously (failing launch on a required error) and then schedules it with the
-cron engine. The signing-key job reconciles the active key and re-seals keys under
-the current key-encryption key; the auth-flow job is optional best-effort cleanup.
-Store the returned stop function on the presentation and call it before
-PostgreSQL closes. Never parse environment variables outside config.
+cron engine. The signing-key job reconciles the active key, re-seals keys under
+the current key-encryption key, and retires old keys on its own reconcile
+interval (which must not exceed the rotation interval); the auth-flow job is
+optional best-effort cleanup. Store the returned stop function on the
+presentation and call it before PostgreSQL closes. Never parse environment
+variables outside config.
 
 Embedded seed definitions provision the control-space baseline. Its slug comes
 from seederdata.SeedData.Space.Slug and is passed to management constructors even

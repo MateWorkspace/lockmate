@@ -34,6 +34,7 @@ func setupEnvironment(t *testing.T) {
 		"LOCKMATE_TOKEN_ACCESS_DURATION", "LOCKMATE_TOKEN_REFRESH_DURATION",
 		"LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", "LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY_PREVIOUS",
 		"LOCKMATE_SIGNING_KEY_ROTATION_INTERVAL", "LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL",
+		"LOCKMATE_SIGNING_KEY_RECONCILE_INTERVAL",
 		"LOCKMATE_PASSWORD_BCRYPT_COST", "LOCKMATE_SEEDER_ENABLED",
 		"LOCKMATE_SEEDER_SUPER_PASSWORD", "LOCKMATE_SEEDER_ADMIN_PASSWORD",
 		"LOCKMATE_SEEDER_USER_PASSWORD", "LOCKMATE_SEEDER_CLIENT_SECRET_KEY",
@@ -107,6 +108,7 @@ func TestLoadEnvCallsValidate(t *testing.T) {
 		{"LOCKMATE_TOKEN_REFRESH_SECRET", " ", domainmodelserror.EnvironmentRequired},
 		{"LOCKMATE_TOKEN_ACCESS_DURATION", "999ms", domainmodelserror.EnvironmentInvalid},
 		{"LOCKMATE_TOKEN_REFRESH_DURATION", "0", domainmodelserror.EnvironmentInvalid},
+		{"LOCKMATE_SIGNING_KEY_RECONCILE_INTERVAL", "0", domainmodelserror.EnvironmentInvalid},
 		{"LOCKMATE_PORT_GRPC_SERVER", "0", domainmodelserror.EnvironmentInvalid},
 		{"LOCKMATE_PORT_HTTP_SERVER", "0", domainmodelserror.EnvironmentInvalid},
 		{"LOCKMATE_POSTGRES_PORT", "0", domainmodelserror.EnvironmentInvalid},
@@ -122,6 +124,15 @@ func TestLoadEnvCallsValidate(t *testing.T) {
 				t.Fatalf("incorrect validation error: %v", err)
 			}
 		})
+	}
+}
+
+func TestSigningKeyReconcileExceedsRotationRejected(t *testing.T) {
+	setupEnvironment(t)
+	t.Setenv("LOCKMATE_SIGNING_KEY_RECONCILE_INTERVAL", "800h")
+	err := config.LoadEnv()
+	if !errors.Is(err, domainmodelserror.EnvironmentInvalid) || !strings.Contains(err.Error(), "RECONCILE") {
+		t.Fatalf("reconcile interval exceeding rotation accepted: %v", err)
 	}
 }
 
