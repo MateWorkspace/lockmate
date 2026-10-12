@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      additional_contexts:
+        mate-golang: ../mate-golang
+      args:
+        LOCKMATE_PORT_HTTP_SERVER: ${LOCKMATE_PORT_HTTP_SERVER:-10701}
+        LOCKMATE_PORT_GRPC_SERVER: ${LOCKMATE_PORT_GRPC_SERVER:-10702}
+    container_name: ${DOCKER_COMPOSE_CONTAINER_NAME:-lockmate-app}
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${DOCKER_COMPOSE_HTTP_HOST_PORT:-10701}:${LOCKMATE_PORT_HTTP_SERVER:-10701}"
+      - "${DOCKER_COMPOSE_GRPC_HOST_PORT:-10702}:${LOCKMATE_PORT_GRPC_SERVER:-10702}"
+    extra_hosts:
+      - "dodol.local:host-gateway"
+      - "host.docker.internal:host-gateway"
+    stop_grace_period: 30s
