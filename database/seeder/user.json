@@ -1,0 +1,17 @@
+[
+  {
+    "role_slug": "super",
+    "name": "Super",
+    "username": "super"
+  },
+  {
+    "role_slug": "admin",
+    "name": "Admin",
+    "username": "admin"
+  },
+  {
+    "role_slug": "user",
+    "name": "User",
+    "username": "user"
+  }
+]

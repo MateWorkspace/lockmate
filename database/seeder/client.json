@@ -1,0 +1,14 @@
+[
+  {
+    "slug": "lockmate",
+    "name": "Lockmate",
+    "description": "Lockmate control client.",
+    "is_active": true,
+    "auth_redirect_uri": null,
+    "origins": [
+      "http://localhost:10701",
+      "http://127.0.0.1:10701",
+      "https://lockmate-dev.dhonan.my.id"
+    ]
+  }
+]

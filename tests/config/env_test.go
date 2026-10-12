@@ -32,13 +32,19 @@ func setupEnvironment(t *testing.T) {
 		"LOCKMATE_POSTGRES_MAX_CONNECTIONS", "LOCKMATE_POSTGRES_CONNECT_TIMEOUT",
 		"LOCKMATE_TOKEN_ACCESS_SECRET", "LOCKMATE_TOKEN_REFRESH_SECRET",
 		"LOCKMATE_TOKEN_ACCESS_DURATION", "LOCKMATE_TOKEN_REFRESH_DURATION",
-		"LOCKMATE_PASSWORD_BCRYPT_COST", "LOCKMATE_CONTROL_SPACE_SLUG",
+		"LOCKMATE_PASSWORD_BCRYPT_COST", "LOCKMATE_SEEDER_ENABLED",
+		"LOCKMATE_SEEDER_SUPER_PASSWORD", "LOCKMATE_SEEDER_ADMIN_PASSWORD",
+		"LOCKMATE_SEEDER_USER_PASSWORD", "LOCKMATE_SEEDER_CLIENT_SECRET_KEY",
 	} {
 		t.Setenv(key, "")
 	}
 
 	t.Setenv("LOCKMATE_TOKEN_ACCESS_SECRET", "test-access-secret")
 	t.Setenv("LOCKMATE_TOKEN_REFRESH_SECRET", "test-refresh-secret")
+	t.Setenv("LOCKMATE_SEEDER_SUPER_PASSWORD", "super-seed-password")
+	t.Setenv("LOCKMATE_SEEDER_ADMIN_PASSWORD", "admin-seed-password")
+	t.Setenv("LOCKMATE_SEEDER_USER_PASSWORD", "user-seed-password")
+	t.Setenv("LOCKMATE_SEEDER_CLIENT_SECRET_KEY", "lockmate-"+strings.Repeat("a", 64))
 }
 
 func TestLoadEnvDefaultsAndOverrides(t *testing.T) {
@@ -235,5 +241,64 @@ func TestGoogleEnvironment(t *testing.T) {
 	}
 	if config.Env.PortHttpServer != 10701 || config.Env.HttpPublicUrl != "https://lockmate-dev.dhonan.my.id" || config.Env.GoogleOAuthAttemptDuration != 10*time.Minute || config.Env.AuthHandoffDuration != time.Minute {
 		t.Fatal("incorrect Google defaults")
+	}
+}
+
+func TestSeederEnvironment(t *testing.T) {
+	setupEnvironment(t)
+	t.Setenv("LOCKMATE_CONTROL_SPACE_SLUG", "ignored-control-slug")
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if !config.Env.SeederEnabled {
+		t.Fatal("seeding should be enabled by default")
+	}
+	t.Setenv("LOCKMATE_SEEDER_ENABLED", "false")
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if config.Env.SeederEnabled {
+		t.Fatal("seeding toggle ignored")
+	}
+}
+
+func TestSeederCredentialsRequiredOnlyWhenEnabled(t *testing.T) {
+	for _, key := range []string{
+		"LOCKMATE_SEEDER_SUPER_PASSWORD",
+		"LOCKMATE_SEEDER_ADMIN_PASSWORD",
+		"LOCKMATE_SEEDER_USER_PASSWORD",
+		"LOCKMATE_SEEDER_CLIENT_SECRET_KEY",
+	} {
+		t.Run(key, func(t *testing.T) {
+			setupEnvironment(t)
+			t.Setenv(key, " ")
+			err := config.LoadEnv()
+			if !errors.Is(err, domainmodelserror.EnvironmentRequired) || !strings.Contains(err.Error(), key) {
+				t.Fatalf("missing credential classification: %v", err)
+			}
+
+			t.Setenv("LOCKMATE_SEEDER_ENABLED", "false")
+			if err := config.LoadEnv(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestSeederCredentialsLoadedFromEnvironment(t *testing.T) {
+	setupEnvironment(t)
+	t.Setenv("LOCKMATE_SEEDER_SUPER_PASSWORD", "custom-super-password")
+	t.Setenv("LOCKMATE_SEEDER_ADMIN_PASSWORD", "custom-admin-password")
+	t.Setenv("LOCKMATE_SEEDER_USER_PASSWORD", "custom-user-password")
+	t.Setenv("LOCKMATE_SEEDER_CLIENT_SECRET_KEY", "lockmate-"+strings.Repeat("b", 64))
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+
+	if config.Env.SeederSuperPassword != "custom-super-password" ||
+		config.Env.SeederAdminPassword != "custom-admin-password" ||
+		config.Env.SeederUserPassword != "custom-user-password" ||
+		config.Env.SeederClientSecretKey != "lockmate-"+strings.Repeat("b", 64) {
+		t.Fatal("seeder credential overrides ignored")
 	}
 }

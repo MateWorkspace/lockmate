@@ -16,6 +16,9 @@ drivers, SQL builders, JWT library claims, bcrypt, and slog do not belong here.
   Google OAuth errors distinguish invalid attempts, denial, invalid identity,
   and provider failures.
 - `logger/`: format, level, and metadata definitions in separate files.
+- `seeder/`: typed embedded bootstrap definitions, one file per entity; Data
+  assembles them without importing the embedded-data loader. Seed User.Password
+  and Client.SecretKey are runtime-only fields with json:"-"; JSON contains no secrets.
 
 Use the existing package names: `domainmodelsapp`, `domainmodelsentity`,
 `domainmodelserror`, and `domainmodelslogger`. Prefer simple value types and small
@@ -61,7 +64,8 @@ JSON tags. Context storage belongs to the tracer adapter, not the trace model.
 Keep environment parsing and defaults in configuration code. `app.Env` contains
 logger settings, server ports and HTTP lifecycle timeouts, PostgreSQL settings,
 JWT secrets/lifetimes, bcrypt
-cost, and the management control-space slug. Domain fields use standard Go types,
+cost, the startup seeder toggle, three seed passwords, and the seed client secret. Control-space slug comes from space.json,
+not the environment. Domain fields use standard Go types,
 including time.Duration, uint16 ports, and an int32 PostgreSQL connection limit.
 Do not include driver-specific configuration objects or log the entire Env model.
 Configuration uses a global config.Env value. LoadEnv loads an optional .env

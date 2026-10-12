@@ -38,19 +38,22 @@ cd lockmate
 cp .env.example .env
 ```
 
-Edit `.env` to set your PostgreSQL connection and two different JWT secrets:
+Edit `.env` to set your PostgreSQL connection, two different JWT secrets, and
+bootstrap credentials:
 
 ```dotenv
 LOCKMATE_TOKEN_ACCESS_SECRET=<your-access-token-secret>
 LOCKMATE_TOKEN_REFRESH_SECRET=<your-refresh-token-secret>
+LOCKMATE_SEEDER_SUPER_PASSWORD=<your-super-password>
+LOCKMATE_SEEDER_ADMIN_PASSWORD=<your-admin-password>
+LOCKMATE_SEEDER_USER_PASSWORD=<your-user-password>
+LOCKMATE_SEEDER_CLIENT_SECRET_KEY=<lockmate-followed-by-64-lowercase-hex-characters>
 ```
 
-Apply the ordered SQL migrations in [database/migrations](database/migrations)
-with your migration tool. Before using authentication, provision an active space,
-its default role, and an active client with valid credentials. Administration also
-needs an initial administrator and permission assignments. Automatic migration
-and seed provisioning are not included yet. See the [database diagram](docs/erd.dbml)
-for the relationships.
+Docker startup applies the ordered [migrations](database/migrations) automatically.
+For native Go startup, apply them with your migration tool first. Lockmate then
+seeds its control space, permissions, roles, users, and client before serving HTTP.
+See the [database diagram](docs/erd.dbml) for the relationships.
 
 ### Run with Go
 
@@ -81,6 +84,27 @@ DOCKER_COMPOSE_GRPC_HOST_PORT=10702
 The container's target ports come from `LOCKMATE_PORT_HTTP_SERVER` and
 `LOCKMATE_PORT_GRPC_SERVER`. The gRPC port is reserved; its presentation layer is
 not implemented yet.
+
+## Bootstrap accounts
+
+The default control space and client slug are both `lockmate`. The bundled users
+are `super`, `admin`, and `user`; their passwords come from the corresponding
+`LOCKMATE_SEEDER_SUPER_PASSWORD`, `LOCKMATE_SEEDER_ADMIN_PASSWORD`, and
+`LOCKMATE_SEEDER_USER_PASSWORD` variables. The control client's secret comes from
+`LOCKMATE_SEEDER_CLIENT_SECRET_KEY`: `lockmate-` followed by 64 lowercase hexadecimal
+characters. All four values are required when seeding is enabled, with no built-in
+credential defaults. Passwords use the same validation as normal user passwords.
+
+Super has full administration; Admin manages users, credentials, clients, and
+memberships; User has self-service profile/security access.
+
+Edit [the seed JSON](database/seeder) and rebuild to customize metadata and grants.
+The control-space slug is defined in `space.json`; it has no env setting. Credentials
+are supplied at runtime. Existing passwords, client secrets, and metadata are
+preserved on reruns, so changing environment values does not rotate stored secrets.
+Missing baseline grants are restored. Set `LOCKMATE_SEEDER_ENABLED=false` to skip
+seeding and make its credential settings optional. Rotate existing credentials
+through the profile or management API.
 
 ## Use the API
 

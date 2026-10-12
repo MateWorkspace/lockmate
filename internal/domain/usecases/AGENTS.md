@@ -7,7 +7,7 @@ Implementation belongs in application; domain usecases must not import
 infrastructure, transport bindings, database drivers, or provider SDKs.
 
 Application implements the interfaces and enforces the rules below. Interfaces
-alone do not enforce authorization. Google adapters/configuration are wired through composition; seed definitions remain separate follow-up work.
+alone do not enforce authorization. Google adapters/configuration are wired through composition; embedded seed definitions are applied through the startup Seeder.
 Gin presentation and main composition expose the implemented classic, profile,
 and management operations.
 
@@ -176,8 +176,8 @@ follow repository visibility rules; inactive targets remain manageable.
 | Own classic credential/password changes | `profile_security:set` |
 
 Entity prefixes are space, permission, role, user, classic_auth, google_auth,
-client, client_origin, space_member, role_permission, and space_member_role. Seed definitions
-must later follow this catalog; no seed implementation is introduced here.
+client, client_origin, space_member, role_permission, and space_member_role.
+Embedded seed definitions follow this catalog; independent tests verify parity.
 
 User.Create atomically creates a profile and required classic credentials; it
 does not issue tokens or enroll membership. ClassicAuth.Create can provision a
@@ -266,3 +266,8 @@ not a redirect URL; Launch supplies internal browser-cookie data; callback retur
 a safe redirect containing a handoff. Auth.Handoff.Exchange returns SessionResult
 only after committed single-use consumption and fresh token generation. Misc.AuthFlow
 provides bounded expiration cleanup without presentation-specific types.
+
+Startup Seeder.Run is separate from HTTP usecases. It depends on contracts and
+seed models, owns an atomic bootstrap boundary, and is invoked only by composition.
+Its interface is under seeder/. It does not require user claims or grant a transport
+permission bypass. Read its scoped application/data guides before modifying it.

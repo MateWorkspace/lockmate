@@ -3,7 +3,7 @@
 permissions.go is the source-based permission catalog for protected application
 operations. Group immutable constants by usecase group and capability; name each
 constant after its group, capability, and method. Keep the existing permission
-slug vocabulary consistent with domain contracts and future seed definitions.
+slug vocabulary consistent with domain contracts and embedded seed definitions.
 
 Each protected application method calls its injected PermissionGuard directly,
 using catalog constants immediately below its tag declaration. The check must
@@ -20,4 +20,4 @@ Origin administration belongs to management Client but uses its own
 client_origin:add/get/set/remove slugs. Name constants after the client methods;
 do not reuse client metadata or secret permissions. Misc allowlist checks run
 before authentication and have no permission requirement. Include these slugs in
-future seed definitions; there is no seeder to modify yet.
+embedded seed definitions and their catalog coverage tests.

@@ -1,6 +1,7 @@
 package compositionmain
 
 import (
+	seederdata "github.com/MateWorkspace/lockmate/database/seeder"
 	applicationauthclient "github.com/MateWorkspace/lockmate/internal/application/auth/client"
 	applicationauthgoogle "github.com/MateWorkspace/lockmate/internal/application/auth/google"
 	applicationauthhandoff "github.com/MateWorkspace/lockmate/internal/application/auth/handoff"
@@ -20,14 +21,17 @@ import (
 	applicationmisctracer "github.com/MateWorkspace/lockmate/internal/application/misc/tracer"
 	applicationprofileaccount "github.com/MateWorkspace/lockmate/internal/application/profile/account"
 	applicationprofilesecurity "github.com/MateWorkspace/lockmate/internal/application/profile/security"
+	applicationseeder "github.com/MateWorkspace/lockmate/internal/application/seeder"
 	"github.com/MateWorkspace/lockmate/internal/config"
 	domainusecasesauth "github.com/MateWorkspace/lockmate/internal/domain/usecases/auth"
 	domainusecasesmanagement "github.com/MateWorkspace/lockmate/internal/domain/usecases/management"
 	domainusecasesmisc "github.com/MateWorkspace/lockmate/internal/domain/usecases/misc"
 	domainusecasesprofile "github.com/MateWorkspace/lockmate/internal/domain/usecases/profile"
+	domainusecasesseeder "github.com/MateWorkspace/lockmate/internal/domain/usecases/seeder"
 )
 
 type application struct {
+	seeder                    domainusecasesseeder.Seeder
 	authGoogle                domainusecasesauth.Google
 	authHandoff               domainusecasesauth.Handoff
 	miscAuthFlow              domainusecasesmisc.AuthFlow
@@ -50,7 +54,27 @@ type application struct {
 }
 
 func (l *launcher) newApplication() {
+	seedData := newSeedData()
+
 	l.app = &application{
+		seeder: applicationseeder.NewUsecaseImpl(
+			l.infra.space,
+			l.infra.permission,
+			l.infra.role,
+			l.infra.rolePermission,
+			l.infra.user,
+			l.infra.classicAuth,
+			l.infra.spaceMember,
+			l.infra.spaceMemberRole,
+			l.infra.client,
+			l.infra.clientOrigin,
+			l.infra.password,
+			l.infra.keygen,
+			l.infra.validator,
+			l.infra.transactor,
+			l.infra.logger,
+			&seedData,
+		),
 		authGoogle: applicationauthgoogle.NewUsecaseImpl(
 			l.infra.client,
 			l.infra.space,
@@ -140,7 +164,7 @@ func (l *launcher) newApplication() {
 			l.infra.validator,
 			l.infra.logger,
 			l.infra.transactor,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementPermission: applicationmanagementpermission.NewUsecaseImpl(
 			l.infra.user,
@@ -151,7 +175,7 @@ func (l *launcher) newApplication() {
 			l.infra.validator,
 			l.infra.logger,
 			l.infra.transactor,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementRole: applicationmanagementrole.NewUsecaseImpl(
 			l.infra.user,
@@ -162,7 +186,7 @@ func (l *launcher) newApplication() {
 			l.infra.validator,
 			l.infra.logger,
 			l.infra.transactor,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementUser: applicationmanagementuser.NewUsecaseImpl(
 			l.infra.user,
@@ -174,7 +198,7 @@ func (l *launcher) newApplication() {
 			l.infra.logger,
 			l.infra.transactor,
 			l.infra.password,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementClassicAuth: applicationmanagementclassicauth.NewUsecaseImpl(
 			l.infra.user,
@@ -187,7 +211,7 @@ func (l *launcher) newApplication() {
 			l.infra.logger,
 			l.infra.transactor,
 			l.infra.password,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementGoogleAuth: applicationmanagementgoogleauth.NewUsecaseImpl(
 			l.infra.user,
@@ -196,7 +220,7 @@ func (l *launcher) newApplication() {
 			l.infra.googleAuth,
 			l.infra.permissionGuard,
 			l.infra.logger,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementClient: applicationmanagementclient.NewUsecaseImpl(
 			l.infra.user,
@@ -209,7 +233,7 @@ func (l *launcher) newApplication() {
 			l.infra.logger,
 			l.infra.transactor,
 			l.infra.keygen,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementSpaceMember: applicationmanagementspacemember.NewUsecaseImpl(
 			l.infra.user,
@@ -219,7 +243,7 @@ func (l *launcher) newApplication() {
 			l.infra.permissionGuard,
 			l.infra.logger,
 			l.infra.transactor,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementRolePermission: applicationmanagementrolepermission.NewUsecaseImpl(
 			l.infra.user,
@@ -229,7 +253,7 @@ func (l *launcher) newApplication() {
 			l.infra.permissionGuard,
 			l.infra.logger,
 			l.infra.transactor,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		managementSpaceMemberRole: applicationmanagementspacememberrole.NewUsecaseImpl(
 			l.infra.user,
@@ -239,7 +263,7 @@ func (l *launcher) newApplication() {
 			l.infra.permissionGuard,
 			l.infra.logger,
 			l.infra.transactor,
-			config.Env.ControlSpaceSlug,
+			seederdata.SeedData.Space.Slug,
 		),
 		miscTracer: applicationmisctracer.NewUsecaseImpl(
 			l.infra.tracer,

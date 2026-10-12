@@ -8,7 +8,8 @@ signatures, early returns, and whitespace between operation steps.
 
 Shared IdentityReader checks live callers and space boundaries after the initial
 permission check. Keep permission slugs in application/permissions, not in methods.
-Control-space slug defaults to lockmate and is resolved by immutable slug. Global user/space/authentication
+Control-space slug comes from embedded space.json (default lockmate), supplied
+by composition and resolved by immutable slug. Global user/space/authentication
 management requires control authority; scoped operations allow target-space or
 control authority. Role names provide no bypass. Inactive targets are manageable.
 

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	seederdata "github.com/MateWorkspace/lockmate/database/seeder"
 	"github.com/MateWorkspace/lockmate/internal/config"
 	domainmodelslogger "github.com/MateWorkspace/lockmate/internal/domain/models/logger"
 )
@@ -28,6 +29,11 @@ func Launch() int {
 		slog.Error("failed to load environment configuration", "tag", path+"/Launch", "err", err)
 		return 1
 	}
+	if err := seederdata.Load(); err != nil {
+		slog.Error("failed to load embedded seed definitions", "tag", path+"/Launch", "err", err)
+		return 1
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	l := &launcher{}
@@ -37,7 +43,19 @@ func Launch() int {
 	defer l.drv.cleanup()
 
 	l.newInfrastructure()
+	if err := l.infra.validator.SpaceSlug(seederdata.SeedData.Space.Slug); err != nil {
+		l.infra.logger.Error(ctx, path+"/Launch", "invalid control-space slug in seed definitions", domainmodelslogger.Meta{"err": err})
+		return 1
+	}
+
 	l.newApplication()
+	if config.Env.SeederEnabled {
+		if err := l.app.seeder.Run(ctx); err != nil {
+			l.infra.logger.Error(ctx, path+"/Launch", "failed to seed control-space bootstrap data", domainmodelslogger.Meta{"err": err})
+			return 1
+		}
+		l.infra.logger.Info(ctx, path+"/Launch", "seeding completed successfully", nil)
+	}
 	l.newPresentation()
 
 	maintenanceCtx, cancelMaintenance := context.WithCancel(ctx)

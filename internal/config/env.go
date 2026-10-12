@@ -42,8 +42,8 @@ var Env = domainmodelsapp.Env{
 	TokenAccessDuration:  15 * time.Minute,
 	TokenRefreshDuration: 24 * time.Hour,
 
+	SeederEnabled:      true,
 	PasswordBcryptCost: bcrypt.DefaultCost,
-	ControlSpaceSlug:   "lockmate",
 	HttpPublicUrl:      "https://lockmate-dev.dhonan.my.id",
 
 	GoogleOAuthEnabled:         false,
@@ -89,7 +89,11 @@ func LoadEnv() error {
 	Env.TokenRefreshDuration = envGetDuration("LOCKMATE_TOKEN_REFRESH_DURATION", Env.TokenRefreshDuration)
 
 	Env.PasswordBcryptCost = envGetInt("LOCKMATE_PASSWORD_BCRYPT_COST", Env.PasswordBcryptCost)
-	Env.ControlSpaceSlug = envGetString("LOCKMATE_CONTROL_SPACE_SLUG", Env.ControlSpaceSlug)
+	Env.SeederEnabled = envGetBool("LOCKMATE_SEEDER_ENABLED", Env.SeederEnabled)
+	Env.SeederSuperPassword = envGetString("LOCKMATE_SEEDER_SUPER_PASSWORD", Env.SeederSuperPassword)
+	Env.SeederAdminPassword = envGetString("LOCKMATE_SEEDER_ADMIN_PASSWORD", Env.SeederAdminPassword)
+	Env.SeederUserPassword = envGetString("LOCKMATE_SEEDER_USER_PASSWORD", Env.SeederUserPassword)
+	Env.SeederClientSecretKey = envGetString("LOCKMATE_SEEDER_CLIENT_SECRET_KEY", Env.SeederClientSecretKey)
 	Env.HttpPublicUrl = envGetString("LOCKMATE_HTTP_PUBLIC_URL", Env.HttpPublicUrl)
 
 	Env.GoogleOAuthEnabled = envGetBool("LOCKMATE_GOOGLE_OAUTH_ENABLED", Env.GoogleOAuthEnabled)
@@ -160,6 +164,25 @@ func validate() error {
 
 	if Env.PasswordBcryptCost < bcrypt.MinCost || Env.PasswordBcryptCost > bcrypt.MaxCost {
 		return domainmodelserror.NewError("LOCKMATE_PASSWORD_BCRYPT_COST must be between 4 and 31", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.SeederEnabled {
+		if strings.TrimSpace(Env.SeederSuperPassword) == "" {
+			return domainmodelserror.NewError("LOCKMATE_SEEDER_SUPER_PASSWORD is required when seeding is enabled", domainmodelserror.EnvironmentRequired, nil)
+		}
+
+		if strings.TrimSpace(Env.SeederAdminPassword) == "" {
+			return domainmodelserror.NewError("LOCKMATE_SEEDER_ADMIN_PASSWORD is required when seeding is enabled", domainmodelserror.EnvironmentRequired, nil)
+		}
+
+		if strings.TrimSpace(Env.SeederUserPassword) == "" {
+			return domainmodelserror.NewError("LOCKMATE_SEEDER_USER_PASSWORD is required when seeding is enabled", domainmodelserror.EnvironmentRequired, nil)
+		}
+
+		if strings.TrimSpace(Env.SeederClientSecretKey) == "" {
+			return domainmodelserror.NewError("LOCKMATE_SEEDER_CLIENT_SECRET_KEY is required when seeding is enabled", domainmodelserror.EnvironmentRequired, nil)
+		}
+
 	}
 
 	if Env.GoogleOAuthEnabled {

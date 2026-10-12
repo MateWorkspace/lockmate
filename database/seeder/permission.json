@@ -1,0 +1,232 @@
+[
+  {
+    "slug": "classic_auth:add",
+    "name": "Create classic auth",
+    "description": "Create classic auth within the authorized scope."
+  },
+  {
+    "slug": "classic_auth:get",
+    "name": "Read classic auth",
+    "description": "Read classic auth within the authorized scope."
+  },
+  {
+    "slug": "classic_auth:remove",
+    "name": "Delete classic auth",
+    "description": "Delete classic auth within the authorized scope."
+  },
+  {
+    "slug": "classic_auth:set",
+    "name": "Update classic auth",
+    "description": "Update classic auth within the authorized scope."
+  },
+  {
+    "slug": "client:add",
+    "name": "Create client",
+    "description": "Create client within the authorized scope."
+  },
+  {
+    "slug": "client:get",
+    "name": "Read client",
+    "description": "Read client within the authorized scope."
+  },
+  {
+    "slug": "client:remove",
+    "name": "Delete client",
+    "description": "Delete client within the authorized scope."
+  },
+  {
+    "slug": "client:set",
+    "name": "Update client",
+    "description": "Update client within the authorized scope."
+  },
+  {
+    "slug": "client_origin:add",
+    "name": "Create client origin",
+    "description": "Create client origin within the authorized scope."
+  },
+  {
+    "slug": "client_origin:get",
+    "name": "Read client origin",
+    "description": "Read client origin within the authorized scope."
+  },
+  {
+    "slug": "client_origin:remove",
+    "name": "Delete client origin",
+    "description": "Delete client origin within the authorized scope."
+  },
+  {
+    "slug": "client_origin:set",
+    "name": "Update client origin",
+    "description": "Update client origin within the authorized scope."
+  },
+  {
+    "slug": "client_secret:set",
+    "name": "Update client secret",
+    "description": "Update client secret within the authorized scope."
+  },
+  {
+    "slug": "google_auth:get",
+    "name": "Read google auth",
+    "description": "Read google auth within the authorized scope."
+  },
+  {
+    "slug": "permission:add",
+    "name": "Create permission",
+    "description": "Create permission within the authorized scope."
+  },
+  {
+    "slug": "permission:get",
+    "name": "Read permission",
+    "description": "Read permission within the authorized scope."
+  },
+  {
+    "slug": "permission:remove",
+    "name": "Delete permission",
+    "description": "Delete permission within the authorized scope."
+  },
+  {
+    "slug": "permission:set",
+    "name": "Update permission",
+    "description": "Update permission within the authorized scope."
+  },
+  {
+    "slug": "profile:get",
+    "name": "Read profile",
+    "description": "Read profile within the authorized scope."
+  },
+  {
+    "slug": "profile:set",
+    "name": "Update profile",
+    "description": "Update profile within the authorized scope."
+  },
+  {
+    "slug": "profile_security:get",
+    "name": "Read profile security",
+    "description": "Read profile security within the authorized scope."
+  },
+  {
+    "slug": "profile_security:set",
+    "name": "Update profile security",
+    "description": "Update profile security within the authorized scope."
+  },
+  {
+    "slug": "role:add",
+    "name": "Create role",
+    "description": "Create role within the authorized scope."
+  },
+  {
+    "slug": "role:get",
+    "name": "Read role",
+    "description": "Read role within the authorized scope."
+  },
+  {
+    "slug": "role:remove",
+    "name": "Delete role",
+    "description": "Delete role within the authorized scope."
+  },
+  {
+    "slug": "role:set",
+    "name": "Update role",
+    "description": "Update role within the authorized scope."
+  },
+  {
+    "slug": "role_permission:add",
+    "name": "Create role permission",
+    "description": "Create role permission within the authorized scope."
+  },
+  {
+    "slug": "role_permission:get",
+    "name": "Read role permission",
+    "description": "Read role permission within the authorized scope."
+  },
+  {
+    "slug": "role_permission:remove",
+    "name": "Delete role permission",
+    "description": "Delete role permission within the authorized scope."
+  },
+  {
+    "slug": "space:add",
+    "name": "Create space",
+    "description": "Create space within the authorized scope."
+  },
+  {
+    "slug": "space:get",
+    "name": "Read space",
+    "description": "Read space within the authorized scope."
+  },
+  {
+    "slug": "space:remove",
+    "name": "Delete space",
+    "description": "Delete space within the authorized scope."
+  },
+  {
+    "slug": "space:set",
+    "name": "Update space",
+    "description": "Update space within the authorized scope."
+  },
+  {
+    "slug": "space_member:add",
+    "name": "Create space member",
+    "description": "Create space member within the authorized scope."
+  },
+  {
+    "slug": "space_member:get",
+    "name": "Read space member",
+    "description": "Read space member within the authorized scope."
+  },
+  {
+    "slug": "space_member:remove",
+    "name": "Delete space member",
+    "description": "Delete space member within the authorized scope."
+  },
+  {
+    "slug": "space_member:set",
+    "name": "Update space member",
+    "description": "Update space member within the authorized scope."
+  },
+  {
+    "slug": "space_member_role:add",
+    "name": "Create space member role",
+    "description": "Create space member role within the authorized scope."
+  },
+  {
+    "slug": "space_member_role:get",
+    "name": "Read space member role",
+    "description": "Read space member role within the authorized scope."
+  },
+  {
+    "slug": "space_member_role:remove",
+    "name": "Delete space member role",
+    "description": "Delete space member role within the authorized scope."
+  },
+  {
+    "slug": "user:add",
+    "name": "Create user",
+    "description": "Create user within the authorized scope."
+  },
+  {
+    "slug": "user:get",
+    "name": "Read user",
+    "description": "Read user within the authorized scope."
+  },
+  {
+    "slug": "user:remove",
+    "name": "Delete user",
+    "description": "Delete user within the authorized scope."
+  },
+  {
+    "slug": "user:set",
+    "name": "Update user",
+    "description": "Update user within the authorized scope."
+  },
+  {
+    "slug": "user_password:set",
+    "name": "Update user password",
+    "description": "Update user password within the authorized scope."
+  },
+  {
+    "slug": "user_permission:get",
+    "name": "Read user permission",
+    "description": "Read user permission within the authorized scope."
+  }
+]

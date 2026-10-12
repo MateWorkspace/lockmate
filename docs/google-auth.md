@@ -51,10 +51,11 @@ LOCKMATE_AUTH_HANDOFF_DURATION=1m
 LOCKMATE_AUTH_FLOW_CLEANUP_INTERVAL=5m
 ```
 
-Apply the new ordered migrations with your migration runner before starting the
-updated service. They add `clients.auth_redirect_uri`, `google_oauth_launches`,
+Docker startup applies pending migrations automatically. For native Go startup,
+apply the ordered migrations with your migration runner first. They add `clients.auth_redirect_uri`, `google_oauth_launches`,
 `google_oauth_attempts`, and `auth_handoffs`. Existing client rows retain a null
-redirect until configured. Startup does not apply migrations or create seed data.
+redirect until configured. Application startup seeds the control-space baseline unless LOCKMATE_SEEDER_ENABLED
+is false. The default control client has no callback until configured.
 
 Run `go run ./cmd/main` from the repository root. Swagger is available at
 `https://lockmate-dev.dhonan.my.id/api/docs/index.html`.
@@ -153,7 +154,8 @@ in its transient attempt. Handoffs contain identity references rather than JWTs.
 Expiration is enforced during use, independently of periodic bounded cleanup.
 Cleanup failures are warnings; they do not authorize expired records.
 
-Apply migrations first, configure the client URI, enable Google, and manually
+Start Docker to migrate/seed (or apply migrations before native startup), configure
+the client URI, enable Google, and manually
 exercise successful login, first-time registration, and cancellation through the
 public domain. Also confirm that replay and a second client's exchange fail.
 

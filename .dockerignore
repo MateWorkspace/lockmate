@@ -8,5 +8,12 @@
 !docs/
 !docs/swagger/
 !docs/swagger/**
+!database/
+!database/seeder/
+!database/seeder/**
+!database/migrations/
+!database/migrations/*.up.sql
+!database/migrations/*.down.sql
+!entrypoint.sh
 **/.env
 **/.env.*

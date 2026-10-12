@@ -30,9 +30,11 @@ The current scoped guides are:
   [management](internal/application/management/AGENTS.md),
   [misc](internal/application/misc/AGENTS.md),
   [shared](internal/application/shared/AGENTS.md), and
-  [permissions](internal/application/permissions/AGENTS.md).
+  [permissions](internal/application/permissions/AGENTS.md), and
+  [seeder](internal/application/seeder/AGENTS.md).
 - Infrastructure: [repository](internal/infrastructure/repository/AGENTS.md) and
   [utility](internal/infrastructure/utility/AGENTS.md).
+- Seed definitions: [embedded JSON](database/seeder/AGENTS.md).
 - Delivery and wiring: [HTTP presentation](internal/presentation/http/AGENTS.md)
   and [composition](internal/composition/AGENTS.md).
 
@@ -50,7 +52,7 @@ align all affected layers rather than introducing isolated conventions.
 - `internal/domain/contracts/`: repository and utility interfaces consumed by
   application; argument structs follow interface declarations.
 - `internal/domain/usecases/`: application-facing interfaces and request/result
-  types, grouped into `auth`, `profile`, `management`, `misc`, and `shared`.
+  types, grouped into `auth`, `profile`, `management`, `misc`, `shared`, and internal startup `seeder`.
 - `internal/application/`: business orchestration implementing usecases through
   contracts. Permission constants live in `permissions`; focused helpers in
   `shared`.
@@ -61,6 +63,7 @@ align all affected layers rather than introducing isolated conventions.
 - `internal/composition/main/`: explicit driver, infrastructure, application,
   presentation, and lifecycle wiring.
 - `database/migrations/`: ordered SQL up/down migrations.
+- `database/seeder/`: embedded bootstrap definitions and their loader.
 - `docs/`: ERD, generated Swagger, and the Google integration guide.
 - `tests/`: behavior and integration tests organized by layer and capability.
 - `Dockerfile` and `docker-compose.yml`: application image and environment-driven
@@ -120,11 +123,14 @@ origins. Google browser launch/callback instead validate saved state and an
 attempt-specific browser-binding cookie. Client `auth_redirect_uri` is independent
 of CORS origins. See [Google setup and integration](docs/google-auth.md).
 
-Google is optional and disabled until configured. Migrations and initial
-client/space/role/permission records are provisioned externally; startup does not
-create them. Expiring auth records are cleaned periodically, while expiration is
-also enforced during consumption. gRPC presentation, Redis integration, seed
-tooling, hosted login UI, OTP/recovery, and logout/revocation remain future work.
+Google is optional and disabled until configured. Docker startup applies pending
+migrations, then application startup fills missing bootstrap records before HTTP.
+Native Go startup requires migrations to be applied separately. SeederEnabled
+defaults true; disable it with LOCKMATE_SEEDER_ENABLED=false. space.json supplies
+the control-space slug, including management authorization; there is no slug env
+setting. Seed credentials come from required LOCKMATE_SEEDER_* variables when
+seeding is enabled, with no embedded defaults. Expiring auth records are cleaned periodically, while expiration is
+also enforced during consumption. gRPC presentation, Redis integration, hosted login UI, OTP/recovery, and logout/revocation remain future work.
 
 For Go changes, run from this repository:
 
@@ -158,8 +164,12 @@ no gRPC listener yet. Keep cloudflared pointed at the published HTTP host port.
 The image runs a static Go binary as a non-root user, with CA certificates for
 Google requests and an HTTP version-endpoint health check. Secrets are supplied
 at runtime through env_file; never copy `.env` into an image or print resolved
-Compose configuration containing secrets. Existing PostgreSQL and migrations are
-managed separately. In a container, 127.0.0.1 refers to that container; use
+Compose configuration containing secrets. PostgreSQL is managed separately. Docker includes pinned golang-migrate v4.20.1,
+canonical migrations, and entrypoint.sh; migration failures abort startup
+and redact connection URLs/passwords. Never automatically force migration history.
+Embedded metadata/grant JSON is compiled into the app; credentials are runtime
+environment settings. Rebuilding or changing these settings does not replace
+existing credentials. Enabled seed reruns restore missing baseline grants. In a container, 127.0.0.1 refers to that container; use
 dodol.local or host.docker.internal for host services, both mapped to host-gateway.
 Keep the Compose stop grace period longer than the application's shutdown timeout.
 Validate Docker changes with Compose configuration checks, an image build, and an

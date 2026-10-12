@@ -34,8 +34,13 @@ type Env struct {
 	TokenAccessDuration  time.Duration
 	TokenRefreshDuration time.Duration
 
+	SeederEnabled         bool
+	SeederSuperPassword   string
+	SeederAdminPassword   string
+	SeederUserPassword    string
+	SeederClientSecretKey string
+
 	PasswordBcryptCost int
-	ControlSpaceSlug   string
 	HttpPublicUrl      string
 
 	GoogleOAuthEnabled         bool
