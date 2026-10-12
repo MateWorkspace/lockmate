@@ -30,3 +30,8 @@ without logging or persistence; unexpected validation or repository failures
 return false with the original error and an explicit step-specific log. Never
 swallow operational failures or use an allowance as authenticated identity.
 Routine matches and nonmatches are quiet; middleware and caching are deferred.
+
+auth_flow/usecase.go purges expired launch, attempt, and generic handoff records
+in batches of 1000, respecting cancellation. Each failed stage writes its own
+explicit warning and returns its error. Cleanup does not authenticate records;
+expiration is always enforced during use. Composition owns the timer lifecycle.

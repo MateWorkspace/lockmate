@@ -58,11 +58,12 @@ func (h *handler) ClientPost(c *gin.Context) {
 	}
 
 	request := domainusecasesmanagement.CreateClientRequest{
-		Slug:        slug,
-		Name:        name,
-		Description: req.Description,
-		IsActive:    req.IsActive,
-		Preferences: req.Preferences,
+		AuthRedirectUri: req.AuthRedirectUri,
+		Slug:            slug,
+		Name:            name,
+		Description:     req.Description,
+		IsActive:        req.IsActive,
+		Preferences:     req.Preferences,
 	}
 
 	result, err := h.clientUseCase.Create(ctx, caller, spaceId, request)
@@ -278,10 +279,12 @@ func (h *handler) ClientPatch(c *gin.Context) {
 	}
 
 	request := domainusecasesmanagement.UpdateClientRequest{
-		Name:        req.Name,
-		Description: req.Description,
-		IsActive:    req.IsActive,
-		Preferences: req.Preferences,
+		AuthRedirectUri:        req.AuthRedirectUri,
+		SetAuthRedirectUriNull: req.SetAuthRedirectUriNull,
+		Name:                   req.Name,
+		Description:            req.Description,
+		IsActive:               req.IsActive,
+		Preferences:            req.Preferences,
 	}
 
 	if err := h.clientUseCase.UpdateById(ctx, caller, spaceId, id, request); err != nil {

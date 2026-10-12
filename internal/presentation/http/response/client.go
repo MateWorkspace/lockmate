@@ -7,6 +7,7 @@ import (
 )
 
 type ClientResponse struct {
+	AuthRedirectUri   *string         `json:"auth_redirect_uri" example:"https://app.example.com/auth/callback"`
 	Id                int64           `json:"id" example:"1"`
 	SpaceId           int64           `json:"space_id" example:"1"`
 	Slug              string          `json:"slug" example:"web"`
@@ -20,6 +21,7 @@ type ClientResponse struct {
 
 func Client(value domainusecasesshared.ClientView) ClientResponse {
 	return ClientResponse{
+		AuthRedirectUri:   value.AuthRedirectUri,
 		Id:                value.Id,
 		SpaceId:           value.SpaceId,
 		Slug:              value.Slug,

@@ -88,6 +88,13 @@ Gin tree: space_id, client_id, space_member_id, and origin_id, for example.
 
 Tests live under tests/presentation/http. Cover route/usecase completeness,
 trusted context and DTO mapping, error sanitization, Swagger/runtime parity,
-preflight, origin revocation, and real PostgreSQL authentication. Google sign-in,
-cookies, logout/revocation, forgotten-password recovery, and object storage remain
-deferred; existing Google identity monitoring is available.
+preflight, origin revocation, and real PostgreSQL authentication. Logout/revocation, forgotten-password recovery, hosted login UI, and object storage
+remain deferred; existing Google identity monitoring is available.
+
+Google start and generic handoff exchange require the normal client headers.
+Google launch/callback are browser navigation routes without those headers or
+bearer authentication; saved state and the browser-binding cookie authorize the
+callback. Use attempt-specific __Host cookies, Secure/HttpOnly/SameSite=Lax with
+Path=/ and no Domain. Keep credentialed CORS disabled. Callback query values must
+be unambiguous; read binding only from its cookie. Responses use no-store and
+no-referrer. Redirects carry short-lived handoff codes, never JWTs.

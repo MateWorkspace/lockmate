@@ -219,6 +219,7 @@ Table space_member_role [headercolor: #22D3EE] {
 }
 
 Table clients [headercolor: #D97706] {
+    auth_redirect_uri TEXT [note: 'Exact application backend auth callback; nullable disables browser authentication.']
     Note: 'Consuming applications, each owned by one space. Authenticate using the stable slug and supplied secret. A client identifies the application and does not grant user roles or permissions. Disabled or deleted clients, or disabled or deleted parent spaces, cannot authenticate. One current secret is stored; rotation replaces its hash and redaction without secret history or overlapping secrets.'
 
     id                  BIGINT      [pk, increment]
@@ -310,4 +311,58 @@ TableGroup application_clients [color: #D97706] {
     clients
     client_origins
     Note: 'Space-owned consuming applications with hashed client secrets and per-client browser origin allowlists.'
+}
+
+// Internal OAuth state and generic single-use session handoff. Never expose these records.
+Table google_oauth_launches [headercolor: #059669] {
+    ticket_hash TEXT [pk, not null]
+    client_id BIGINT [not null]
+    space_id BIGINT [not null]
+    redirect_uri TEXT [not null]
+    client_state TEXT [not null]
+    expires_at TIMESTAMPTZ [not null]
+    Indexes {
+        expires_at [name: 'idx_google_oauth_launches_expires_at']
+    }
+}
+Ref: google_oauth_launches.client_id > clients.id [delete: cascade]
+Ref: google_oauth_launches.space_id > spaces.id [delete: cascade]
+Table google_oauth_attempts [headercolor: #059669] {
+    state_hash TEXT [pk, not null]
+    binding_hash TEXT [not null]
+    nonce_hash TEXT [not null]
+    verifier TEXT [not null]
+    client_id BIGINT [not null]
+    space_id BIGINT [not null]
+    redirect_uri TEXT [not null]
+    client_state TEXT [not null]
+    expires_at TIMESTAMPTZ [not null]
+    Indexes {
+        expires_at [name: 'idx_google_oauth_attempts_expires_at']
+    }
+}
+Ref: google_oauth_attempts.client_id > clients.id [delete: cascade]
+Ref: google_oauth_attempts.space_id > spaces.id [delete: cascade]
+Table auth_handoffs [headercolor: #059669] {
+    code_hash TEXT [pk, not null]
+    client_id BIGINT [not null]
+    space_id BIGINT [not null]
+    user_id BIGINT [not null]
+    space_member_id BIGINT [not null]
+    redirect_uri TEXT [not null]
+    is_new_user BOOLEAN [not null]
+    expires_at TIMESTAMPTZ [not null]
+    Indexes {
+        expires_at [name: 'idx_auth_handoffs_expires_at']
+    }
+}
+Ref: auth_handoffs.client_id > clients.id [delete: cascade]
+Ref: auth_handoffs.space_id > spaces.id [delete: cascade]
+Ref: auth_handoffs.user_id > users.id [delete: cascade]
+Ref: auth_handoffs.space_member_id > space_members.id [delete: cascade]
+
+TableGroup auth_flows [color: #059669] {
+    google_oauth_launches
+    google_oauth_attempts
+    auth_handoffs
 }

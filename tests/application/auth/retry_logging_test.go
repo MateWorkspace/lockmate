@@ -39,7 +39,7 @@ func TestExhaustedConflictRetriesLogWarnThenError(t *testing.T) {
 				calls := 0
 				oauth := &testshared.GoogleOAuth{CompleteFn: func(context.Context, domaincontractsutility.CompleteGoogleOAuthArgs) (*domaincontractsutility.CompleteGoogleOAuthResult, error) {
 					calls++
-					return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: 30, SpaceId: 10, Identity: domaincontractsutility.GoogleOAuthIdentity{Subject: "google-sub", Email: "new@example.com", IsEmailVerified: true}}, nil
+					return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: 30, SpaceId: 10, RedirectUri: "https://app.example.com/auth/callback", ClientState: "project-state", Identity: domaincontractsutility.GoogleOAuthIdentity{Subject: "google-sub", Email: "new@example.com", IsEmailVerified: true}}, nil
 				}}
 				_, err = google(f, oauth).SignInCallback(context.Background(), callbackRequest())
 				if calls != 1 {

@@ -96,3 +96,10 @@ Do not put passwords, raw keys, or tokens in messages or sources created here.
 
 Match the existing field ordering and explicit import aliases. Keep related
 fields readable with blank lines, and format changed Go files with gofmt.
+
+Client.AuthRedirectUri is nullable, separate from CORS origins, and exposed in
+safe client views. GoogleOAuthLaunch, GoogleOAuthAttempt, and AuthHandoff are
+internal expiring records whose fields have json:"-". They store digests and
+trusted scope; handoffs have identity references, not tokens. Env includes public
+HTTP origin, optional Google credentials, flow lifetimes, provider timeout, and
+cleanup interval. Never serialize these configuration or transient records.

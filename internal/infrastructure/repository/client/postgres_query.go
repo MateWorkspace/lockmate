@@ -16,6 +16,7 @@ var clientColumns = []string{
 	"secret_key_redacted",
 	"is_active",
 	"preferences",
+	"auth_redirect_uri",
 	"created_at",
 	"updated_at",
 	"deleted_at",
@@ -33,6 +34,7 @@ var summaryColumns = []string{
 	"secret_key_redacted",
 	"is_active",
 	"preferences",
+	"auth_redirect_uri",
 	"created_at",
 	"updated_at",
 	"deleted_at",
@@ -86,6 +88,11 @@ func (p *postgresImpl) queryCreate(spaceId int64, args domaincontractsrepository
 		values = append(values, *args.Preferences)
 	}
 
+	if args.AuthRedirectUri != nil {
+		columns = append(columns, "auth_redirect_uri")
+		values = append(values, *args.AuthRedirectUri)
+	}
+
 	return p.SqrD.Insert("clients").Columns(columns...).Values(values...).Suffix("RETURNING id").ToSql()
 }
 
@@ -115,6 +122,12 @@ func (p *postgresImpl) queryUpdateById(spaceId, id int64, args domaincontractsre
 
 	if args.Preferences != nil {
 		q = q.Set("preferences", *args.Preferences)
+	}
+
+	if args.AuthRedirectUri != nil {
+		q = q.Set("auth_redirect_uri", *args.AuthRedirectUri)
+	} else if args.SetAuthRedirectUriNull {
+		q = q.Set("auth_redirect_uri", nil)
 	}
 
 	return q.Set("updated_at", squirrel.Expr("CURRENT_TIMESTAMP")).Set("updated_by", args.By).ToSql()

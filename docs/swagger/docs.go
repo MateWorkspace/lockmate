@@ -15,6 +15,338 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/v1/auth/exchange": {
+            "post": {
+                "security": [
+                    {
+                        "ClientExecId": [],
+                        "ClientSecret": [],
+                        "ClientSlug": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "01. Auth"
+                ],
+                "summary": "Exchange a single-use authentication handoff for a session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Nonzero execution UUID",
+                        "name": "X-Client-Exec-Id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthExchangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "412": {
+                        "description": "Precondition Failed",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/google/callback": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "01. Auth"
+                ],
+                "summary": "Complete Google sign-in and redirect with a handoff code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "state",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "code",
+                        "name": "code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "error",
+                        "name": "error",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "303": {
+                        "description": "Redirect to client backend",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "412": {
+                        "description": "Precondition Failed",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/google/launch": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "01. Auth"
+                ],
+                "summary": "Launch Google authentication in the browser",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ticket",
+                        "name": "ticket",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "303": {
+                        "description": "Redirect to Google",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "412": {
+                        "description": "Precondition Failed",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/google/start": {
+            "post": {
+                "security": [
+                    {
+                        "ClientExecId": [],
+                        "ClientSecret": [],
+                        "ClientSlug": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "01. Auth"
+                ],
+                "summary": "Start Google sign-in or registration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Nonzero execution UUID",
+                        "name": "X-Client-Exec-Id",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthGoogleStartRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.AuthGoogleStartResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "412": {
+                        "description": "Precondition Failed",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/auth/refresh": {
             "post": {
                 "security": [
@@ -8599,6 +8931,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthExchangeRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthGoogleStartRequest": {
+            "type": "object",
+            "properties": {
+                "state": {
+                    "type": "string",
+                    "example": "f8d5b65dc01947658b04e768c98771ae"
+                }
+            }
+        },
         "github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthRefreshRequest": {
             "type": "object",
             "properties": {
@@ -8702,6 +9051,10 @@ const docTemplate = `{
         "github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientRequest": {
             "type": "object",
             "properties": {
+                "auth_redirect_uri": {
+                    "type": "string",
+                    "example": "https://app.example.com/auth/callback"
+                },
                 "description": {
                     "type": "string",
                     "example": "Example description"
@@ -8938,6 +9291,13 @@ const docTemplate = `{
         "github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientRequest": {
             "type": "object",
             "properties": {
+                "auth_redirect_uri": {
+                    "type": "string",
+                    "example": "https://app.example.com/auth/callback"
+                },
+                "auth_redirect_uri_set_null": {
+                    "type": "boolean"
+                },
                 "description": {
                     "type": "string",
                     "example": "Example description"
@@ -9117,6 +9477,15 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_response.AuthGoogleStartResponse": {
+            "type": "object",
+            "properties": {
+                "launch_url": {
+                    "type": "string",
+                    "example": "https://lockmate-dev.dhonan.my.id/api/v1/auth/google/launch?ticket=..."
+                }
+            }
+        },
         "github_com_MateWorkspace_lockmate_internal_presentation_http_response.AuthMethodsResponse": {
             "type": "object",
             "properties": {
@@ -9236,6 +9605,10 @@ const docTemplate = `{
         "github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientResponse": {
             "type": "object",
             "properties": {
+                "auth_redirect_uri": {
+                    "type": "string",
+                    "example": "https://app.example.com/auth/callback"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2026-10-10T09:30:00Z"
@@ -10017,7 +10390,7 @@ const docTemplate = `{
             "name": "00. Version"
         },
         {
-            "description": "Classic registration, sign-in, and refresh.",
+            "description": "Classic registration, sign-in, refresh, Google sign-in/registration, and single-use authentication handoff.",
             "name": "01. Auth"
         },
         {
@@ -10078,7 +10451,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api",
 	Schemes:          []string{},
 	Title:            "Lockmate",
-	Description:      "Multi-space authentication and access management. Every business operation requires client credentials and a nonzero execution UUID.",
+	Description:      "Multi-space authentication and access management. Client-authenticated operations require credentials and a nonzero execution UUID; Google browser navigation uses saved flow state and binding.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

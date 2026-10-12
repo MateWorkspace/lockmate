@@ -22,6 +22,7 @@ func (l *launcher) newPresentation() {
 	version := presentationhttphandlerversion.NewHandler(config.App)
 
 	presentationhttproute.Route(l.drv.gin, presentationhttproute.Args{
+		Flow: presentationhttphandlerauth.NewFlowHandler(l.app.authGoogle, l.app.authHandoff),
 		Auth: auth, Profile: profile, Management: management, Version: version,
 		Client: l.app.authClient, Session: l.app.authSession,
 		Tracer: l.app.miscTracer, AllowedOrigin: l.app.miscAllowedOrigin,

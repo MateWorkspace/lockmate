@@ -30,6 +30,7 @@ func ClientView(value *domainmodelsentity.Client) *domainusecasesshared.ClientVi
 
 	return &domainusecasesshared.ClientView{
 		Id:                      value.Id,
+		AuthRedirectUri:         value.AuthRedirectUri,
 		SpaceId:                 value.SpaceId,
 		Slug:                    value.Slug,
 		Name:                    value.Name,

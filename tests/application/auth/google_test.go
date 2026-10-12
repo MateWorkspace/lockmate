@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	infrastructureutilityauthflow "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/auth_flow"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	applicationauthgoogle "github.com/MateWorkspace/lockmate/internal/application/auth/google"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
@@ -17,7 +20,16 @@ import (
 )
 
 func google(f *testshared.Fixture, oauth *testshared.GoogleOAuth) domainusecasesauth.Google {
-	return applicationauthgoogle.NewUsecaseImpl(f.Client, f.Space, f.User, f.SpaceMember, f.SpaceMemberRole, f.Token, f.Validator, f.Transactor, f.Logger, f.GoogleAuth, oauth)
+	read := f.Client.ReadByIdFn
+	f.Client.ReadByIdFn = func(ctx context.Context, spaceId, id int64) (*domainmodelsentity.Client, error) {
+		value, err := read(ctx, spaceId, id)
+		if value != nil {
+			redirect := "https://app.example.com/auth/callback"
+			value.AuthRedirectUri = &redirect
+		}
+		return value, err
+	}
+	return applicationauthgoogle.NewUsecaseImpl(f.Client, f.Space, f.User, f.SpaceMember, f.SpaceMemberRole, f.Validator, f.Transactor, f.Logger, f.GoogleAuth, oauth, &launchStore{}, &handoffStore{fixture: f}, infrastructureutilityauthflow.NewRandomImpl(), applicationauthgoogle.Config{Enabled: true, PublicUrl: "https://lockmate-dev.dhonan.my.id", LaunchDuration: 2 * time.Minute, AttemptDuration: 10 * time.Minute, HandoffDuration: time.Minute})
 }
 func callbackRequest() domainusecasesauth.GoogleSignInCallbackRequest {
 	return domainusecasesauth.GoogleSignInCallbackRequest{Code: "private-code", State: "private-state", Binding: "private-binding"}
@@ -32,7 +44,7 @@ func TestGoogleSeamlessRegistrationAndSync(t *testing.T) {
 				if mode == "provider failure" {
 					return nil, testshared.NotFound(domainmodelserror.GoogleOAuthStateInvalid)
 				}
-				return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: 30, SpaceId: 10, Identity: domaincontractsutility.GoogleOAuthIdentity{Subject: "google-sub", Email: "new@example.com", IsEmailVerified: true}}, nil
+				return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: 30, SpaceId: 10, RedirectUri: "https://app.example.com/auth/callback", ClientState: "project-state", Identity: domaincontractsutility.GoogleOAuthIdentity{Subject: "google-sub", Email: "new@example.com", IsEmailVerified: true}}, nil
 			}}
 			if mode == "existing" {
 				f.Googles[1] = &domainmodelsentity.GoogleAuth{Id: 50, UserId: 1, Subject: "google-sub", Email: "old@example.com"}
@@ -89,10 +101,10 @@ func TestGoogleSeamlessRegistrationAndSync(t *testing.T) {
 				t.Fatalf("callback: %v", err)
 			}
 			if mode == "existing" || mode == "subject conflict" {
-				if result.IsNewUser || result.User.Name != "Current name" || f.Googles[1].Email != "new@example.com" || f.Classics[1].Username != "user" {
+				if f.Users[1].Name != "Current name" || f.Googles[1].Email != "new@example.com" || f.Classics[1].Username != "user" {
 					t.Fatal("existing identity overwritten")
 				}
-			} else if !result.IsNewUser || result.User.Name != "Google user" || len(f.Classics) != 1 {
+			} else if f.Users[2] == nil || f.Users[2].Name != "Google user" || len(f.Classics) != 1 {
 				t.Fatal("google registration not separate from classic")
 			}
 			if mode == "conflict" || mode == "subject conflict" {
@@ -137,10 +149,10 @@ func TestGoogleNameFallbackIsBestEffort(t *testing.T) {
 				identity.Name = &invalidName
 			}
 			oauth := &testshared.GoogleOAuth{CompleteFn: func(context.Context, domaincontractsutility.CompleteGoogleOAuthArgs) (*domaincontractsutility.CompleteGoogleOAuthResult, error) {
-				return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: 30, SpaceId: 10, Identity: identity}, nil
+				return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: 30, SpaceId: 10, RedirectUri: "https://app.example.com/auth/callback", ClientState: "project-state", Identity: identity}, nil
 			}}
 			result, err := google(f, oauth).SignInCallback(context.Background(), callbackRequest())
-			if err != nil || result == nil || result.User.Name != "Google user" || !f.Committed {
+			if err != nil || result == nil || f.Users[2] == nil || f.Users[2].Name != "Google user" || !f.Committed {
 				t.Fatalf("fallback registration failed: %v", err)
 			}
 			expected := 1
@@ -157,5 +169,47 @@ func TestGoogleNameFallbackIsBestEffort(t *testing.T) {
 				t.Fatal("provider name leaked")
 			}
 		})
+	}
+}
+
+// These doubles exercise application orchestration; PostgreSQL tests cover atomicity.
+type launchStore struct {
+	domaincontractsrepository.GoogleOAuthLaunch
+	value *domainmodelsentity.GoogleOAuthLaunch
+}
+
+func (s *launchStore) Create(_ context.Context, value domainmodelsentity.GoogleOAuthLaunch) error {
+	s.value = &value
+	return nil
+}
+func (s *launchStore) Consume(_ context.Context, _ string) (*domainmodelsentity.GoogleOAuthLaunch, error) {
+	return s.value, nil
+}
+
+type handoffStore struct {
+	domaincontractsrepository.AuthHandoff
+	fixture *testshared.Fixture
+	value   *domainmodelsentity.AuthHandoff
+}
+
+func (s *handoffStore) Create(_ context.Context, value domainmodelsentity.AuthHandoff) error {
+	if s.fixture.TokenErr != nil {
+		return s.fixture.TokenErr
+	}
+	s.value = &value
+	return nil
+}
+func TestGoogleCallbackRedirectHasNoTokens(t *testing.T) {
+	f := testshared.NewFixture()
+	oauth := &testshared.GoogleOAuth{CompleteFn: func(context.Context, domaincontractsutility.CompleteGoogleOAuthArgs) (*domaincontractsutility.CompleteGoogleOAuthResult, error) {
+		return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: 30, SpaceId: 10, RedirectUri: "https://app.example.com/auth/callback", ClientState: "project-state", Identity: domaincontractsutility.GoogleOAuthIdentity{Subject: "sub", Email: "user@example.com", IsEmailVerified: true}}, nil
+	}}
+	result, err := google(f, oauth).SignInCallback(context.Background(), callbackRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	uri, err := url.Parse(result.RedirectUrl)
+	if err != nil || len(uri.Query().Get("code")) != 43 || uri.Query().Get("state") != "project-state" || len(uri.Query()) != 2 {
+		t.Fatalf("unsafe callback redirect: %v", err)
 	}
 }

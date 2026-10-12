@@ -2,6 +2,8 @@ package config
 
 import (
 	"math"
+	"net/netip"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -20,7 +22,7 @@ var Env = domainmodelsapp.Env{
 	LoggerUseTrace: true,
 
 	PortGrpcServer: 50051,
-	PortHttpServer: 50050,
+	PortHttpServer: 10701,
 
 	HttpServerReadHeaderTimeout: 5 * time.Second,
 	HttpServerReadTimeout:       15 * time.Second,
@@ -42,6 +44,16 @@ var Env = domainmodelsapp.Env{
 
 	PasswordBcryptCost: bcrypt.DefaultCost,
 	ControlSpaceSlug:   "lockmate",
+	HttpPublicUrl:      "https://lockmate-dev.dhonan.my.id",
+
+	GoogleOAuthEnabled:         false,
+	GoogleOAuthClientId:        "",
+	GoogleOAuthClientSecret:    "",
+	GoogleOAuthLaunchDuration:  2 * time.Minute,
+	GoogleOAuthAttemptDuration: 10 * time.Minute,
+	GoogleOAuthHttpTimeout:     10 * time.Second,
+	AuthHandoffDuration:        time.Minute,
+	AuthFlowCleanupInterval:    5 * time.Minute,
 }
 
 func LoadEnv() error {
@@ -78,6 +90,17 @@ func LoadEnv() error {
 
 	Env.PasswordBcryptCost = envGetInt("LOCKMATE_PASSWORD_BCRYPT_COST", Env.PasswordBcryptCost)
 	Env.ControlSpaceSlug = envGetString("LOCKMATE_CONTROL_SPACE_SLUG", Env.ControlSpaceSlug)
+	Env.HttpPublicUrl = envGetString("LOCKMATE_HTTP_PUBLIC_URL", Env.HttpPublicUrl)
+
+	Env.GoogleOAuthEnabled = envGetBool("LOCKMATE_GOOGLE_OAUTH_ENABLED", Env.GoogleOAuthEnabled)
+	Env.GoogleOAuthClientId = envGetString("LOCKMATE_GOOGLE_OAUTH_CLIENT_ID", Env.GoogleOAuthClientId)
+	Env.GoogleOAuthClientSecret = envGetString("LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET", Env.GoogleOAuthClientSecret)
+	Env.GoogleOAuthLaunchDuration = envGetDuration("LOCKMATE_GOOGLE_OAUTH_LAUNCH_DURATION", Env.GoogleOAuthLaunchDuration)
+	Env.GoogleOAuthAttemptDuration = envGetDuration("LOCKMATE_GOOGLE_OAUTH_ATTEMPT_DURATION", Env.GoogleOAuthAttemptDuration)
+	Env.AuthHandoffDuration = envGetDuration("LOCKMATE_AUTH_HANDOFF_DURATION", Env.AuthHandoffDuration)
+
+	Env.GoogleOAuthHttpTimeout = envGetDuration("LOCKMATE_GOOGLE_OAUTH_HTTP_TIMEOUT", Env.GoogleOAuthHttpTimeout)
+	Env.AuthFlowCleanupInterval = envGetDuration("LOCKMATE_AUTH_FLOW_CLEANUP_INTERVAL", Env.AuthFlowCleanupInterval)
 
 	return validate()
 }
@@ -137,6 +160,39 @@ func validate() error {
 
 	if Env.PasswordBcryptCost < bcrypt.MinCost || Env.PasswordBcryptCost > bcrypt.MaxCost {
 		return domainmodelserror.NewError("LOCKMATE_PASSWORD_BCRYPT_COST must be between 4 and 31", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.GoogleOAuthEnabled {
+		if strings.TrimSpace(Env.GoogleOAuthClientId) == "" {
+			return domainmodelserror.NewError("LOCKMATE_GOOGLE_OAUTH_CLIENT_ID is required", domainmodelserror.EnvironmentRequired, nil)
+		}
+		if strings.TrimSpace(Env.GoogleOAuthClientSecret) == "" {
+			return domainmodelserror.NewError("LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET is required", domainmodelserror.EnvironmentRequired, nil)
+		}
+		u, err := url.Parse(Env.HttpPublicUrl)
+		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.String() != Env.HttpPublicUrl || !validPublicHost(u) || strings.ContainsAny(Env.HttpPublicUrl, " \t\r\n?#") {
+			return domainmodelserror.NewError("LOCKMATE_HTTP_PUBLIC_URL must be an HTTPS origin", domainmodelserror.EnvironmentInvalid, nil)
+		}
+	}
+
+	if Env.GoogleOAuthLaunchDuration < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_GOOGLE_OAUTH_LAUNCH_DURATION must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.GoogleOAuthAttemptDuration < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_GOOGLE_OAUTH_ATTEMPT_DURATION must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.GoogleOAuthHttpTimeout < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_GOOGLE_OAUTH_HTTP_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.AuthHandoffDuration < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_AUTH_HANDOFF_DURATION must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.AuthFlowCleanupInterval < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_AUTH_FLOW_CLEANUP_INTERVAL must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
 	}
 
 	return nil
@@ -281,4 +337,39 @@ func envGetLoggerLevel(key string, fallback domainmodelslogger.Level) domainmode
 	default:
 		return fallback
 	}
+}
+
+func validPublicHost(value *url.URL) bool {
+	if value.Host != strings.ToLower(value.Host) || value.Hostname() == "" {
+		return false
+	}
+	host := value.Hostname()
+	if address, err := netip.ParseAddr(host); err == nil {
+		if address.Zone() != "" || address.String() != host {
+			return false
+		}
+	} else {
+		if len(host) > 253 {
+			return false
+		}
+		for _, label := range strings.Split(host, ".") {
+			if label == "" || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+				return false
+			}
+			for _, char := range label {
+				if !(char >= 'a' && char <= 'z' || char >= '0' && char <= '9' || char == '-') {
+					return false
+				}
+			}
+		}
+	}
+	if value.Port() != "" {
+		port, err := strconv.ParseUint(value.Port(), 10, 16)
+		if err != nil || port == 0 || port == 443 || strconv.FormatUint(port, 10) != value.Port() {
+			return false
+		}
+	} else if strings.HasSuffix(value.Host, ":") {
+		return false
+	}
+	return true
 }

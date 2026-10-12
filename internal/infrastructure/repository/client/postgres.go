@@ -151,6 +151,10 @@ func (p *postgresImpl) UpdateById(ctx context.Context, spaceId int64, id int64, 
 		return err
 	}
 
+	if args.AuthRedirectUri != nil && args.SetAuthRedirectUriNull {
+		return domainmodelserror.NewError("redirect replacement and clearing cannot be combined", domainmodelserror.BadArgs, nil)
+	}
+
 	if (args.SecretKeyHash == nil) != (args.SecretKeyRedacted == nil) {
 		return domainmodelserror.NewError("secret hash and redaction must be updated together", domainmodelserror.BadArgs, nil)
 	}

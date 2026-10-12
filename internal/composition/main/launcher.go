@@ -40,6 +40,28 @@ func Launch() int {
 	l.newApplication()
 	l.newPresentation()
 
+	maintenanceCtx, cancelMaintenance := context.WithCancel(ctx)
+	maintenanceDone := make(chan struct{})
+	go func() {
+		defer close(maintenanceDone)
+		ticker := time.NewTicker(config.Env.AuthFlowCleanupInterval)
+		defer ticker.Stop()
+		for {
+			cleanupCtx, cancel := context.WithTimeout(maintenanceCtx, config.Env.PostgresConnectTimeout)
+			_ = l.app.miscAuthFlow.PurgeExpired(cleanupCtx)
+			cancel()
+			select {
+			case <-maintenanceCtx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+	defer func() {
+		cancelMaintenance()
+		<-maintenanceDone
+	}()
+
 	l.infra.logger.Info(ctx, path+"/Launch", "HTTP service starting", domainmodelslogger.Meta{
 		"port": config.Env.PortHttpServer,
 	})

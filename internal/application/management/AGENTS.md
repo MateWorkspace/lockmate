@@ -58,3 +58,9 @@ manageable. Validate supplied origins without normalization; derive audit actors
 from the caller. Log committed creates/deletes and updates supplying Origin or
 IsActive; audit-only updates stay quiet. Use distinct explicit failure logs for
 each operation step and its outer transaction.
+
+Client.AuthRedirectUri is configured through existing client create/update permissions.
+Validate the exact callback URL and reject simultaneous replacement/clearing.
+Committed redirect replacement/clearing emits its own specific info log; no raw
+client secret or redirect value is included in metadata. Client creation logs the
+client ID, never the ClientSecretResult containing its one-time raw secret.

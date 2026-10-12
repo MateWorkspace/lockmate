@@ -20,4 +20,5 @@ type Validator interface {
 	ClientName(val string) error
 	ClientDesc(val string) error
 	ClientOrigin(val string) error
+	ClientAuthRedirectUri(val string) error
 }

@@ -127,6 +127,14 @@ func (u *usecase) Create(ctx context.Context, caller *domainmodelsentity.AccessC
 			}
 		}
 
+		if request.AuthRedirectUri != nil {
+			if err := u.validator.ClientAuthRedirectUri(*request.AuthRedirectUri); err != nil {
+				u.logger.Error(ctx, tag, "invalid client authentication redirect URI", domainmodelslogger.Meta{"err": err})
+
+				return err
+			}
+		}
+
 		if err := applicationshared.ValidateJSON(request.Preferences); err != nil {
 			u.logger.Error(ctx, tag, "invalid client preferences JSON", domainmodelslogger.Meta{
 				"caller_user_id":         callerUserId,
@@ -153,6 +161,7 @@ func (u *usecase) Create(ctx context.Context, caller *domainmodelsentity.AccessC
 		}
 
 		id, err := u.client.Create(ctx, spaceId, domaincontractsrepository.CreateClientArgs{
+			AuthRedirectUri:   request.AuthRedirectUri,
 			Slug:              request.Slug,
 			Name:              request.Name,
 			Description:       request.Description,
@@ -225,7 +234,7 @@ func (u *usecase) Create(ctx context.Context, caller *domainmodelsentity.AccessC
 		"caller_space_id":        callerSpaceId,
 		"caller_space_member_id": callerSpaceMemberId,
 		"space_id":               spaceId,
-		"id":                     result,
+		"id":                     result.Client.Id,
 	})
 
 	return result, nil
@@ -469,6 +478,13 @@ func (u *usecase) UpdateById(ctx context.Context, caller *domainmodelsentity.Acc
 			return err
 		}
 
+		if request.AuthRedirectUri != nil && request.SetAuthRedirectUriNull {
+			failure := domainmodelserror.NewError("redirect replacement and clearing cannot be combined", domainmodelserror.BadArgs, nil)
+			u.logger.Error(ctx, tag, "conflicting client redirect update", domainmodelslogger.Meta{"err": failure})
+
+			return failure
+		}
+
 		if request.Name != nil {
 			if err := u.validator.ClientName(*request.Name); err != nil {
 				u.logger.Error(ctx, tag, "invalid client name", domainmodelslogger.Meta{
@@ -499,6 +515,14 @@ func (u *usecase) UpdateById(ctx context.Context, caller *domainmodelsentity.Acc
 			}
 		}
 
+		if request.AuthRedirectUri != nil {
+			if err := u.validator.ClientAuthRedirectUri(*request.AuthRedirectUri); err != nil {
+				u.logger.Error(ctx, tag, "invalid client authentication redirect URI", domainmodelslogger.Meta{"err": err})
+
+				return err
+			}
+		}
+
 		if err := applicationshared.ValidateJSON(request.Preferences); err != nil {
 			u.logger.Error(ctx, tag, "invalid client preferences JSON", domainmodelslogger.Meta{
 				"caller_user_id":         callerUserId,
@@ -513,11 +537,13 @@ func (u *usecase) UpdateById(ctx context.Context, caller *domainmodelsentity.Acc
 		}
 
 		if err := u.client.UpdateById(ctx, spaceId, id, domaincontractsrepository.UpdateClientArgs{
-			Name:        request.Name,
-			Description: request.Description,
-			IsActive:    request.IsActive,
-			Preferences: request.Preferences,
-			By:          &caller.UserId,
+			AuthRedirectUri:        request.AuthRedirectUri,
+			SetAuthRedirectUriNull: request.SetAuthRedirectUriNull,
+			Name:                   request.Name,
+			Description:            request.Description,
+			IsActive:               request.IsActive,
+			Preferences:            request.Preferences,
+			By:                     &caller.UserId,
 		}); err != nil {
 			u.logger.Error(ctx, tag, "failed to update client", domainmodelslogger.Meta{
 				"caller_user_id":         callerUserId,
@@ -545,6 +571,16 @@ func (u *usecase) UpdateById(ctx context.Context, caller *domainmodelsentity.Acc
 		})
 
 		return err
+	}
+
+	if request.AuthRedirectUri != nil || request.SetAuthRedirectUriNull {
+		u.logger.Info(ctx, tag, "updated client authentication redirect", domainmodelslogger.Meta{
+			"caller_user_id":         callerUserId,
+			"caller_space_id":        callerSpaceId,
+			"caller_space_member_id": callerSpaceMemberId,
+			"space_id":               spaceId,
+			"id":                     id,
+		})
 	}
 
 	if request.IsActive != nil {

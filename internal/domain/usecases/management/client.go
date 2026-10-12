@@ -33,11 +33,12 @@ type Client interface {
 }
 
 type CreateClientRequest struct {
-	Slug        string
-	Name        string
-	Description *string
-	IsActive    *bool
-	Preferences *json.RawMessage
+	AuthRedirectUri *string `json:"auth_redirect_uri" example:"https://app.example.com/auth/callback"`
+	Slug            string
+	Name            string
+	Description     *string
+	IsActive        *bool
+	Preferences     *json.RawMessage
 }
 
 type FilterClientRequest struct {
@@ -49,10 +50,12 @@ type FilterClientRequest struct {
 
 // UpdateClientRequest leaves omitted fields unchanged.
 type UpdateClientRequest struct {
-	Name        *string
-	Description *string
-	IsActive    *bool
-	Preferences *json.RawMessage
+	AuthRedirectUri        *string `json:"auth_redirect_uri" example:"https://app.example.com/auth/callback"`
+	SetAuthRedirectUriNull bool    `json:"auth_redirect_uri_set_null"`
+	Name                   *string
+	Description            *string
+	IsActive               *bool
+	Preferences            *json.RawMessage
 }
 
 // ClientSecretResult exposes a raw secret only at creation or rotation.

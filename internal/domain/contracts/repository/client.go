@@ -17,6 +17,7 @@ type Client interface {
 }
 
 type CreateClientArgs struct {
+	AuthRedirectUri   *string
 	Slug              string
 	Name              string
 	Description       *string
@@ -35,13 +36,15 @@ type ClientFilter struct {
 }
 
 type UpdateClientArgs struct {
-	Name              *string
-	Description       *string
-	SecretKeyHash     *string
-	SecretKeyRedacted *string
-	IsActive          *bool
-	Preferences       *json.RawMessage
-	By                *int64
+	AuthRedirectUri        *string
+	SetAuthRedirectUriNull bool
+	Name                   *string
+	Description            *string
+	SecretKeyHash          *string
+	SecretKeyRedacted      *string
+	IsActive               *bool
+	Preferences            *json.RawMessage
+	By                     *int64
 }
 
 // ClientSummary omits stored credential hashes from filtered results.
@@ -51,6 +54,7 @@ type ClientSummary struct {
 	Slug              string          `db:"slug" json:"slug"`
 	Name              string          `db:"name" json:"name"`
 	Description       string          `db:"description" json:"description"`
+	AuthRedirectUri   *string         `db:"auth_redirect_uri" json:"auth_redirect_uri"`
 	SecretKeyRedacted string          `db:"secret_key_redacted" json:"secret_key_redacted"`
 	IsActive          bool            `db:"is_active" json:"is_active"`
 	Preferences       json.RawMessage `db:"preferences" json:"preferences"`

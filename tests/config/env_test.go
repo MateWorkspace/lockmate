@@ -22,6 +22,7 @@ func setupEnvironment(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	for _, key := range []string{
+		"LOCKMATE_HTTP_PUBLIC_URL", "LOCKMATE_GOOGLE_OAUTH_ENABLED", "LOCKMATE_GOOGLE_OAUTH_CLIENT_ID", "LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET", "LOCKMATE_GOOGLE_OAUTH_LAUNCH_DURATION", "LOCKMATE_GOOGLE_OAUTH_ATTEMPT_DURATION", "LOCKMATE_AUTH_HANDOFF_DURATION", "LOCKMATE_GOOGLE_OAUTH_HTTP_TIMEOUT", "LOCKMATE_AUTH_FLOW_CLEANUP_INTERVAL",
 		"LOCKMATE_LOGGER_FORMAT", "LOCKMATE_LOGGER_LEVEL", "LOCKMATE_LOGGER_USE_TRACE",
 		"LOCKMATE_PORT_GRPC_SERVER", "LOCKMATE_PORT_HTTP_SERVER",
 		"LOCKMATE_HTTP_SERVER_READ_HEADER_TIMEOUT", "LOCKMATE_HTTP_SERVER_READ_TIMEOUT",
@@ -46,7 +47,7 @@ func TestLoadEnvDefaultsAndOverrides(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if config.Env.LoggerFormat != domainmodelslogger.FormatJson || config.Env.LoggerLevel != domainmodelslogger.LevelInfo || config.Env.PortGrpcServer != 50051 || config.Env.PortHttpServer != 50050 || config.Env.PostgresMaxConnections != 20 {
+	if config.Env.LoggerFormat != domainmodelslogger.FormatJson || config.Env.LoggerLevel != domainmodelslogger.LevelInfo || config.Env.PortGrpcServer != 50051 || config.Env.PortHttpServer != 10701 || config.Env.PostgresMaxConnections != 20 {
 		t.Fatal("incorrect initial defaults")
 	}
 
@@ -81,7 +82,7 @@ func TestTypedParsingFallsBackWithoutOverflow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if config.Env.PortGrpcServer != 50051 || config.Env.PortHttpServer != 50050 || config.Env.PostgresMaxConnections != 20 || config.Env.TokenAccessDuration != 15*time.Minute || config.Env.LoggerFormat != domainmodelslogger.FormatJson || config.Env.LoggerLevel != domainmodelslogger.LevelInfo || !config.Env.LoggerUseTrace || config.Env.PasswordBcryptCost != 10 {
+	if config.Env.PortGrpcServer != 50051 || config.Env.PortHttpServer != 10701 || config.Env.PostgresMaxConnections != 20 || config.Env.TokenAccessDuration != 15*time.Minute || config.Env.LoggerFormat != domainmodelslogger.FormatJson || config.Env.LoggerLevel != domainmodelslogger.LevelInfo || !config.Env.LoggerUseTrace || config.Env.PasswordBcryptCost != 10 {
 		t.Fatal("malformed or overflowing values did not use fallback")
 	}
 }
@@ -194,5 +195,45 @@ func TestHTTPTimeoutEnvironment(t *testing.T) {
 	t.Setenv("LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT", "0s")
 	if err := config.LoadEnv(); !errors.Is(err, domainmodelserror.EnvironmentInvalid) {
 		t.Fatalf("invalid shutdown timeout accepted: %v", err)
+	}
+}
+
+func TestGoogleEnvironment(t *testing.T) {
+	for _, test := range []struct {
+		name, key, value string
+		kind             error
+	}{
+		{"missing client", "LOCKMATE_GOOGLE_OAUTH_CLIENT_ID", "", domainmodelserror.EnvironmentRequired},
+		{"missing secret", "LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET", "", domainmodelserror.EnvironmentRequired},
+		{"insecure public origin", "LOCKMATE_HTTP_PUBLIC_URL", "http://lockmate-dev.dhonan.my.id", domainmodelserror.EnvironmentInvalid},
+		{"uppercase host", "LOCKMATE_HTTP_PUBLIC_URL", "https://LOCKMATE-dev.dhonan.my.id", domainmodelserror.EnvironmentInvalid},
+		{"invalid hostname", "LOCKMATE_HTTP_PUBLIC_URL", "https://bad..example.com", domainmodelserror.EnvironmentInvalid},
+		{"invalid port", "LOCKMATE_HTTP_PUBLIC_URL", "https://example.com:99999", domainmodelserror.EnvironmentInvalid},
+		{"public URL path", "LOCKMATE_HTTP_PUBLIC_URL", "https://lockmate-dev.dhonan.my.id/", domainmodelserror.EnvironmentInvalid},
+		{"public URL query", "LOCKMATE_HTTP_PUBLIC_URL", "https://lockmate-dev.dhonan.my.id?", domainmodelserror.EnvironmentInvalid},
+		{"public URL credentials", "LOCKMATE_HTTP_PUBLIC_URL", "https://private-secret@lockmate-dev.dhonan.my.id", domainmodelserror.EnvironmentInvalid},
+		{"duration", "LOCKMATE_AUTH_HANDOFF_DURATION", "0s", domainmodelserror.EnvironmentInvalid},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			setupEnvironment(t)
+			t.Setenv("LOCKMATE_GOOGLE_OAUTH_ENABLED", "true")
+			t.Setenv("LOCKMATE_GOOGLE_OAUTH_CLIENT_ID", "client")
+			t.Setenv("LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET", "private-secret")
+			t.Setenv(test.key, test.value)
+			err := config.LoadEnv()
+			if !errors.Is(err, test.kind) || strings.Contains(err.Error(), "private-secret") {
+				t.Fatal(err)
+			}
+		})
+	}
+	setupEnvironment(t)
+	t.Setenv("LOCKMATE_GOOGLE_OAUTH_ENABLED", "true")
+	t.Setenv("LOCKMATE_GOOGLE_OAUTH_CLIENT_ID", "client")
+	t.Setenv("LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET", "secret")
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if config.Env.PortHttpServer != 10701 || config.Env.HttpPublicUrl != "https://lockmate-dev.dhonan.my.id" || config.Env.GoogleOAuthAttemptDuration != 10*time.Minute || config.Env.AuthHandoffDuration != time.Minute {
+		t.Fatal("incorrect Google defaults")
 	}
 }

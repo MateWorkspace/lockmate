@@ -8,12 +8,12 @@ import (
 
 // @title Lockmate
 // @version 1.0.0-dev.1
-// @description Multi-space authentication and access management. Every business operation requires client credentials and a nonzero execution UUID.
+// @description Multi-space authentication and access management. Client-authenticated operations require credentials and a nonzero execution UUID; Google browser navigation uses saved flow state and binding.
 // @BasePath /api
 // @tag.name 00. Version
 // @tag.description Service information.
 // @tag.name 01. Auth
-// @tag.description Classic registration, sign-in, and refresh.
+// @tag.description Classic registration, sign-in, refresh, Google sign-in/registration, and single-use authentication handoff.
 // @tag.name 02. Profile
 // @tag.description The authenticated user's own profile and credentials.
 // @tag.name 03. Spaces

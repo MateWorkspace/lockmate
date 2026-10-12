@@ -61,6 +61,9 @@ var (
 	ClientDescInvalid  = errors.New("CLIENT_DESC_INVALID")
 	ClientDescTooLong  = errors.New("CLIENT_DESC_TOO_LONG")
 
+	ClientAuthRedirectUriInvalid = errors.New("CLIENT_AUTH_REDIRECT_URI_INVALID")
+	ClientAuthRedirectUriTooLong = errors.New("CLIENT_AUTH_REDIRECT_URI_TOO_LONG")
+
 	ClientOriginInvalid = errors.New("CLIENT_ORIGIN_INVALID")
 	ClientOriginTooLong = errors.New("CLIENT_ORIGIN_TOO_LONG")
 

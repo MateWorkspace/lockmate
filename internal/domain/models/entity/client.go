@@ -9,6 +9,7 @@ type Client struct {
 	Name              string          `db:"name" json:"name"`
 	Description       string          `db:"description" json:"description"`
 	SecretKeyHash     string          `db:"secret_key_hash" json:"secret_key_hash"`
+	AuthRedirectUri   *string         `db:"auth_redirect_uri" json:"auth_redirect_uri"`
 	SecretKeyRedacted string          `db:"secret_key_redacted" json:"secret_key_redacted"`
 	IsActive          bool            `db:"is_active" json:"is_active"`
 	Preferences       json.RawMessage `db:"preferences" json:"preferences"`

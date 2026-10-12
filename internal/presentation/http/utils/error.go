@@ -18,6 +18,10 @@ type errorMapping struct {
 }
 
 var errorMappings = []errorMapping{
+	{domainmodelserror.AuthHandoffInvalid, http.StatusUnauthorized, "Invalid Authentication Handoff", "Authentication handoff is invalid or already used."},
+	{domainmodelserror.AuthHandoffExpired, http.StatusUnauthorized, "Authentication Handoff Expired", "Please start authentication again."},
+	{domainmodelserror.ClientAuthRedirectUriInvalid, http.StatusBadRequest, "Invalid Format", ""},
+	{domainmodelserror.ClientAuthRedirectUriTooLong, http.StatusBadRequest, "Invalid Format", ""},
 	{domainmodelserror.NotFound, http.StatusNotFound, "Not Found", ""},
 	{domainmodelserror.BadArgs, http.StatusBadRequest, "Invalid Format", ""},
 	{domainmodelserror.Conflict, http.StatusConflict, "Already Exists", ""},

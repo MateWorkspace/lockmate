@@ -2,6 +2,8 @@ package compositionmain
 
 import (
 	applicationauthclient "github.com/MateWorkspace/lockmate/internal/application/auth/client"
+	applicationauthgoogle "github.com/MateWorkspace/lockmate/internal/application/auth/google"
+	applicationauthhandoff "github.com/MateWorkspace/lockmate/internal/application/auth/handoff"
 	applicationauthsession "github.com/MateWorkspace/lockmate/internal/application/auth/session"
 	applicationmanagementclassicauth "github.com/MateWorkspace/lockmate/internal/application/management/classic_auth"
 	applicationmanagementclient "github.com/MateWorkspace/lockmate/internal/application/management/client"
@@ -14,6 +16,7 @@ import (
 	applicationmanagementspacememberrole "github.com/MateWorkspace/lockmate/internal/application/management/space_member_role"
 	applicationmanagementuser "github.com/MateWorkspace/lockmate/internal/application/management/user"
 	applicationmiscallowedorigin "github.com/MateWorkspace/lockmate/internal/application/misc/allowed_origin"
+	applicationmiscauthflow "github.com/MateWorkspace/lockmate/internal/application/misc/auth_flow"
 	applicationmisctracer "github.com/MateWorkspace/lockmate/internal/application/misc/tracer"
 	applicationprofileaccount "github.com/MateWorkspace/lockmate/internal/application/profile/account"
 	applicationprofilesecurity "github.com/MateWorkspace/lockmate/internal/application/profile/security"
@@ -25,6 +28,9 @@ import (
 )
 
 type application struct {
+	authGoogle                domainusecasesauth.Google
+	authHandoff               domainusecasesauth.Handoff
+	miscAuthFlow              domainusecasesmisc.AuthFlow
 	authClient                domainusecasesauth.Client
 	authSession               domainusecasesauth.Session
 	profileAccount            domainusecasesprofile.Account
@@ -45,6 +51,46 @@ type application struct {
 
 func (l *launcher) newApplication() {
 	l.app = &application{
+		authGoogle: applicationauthgoogle.NewUsecaseImpl(
+			l.infra.client,
+			l.infra.space,
+			l.infra.user,
+			l.infra.spaceMember,
+			l.infra.spaceMemberRole,
+			l.infra.validator,
+			l.infra.transactor,
+			l.infra.logger,
+			l.infra.googleAuth,
+			l.infra.googleOAuth,
+			l.infra.googleLaunch,
+			l.infra.authHandoff,
+			l.infra.authFlow,
+			applicationauthgoogle.Config{
+				Enabled:         config.Env.GoogleOAuthEnabled,
+				PublicUrl:       config.Env.HttpPublicUrl,
+				LaunchDuration:  config.Env.GoogleOAuthLaunchDuration,
+				AttemptDuration: config.Env.GoogleOAuthAttemptDuration,
+				HandoffDuration: config.Env.AuthHandoffDuration,
+			},
+		),
+		authHandoff: applicationauthhandoff.NewUsecaseImpl(
+			l.infra.authHandoff,
+			l.infra.client,
+			l.infra.space,
+			l.infra.user,
+			l.infra.spaceMember,
+			l.infra.spaceMemberRole,
+			l.infra.authFlow,
+			l.infra.token,
+			l.infra.transactor,
+			l.infra.logger,
+		),
+		miscAuthFlow: applicationmiscauthflow.NewUsecaseImpl(
+			l.infra.googleLaunch,
+			l.infra.googleAttempt,
+			l.infra.authHandoff,
+			l.infra.logger,
+		),
 		authClient: applicationauthclient.NewUsecaseImpl(
 			l.infra.client,
 			l.infra.space,

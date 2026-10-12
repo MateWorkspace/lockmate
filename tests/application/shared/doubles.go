@@ -635,25 +635,26 @@ func (s *Tracer) Extract(ctx context.Context) (trace *domainmodelsapp.Trace, err
 }
 
 type Validator struct {
-	SpaceSlugFn      func(val string) error
-	SpaceNameFn      func(val string) error
-	SpaceDescFn      func(val string) error
-	PermissionSlugFn func(val string) error
-	PermissionNameFn func(val string) error
-	PermissionDescFn func(val string) error
-	RoleSlugFn       func(val string) error
-	RoleNameFn       func(val string) error
-	RoleDescFn       func(val string) error
-	UserNameFn       func(val string) error
-	UserBioFn        func(val string) error
-	UserUsernameFn   func(val string) error
-	UserEmailFn      func(val string) error
-	UserPhoneFn      func(val string) error
-	UserPasswordFn   func(val string) error
-	ClientSlugFn     func(val string) error
-	ClientNameFn     func(val string) error
-	ClientDescFn     func(val string) error
-	ClientOriginFn   func(val string) error
+	SpaceSlugFn             func(val string) error
+	SpaceNameFn             func(val string) error
+	SpaceDescFn             func(val string) error
+	PermissionSlugFn        func(val string) error
+	PermissionNameFn        func(val string) error
+	PermissionDescFn        func(val string) error
+	RoleSlugFn              func(val string) error
+	RoleNameFn              func(val string) error
+	RoleDescFn              func(val string) error
+	UserNameFn              func(val string) error
+	UserBioFn               func(val string) error
+	UserUsernameFn          func(val string) error
+	UserEmailFn             func(val string) error
+	UserPhoneFn             func(val string) error
+	UserPasswordFn          func(val string) error
+	ClientSlugFn            func(val string) error
+	ClientNameFn            func(val string) error
+	ClientDescFn            func(val string) error
+	ClientOriginFn          func(val string) error
+	ClientAuthRedirectUriFn func(val string) error
 }
 
 var _ domaincontractsutility.Validator = (*Validator)(nil)
@@ -906,13 +907,13 @@ func (s *Password) Compare(storedHash string, password string) (err error) {
 }
 
 type GoogleOAuth struct {
-	BeginFn    func(ctx context.Context, args domaincontractsutility.BeginGoogleOAuthArgs) (authorizationUrl string, err error)
+	BeginFn    func(ctx context.Context, args domaincontractsutility.BeginGoogleOAuthArgs) (*domaincontractsutility.BeginGoogleOAuthResult, error)
 	CompleteFn func(ctx context.Context, args domaincontractsutility.CompleteGoogleOAuthArgs) (*domaincontractsutility.CompleteGoogleOAuthResult, error)
 }
 
 var _ domaincontractsutility.GoogleOAuth = (*GoogleOAuth)(nil)
 
-func (s *GoogleOAuth) Begin(ctx context.Context, args domaincontractsutility.BeginGoogleOAuthArgs) (authorizationUrl string, err error) {
+func (s *GoogleOAuth) Begin(ctx context.Context, args domaincontractsutility.BeginGoogleOAuthArgs) (*domaincontractsutility.BeginGoogleOAuthResult, error) {
 	if s.BeginFn == nil {
 		panic("unexpected GoogleOAuth.Begin call")
 	}
@@ -1044,4 +1045,11 @@ func (s *ClientOrigin) IsAllowedOrigin(ctx context.Context, origin string) (bool
 	}
 
 	return s.IsAllowedOriginFn(ctx, origin)
+}
+
+func (s *Validator) ClientAuthRedirectUri(val string) error {
+	if s.ClientAuthRedirectUriFn == nil {
+		panic("unexpected Validator.ClientAuthRedirectUri call")
+	}
+	return s.ClientAuthRedirectUriFn(val)
 }

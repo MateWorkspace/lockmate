@@ -263,3 +263,13 @@ func (v *validatorImpl) ClientOrigin(val string) error {
 
 	return nil
 }
+
+func (v *validatorImpl) ClientAuthRedirectUri(val string) error {
+	if len(val) > 2048 {
+		return domainmodelserror.NewError("authentication redirect URI is too long", domainmodelserror.ClientAuthRedirectUriTooLong, nil)
+	}
+	if !validAuthRedirectUri(val) {
+		return domainmodelserror.NewError("authentication redirect URI has an invalid format", domainmodelserror.ClientAuthRedirectUriInvalid, nil)
+	}
+	return nil
+}

@@ -159,3 +159,32 @@ func validOriginHostname(host string) bool {
 
 	return true
 }
+
+func validAuthRedirectUri(val string) bool {
+	for _, char := range val {
+		if char <= ' ' || char > '~' {
+			return false
+		}
+	}
+	parsed, err := url.Parse(val)
+	if err != nil || parsed.Opaque != "" || parsed.User != nil || parsed.Path == "" || !strings.HasPrefix(parsed.Path, "/") || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" || strings.Contains(val, "#") {
+		return false
+	}
+	if !validClientOrigin(parsed.Scheme + "://" + parsed.Host) {
+		return false
+	}
+	for _, char := range parsed.Path {
+		if char < ' ' || char == 127 {
+			return false
+		}
+	}
+	if parsed.String() != val || strings.Contains(parsed.Path, "\\") {
+		return false
+	}
+	for _, part := range strings.Split(parsed.Path, "/") {
+		if part == "." || part == ".." {
+			return false
+		}
+	}
+	return true
+}

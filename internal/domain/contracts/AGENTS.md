@@ -82,7 +82,7 @@ the trace internally; its Inject returns context and error.
 GoogleOAuth owns provider verification and transient authorization attempts,
 including single-use state and browser/session binding. Return only verified
 identity and the original client/space association; provider SDK types, tokens,
-and configuration remain outside the contract. Its adapter is not implemented yet.
+and configuration remain outside the contract. Its adapter is implemented through OAuth2 and OIDC libraries.
 
 Return domain errors from `models/error`, preserving native causes where useful.
 Callers classify errors with `errors.Is` and inspect structured errors with
@@ -99,3 +99,11 @@ records; IsAllowedOriginForClient and the global IsAllowedOrigin require active,
 nondeleted origins, clients, and spaces. A global CORS match never authenticates
 or identifies a client. Client/origin uniqueness includes inactive records but
 excludes deleted records.
+
+Client create/update and safe projections include nullable AuthRedirectUri.
+SetAuthRedirectUriNull clears it; clearing and replacement are mutually exclusive.
+AuthFlow generates opaque URL-safe secrets and hashes. GoogleOAuth.Begin returns
+both state and authorization URL; Complete returns validated scope/redirect and
+provider identity, or a validated denial result. Transient launch/attempt/handoff
+repositories expose Create, atomic Consume, and bounded PurgeExpired. Handoff
+consumption follows the caller's transaction and is committed only with tokens.

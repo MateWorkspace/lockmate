@@ -89,3 +89,10 @@ checks require the origin, client, and space to be active and nondeleted; false
 is an ordinary nonmatch, whereas database failures remain errors. Use exact
 canonical-origin equality. Preserve child origins when a parent is soft-deleted.
 Client-origin uniqueness is per client among all nondeleted records.
+
+Internal google_oauth_launch, google_oauth_attempt, and auth_handoff adapters keep
+query building in postgres_query.go. Use atomic DELETE ... RETURNING with digest
+and ownership/binding predicates. Launches/attempts require nonexpired rows;
+handoff expiry is classified by application inside the exchange transaction.
+Bound PurgeExpired to 1–1000 rows. Respect the pgxdt transaction context so failed
+exchanges roll back consumption. No general management endpoints expose records.

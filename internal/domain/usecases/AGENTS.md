@@ -7,7 +7,7 @@ Implementation belongs in application; domain usecases must not import
 infrastructure, transport bindings, database drivers, or provider SDKs.
 
 Application implements the interfaces and enforces the rules below. Interfaces
-alone do not enforce authorization. Google adapters/configuration and seed definitions remain separate follow-up work.
+alone do not enforce authorization. Google adapters/configuration are wired through composition; seed definitions remain separate follow-up work.
 Gin presentation and main composition expose the implemented classic, profile,
 and management operations.
 
@@ -95,11 +95,11 @@ old refresh token. Preserve TokenInvalid/TokenExpired and operational failures.
 ## Google authentication
 
 Use the GoogleOAuth utility contract, never a concrete provider adapter.
-BeginSignIn rechecks the authenticated client and supplies its IDs and a trusted
-browser/session binding. The adapter owns the configured callback URI, expiring
-single-use attempt state, nonce/PKCE, code exchange, and verified Google claims.
-Binding must originate from a trusted browser/session mechanism rather than an
-arbitrary callback parameter. It is separate from the public OAuth state value.
+Start rechecks the authenticated client and its configured auth_redirect_uri,
+then saves a short-lived launch ticket with project correlation state. Launch
+consumes the ticket and generates trusted browser binding. The GoogleOAuth adapter
+owns expiring single-use state, nonce/PKCE, provider exchange, and verified claims.
+Binding comes from the Lockmate cookie rather than an arbitrary callback parameter.
 
 Callback receives code/state/binding or a provider error. Complete validates the
 attempt and binding before provider work, consumes the attempt even on denial,
@@ -113,18 +113,20 @@ Google identity even if their email matches a classic account. Explicit linking
 is deferred. A valid provider display name initializes the user; otherwise use
 `Google user`. Leave avatar storage unset. Existing user profile edits and classic
 contacts are never overwritten. Synchronize email and its verification flag only
-on GoogleAuth; an unverified email is stored as unverified, not used for linking.
+on GoogleAuth; unverified provider emails are rejected before identity persistence.
 
 Finish provider communication before the database transaction. Identity creation,
-Google contact synchronization, missing membership enrollment, effective grants,
-and token generation form one transaction. A missing default role or token failure
-rolls back registration. Return tokens only after commit. On a concurrent subject
-or membership conflict, roll back and retry once using the winning records; do
-not continue in an aborted transaction. Preserve the conflict if recovery fails.
+Google contact synchronization, missing membership enrollment, and handoff creation
+are atomic. Return a code redirect only after commit. Retry subject/membership
+conflicts once with a fresh transaction, without repeating provider exchange.
+Generic Handoff.Exchange reloads live identity/grants and generates both tokens
+inside the single-use consumption transaction. Return tokens only after commit.
 
-Classify state/binding/replay failures as GoogleOAuthStateInvalid, provider denial
-as GoogleOAuthDenied, invalid verified-token claims as GoogleOAuthInvalid, and
-provider operational failures as GoogleOAuthFailed. Preserve diagnostic causes.
+Classify state/binding/replay failures as GoogleOAuthStateInvalid and invalid
+verified-token claims as GoogleOAuthInvalid. Validated provider denial returns a
+fixed error redirect, while provider operational failures use GoogleOAuthFailed.
+Native provider diagnostics must be sanitized because SDK errors can contain
+codes, token response bodies, and credential-bearing URLs.
 
 ## Profile ownership
 
@@ -258,3 +260,9 @@ logging, or database access. Operational failures remain errors and emit explici
 logs; successful matches and ordinary denials stay quiet. Scoped IDs must be
 positive. A match does not authenticate or identify a client. Gin/CORS wiring and
 caching are outside these usecases.
+
+Google now exposes Start, Launch, and SignInCallback. Start accepts project state,
+not a redirect URL; Launch supplies internal browser-cookie data; callback returns
+a safe redirect containing a handoff. Auth.Handoff.Exchange returns SessionResult
+only after committed single-use consumption and fresh token generation. Misc.AuthFlow
+provides bounded expiration cleanup without presentation-specific types.

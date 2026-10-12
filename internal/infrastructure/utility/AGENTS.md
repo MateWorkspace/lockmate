@@ -104,3 +104,10 @@ canonical IPs, omit default ports, and reject paths, credentials, queries,
 fragments, wildcards, null origins, whitespace, and trailing-dot hostnames.
 Nondefault ports are 1–65535; the limit is 2048 bytes. Reject noncanonical input
 rather than rewriting it, resolving DNS, or checking persistence.
+
+auth_flow/random.go generates 32 cryptographically random bytes encoded as URL-safe
+base64 and SHA-256 hex digests. google_oauth/oidc.go implements provider authorization,
+PKCE/nonce, single-use attempt consumption, and ID-token verification through a
+repository contract. This utility's transient persistence is part of its OAuth
+responsibility; identity persistence remains application-owned. It emits no logs.
+Never propagate provider errors containing token response bodies or request URLs.

@@ -38,10 +38,17 @@ configuration or connection strings. Do not run migrations or generate seed
 records at startup.
 
 Existing schema, active client credentials, origin entries, roles, and permissions
-are provisioned externally. Google provider wiring, gRPC, Redis, and seeding remain
-outside this composition. Future additions must follow the same layer boundaries.
+are provisioned externally. Google OAuth and generic handoff wiring are included; gRPC, Redis, and seeding
+remain outside this composition. Future additions must follow the same layer boundaries.
 
 Run make swagger after annotation changes. Verify go test -race ./..., go vet
 ./..., and go build ./.... Tests for lifecycle and startup failures live under
 tests/composition; PostgreSQL tests use isolated schemas and
 LOCKMATE_TEST_DATABASE_URL.
+
+Google is enabled explicitly through config.Env. HTTP defaults to 10701 behind
+cloudflared; the public HTTPS origin config determines launch/callback URLs.
+Wire AuthFlow random generation, PostgreSQL launch/attempt/handoff repositories,
+Google OAuth, Google usecases, generic Handoff, and misc expiration cleanup.
+Cleanup runs at startup and on a timer with bounded work/deadlines; cancel and
+join maintenance before closing PostgreSQL. Never log OAuth settings or secrets.

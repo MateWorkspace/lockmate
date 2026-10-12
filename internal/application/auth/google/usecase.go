@@ -3,6 +3,8 @@ package applicationauthgoogle
 import (
 	"context"
 	"errors"
+	"net/url"
+	"time"
 
 	applicationshared "github.com/MateWorkspace/lockmate/internal/application/shared"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
@@ -21,13 +23,24 @@ type usecase struct {
 	user            domaincontractsrepository.User
 	spaceMember     domaincontractsrepository.SpaceMember
 	spaceMemberRole domaincontractsrepository.SpaceMemberRole
-	token           domaincontractsutility.Token
 	validator       domaincontractsutility.Validator
 	transactor      domaincontractsutility.Transactor
 	logger          domaincontractsutility.Logger
 	googleAuth      domaincontractsrepository.GoogleAuth
 	oauth           domaincontractsutility.GoogleOAuth
+	launches        domaincontractsrepository.GoogleOAuthLaunch
+	handoffs        domaincontractsrepository.AuthHandoff
+	flow            domaincontractsutility.AuthFlow
+	config          Config
 	identity        *applicationshared.IdentityReader
+}
+
+type Config struct {
+	Enabled         bool
+	PublicUrl       string
+	LaunchDuration  time.Duration
+	AttemptDuration time.Duration
+	HandoffDuration time.Duration
 }
 
 func NewUsecaseImpl(
@@ -36,12 +49,15 @@ func NewUsecaseImpl(
 	user domaincontractsrepository.User,
 	spaceMember domaincontractsrepository.SpaceMember,
 	spaceMemberRole domaincontractsrepository.SpaceMemberRole,
-	token domaincontractsutility.Token,
 	validator domaincontractsutility.Validator,
 	transactor domaincontractsutility.Transactor,
 	logger domaincontractsutility.Logger,
 	googleAuth domaincontractsrepository.GoogleAuth,
 	oauth domaincontractsutility.GoogleOAuth,
+	launches domaincontractsrepository.GoogleOAuthLaunch,
+	handoffs domaincontractsrepository.AuthHandoff,
+	flow domaincontractsutility.AuthFlow,
+	config Config,
 ) domainusecasesauth.Google {
 	return &usecase{
 		client:          client,
@@ -49,55 +65,28 @@ func NewUsecaseImpl(
 		user:            user,
 		spaceMember:     spaceMember,
 		spaceMemberRole: spaceMemberRole,
-		token:           token,
 		validator:       validator,
 		transactor:      transactor,
 		logger:          logger,
 		googleAuth:      googleAuth,
 		oauth:           oauth,
+		launches:        launches,
+		handoffs:        handoffs,
+		flow:            flow,
+		config:          config,
 		identity:        applicationshared.NewIdentityReader(user, space, spaceMember, ""),
 	}
 }
 
-func (u *usecase) BeginSignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.BeginGoogleSignInRequest) (result *domainusecasesauth.BeginGoogleSignInResult, err error) {
-	const tag = tagPath + "/BeginSignIn"
+func (u *usecase) SignInCallback(ctx context.Context, request domainusecasesauth.GoogleSignInCallbackRequest) (output *domainusecasesauth.GoogleSignInCallbackResult, err error) {
+	const tag = tagPath + "/SignInCallback"
 
-	if request.Binding == "" {
-		failure := domainmodelserror.NewError("browser binding is required", domainmodelserror.BadArgs, nil)
-		u.logger.Error(ctx, tag, "browser binding is required", domainmodelslogger.Meta{
-			"err": failure,
-		})
-
+	if !u.config.Enabled {
+		failure := domainmodelserror.NewError("Google authentication is disabled", domainmodelserror.Unimplemented, nil)
+		u.logger.Error(ctx, tag, "Google callback is disabled", domainmodelslogger.Meta{"err": failure})
 		return nil, failure
 	}
-
-	if _, err := applicationshared.ReadClient(ctx, u.client, u.space, client); err != nil {
-		u.logger.Error(ctx, tag, "failed to validate client identity", domainmodelslogger.Meta{
-			"err": err,
-		})
-
-		return nil, err
-	}
-
-	url, err := u.oauth.Begin(ctx, domaincontractsutility.BeginGoogleOAuthArgs{
-		ClientId: client.Id,
-		SpaceId:  client.SpaceId,
-		Binding:  request.Binding,
-	})
-
-	if err != nil {
-		u.logger.Error(ctx, tag, "failed to begin google sign-in", domainmodelslogger.Meta{
-			"err": err,
-		})
-
-		return nil, err
-	}
-
-	return &domainusecasesauth.BeginGoogleSignInResult{AuthorizationUrl: url}, nil
-}
-
-func (u *usecase) SignInCallback(ctx context.Context, request domainusecasesauth.GoogleSignInCallbackRequest) (result *domainusecasesauth.SessionResult, err error) {
-	const tag = tagPath + "/SignInCallback"
+	var result *domainusecasesauth.SessionResult
 
 	if request.State == "" || request.Binding == "" || (request.Code == "" && request.ProviderError == "") || (request.Code != "" && request.ProviderError != "") {
 		failure := domainmodelserror.NewError("invalid google callback", domainmodelserror.BadArgs, nil)
@@ -123,7 +112,15 @@ func (u *usecase) SignInCallback(ctx context.Context, request domainusecasesauth
 		return nil, err
 	}
 
-	if completed == nil || completed.ClientId <= 0 || completed.SpaceId <= 0 || completed.Identity.Subject == "" || completed.Identity.Email == "" {
+	if completed != nil && completed.Denied {
+		if _, err := applicationshared.ReadAuthClient(ctx, u.client, u.space, completed.ClientId, completed.SpaceId, completed.RedirectUri); err != nil {
+			u.logger.Error(ctx, tag, "failed to validate client after Google denial", domainmodelslogger.Meta{"err": err})
+			return nil, err
+		}
+		u.logger.Warn(ctx, tag, "Google authorization was denied", nil)
+		return &domainusecasesauth.GoogleSignInCallbackResult{RedirectUrl: redirectUrl(completed.RedirectUri, completed.ClientState, "error", "access_denied")}, nil
+	}
+	if completed == nil || completed.ClientId <= 0 || completed.SpaceId <= 0 || completed.RedirectUri == "" || completed.ClientState == "" || !completed.Identity.IsEmailVerified || completed.Identity.Subject == "" || completed.Identity.Email == "" {
 		failure := domainmodelserror.NewError("invalid google identity", domainmodelserror.GoogleOAuthInvalid, nil)
 		u.logger.Error(ctx, tag, "invalid google identity", domainmodelslogger.Meta{
 			"err": failure,
@@ -132,38 +129,18 @@ func (u *usecase) SignInCallback(ctx context.Context, request domainusecasesauth
 		return nil, failure
 	}
 
+	code, err := u.flow.Generate()
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to generate authentication handoff code", domainmodelslogger.Meta{"err": err})
+		return nil, err
+	}
+
 	changed := false
 	for attempt := 0; attempt < 2; attempt++ {
 		result, changed = nil, false
 		err = u.transactor.WithTx(ctx, func(txCtx context.Context) error {
-			client, err := u.client.ReadById(txCtx, completed.SpaceId, completed.ClientId)
-			if err != nil {
-				failure := applicationshared.IdentityError(err)
-				u.logger.Error(txCtx, tag, "failed to read client by id", domainmodelslogger.Meta{
-					"err": failure,
-				})
-
-				return failure
-			}
-
-			if client == nil {
-				failure := applicationshared.Unauthorized(nil)
-				u.logger.Error(txCtx, tag, "failed to read client by id", domainmodelslogger.Meta{
-					"err": failure,
-				})
-
-				return failure
-			}
-
-			if _, err := applicationshared.ReadClient(txCtx, u.client, u.space, &domainmodelsentity.ClientIdentity{
-				Id:      completed.ClientId,
-				SpaceId: completed.SpaceId,
-				Slug:    client.Slug,
-			}); err != nil {
-				u.logger.Error(txCtx, tag, "failed to validate client identity", domainmodelslogger.Meta{
-					"err": err,
-				})
-
+			if _, err := applicationshared.ReadAuthClient(txCtx, u.client, u.space, completed.ClientId, completed.SpaceId, completed.RedirectUri); err != nil {
+				u.logger.Error(txCtx, tag, "failed to validate Google callback client and redirect", domainmodelslogger.Meta{"err": err})
 				return err
 			}
 
@@ -270,36 +247,19 @@ func (u *usecase) SignInCallback(ctx context.Context, request domainusecasesauth
 			}
 
 			result.IsNewUser = newUser
-			accessToken, err := u.token.GenerateAccess(applicationshared.SessionClaims(result))
-			if err != nil {
-				u.logger.Error(txCtx, tag, "failed to generate access token", domainmodelslogger.Meta{
-					"err":             err,
-					"user_id":         result.User.Id,
-					"space_id":        result.Space.Id,
-					"space_member_id": result.SpaceMember.Id,
-				})
-
-				return err
-			}
-
-			refreshToken, err := u.token.GenerateRefresh(&domainmodelsentity.RefreshClaims{
+			if err := u.handoffs.Create(txCtx, domainmodelsentity.AuthHandoff{
+				CodeHash:      u.flow.Hash(code),
+				ClientId:      completed.ClientId,
+				SpaceId:       completed.SpaceId,
 				UserId:        result.User.Id,
-				SpaceId:       result.Space.Id,
 				SpaceMemberId: result.SpaceMember.Id,
-				Name:          result.User.Name,
-			})
-			if err != nil {
-				u.logger.Error(txCtx, tag, "failed to generate refresh token", domainmodelslogger.Meta{
-					"err":             err,
-					"user_id":         result.User.Id,
-					"space_id":        result.Space.Id,
-					"space_member_id": result.SpaceMember.Id,
-				})
-
+				RedirectUri:   completed.RedirectUri,
+				IsNewUser:     newUser,
+				ExpiresAt:     time.Now().Add(u.config.HandoffDuration),
+			}); err != nil {
+				u.logger.Error(txCtx, tag, "failed to persist authentication handoff", domainmodelslogger.Meta{"err": err})
 				return err
 			}
-
-			result.AccessToken, result.RefreshToken = accessToken, refreshToken
 
 			return nil
 		})
@@ -332,5 +292,10 @@ func (u *usecase) SignInCallback(ctx context.Context, request domainusecasesauth
 		})
 	}
 
-	return result, nil
+	return &domainusecasesauth.GoogleSignInCallbackResult{RedirectUrl: redirectUrl(completed.RedirectUri, completed.ClientState, "code", code)}, nil
+}
+
+func redirectUrl(uri, state, key, value string) string {
+	query := url.Values{"state": {state}, key: {value}}
+	return uri + "?" + query.Encode()
 }

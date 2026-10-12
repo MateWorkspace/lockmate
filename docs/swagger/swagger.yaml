@@ -1,5 +1,16 @@
 basePath: /api
 definitions:
+  github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthExchangeRequest:
+    properties:
+      code:
+        type: string
+    type: object
+  github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthGoogleStartRequest:
+    properties:
+      state:
+        example: f8d5b65dc01947658b04e768c98771ae
+        type: string
+    type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthRefreshRequest:
     properties:
       refresh_token:
@@ -73,6 +84,9 @@ definitions:
     type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientRequest:
     properties:
+      auth_redirect_uri:
+        example: https://app.example.com/auth/callback
+        type: string
       description:
         example: Example description
         type: string
@@ -240,6 +254,11 @@ definitions:
     type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientRequest:
     properties:
+      auth_redirect_uri:
+        example: https://app.example.com/auth/callback
+        type: string
+      auth_redirect_uri_set_null:
+        type: boolean
       description:
         example: Example description
         type: string
@@ -365,6 +384,12 @@ definitions:
       preferences:
         type: object
     type: object
+  github_com_MateWorkspace_lockmate_internal_presentation_http_response.AuthGoogleStartResponse:
+    properties:
+      launch_url:
+        example: https://lockmate-dev.dhonan.my.id/api/v1/auth/google/launch?ticket=...
+        type: string
+    type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_response.AuthMethodsResponse:
     properties:
       classic_auth:
@@ -451,6 +476,9 @@ definitions:
     type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientResponse:
     properties:
+      auth_redirect_uri:
+        example: https://app.example.com/auth/callback
+        type: string
       created_at:
         example: "2026-10-10T09:30:00Z"
         type: string
@@ -975,11 +1003,230 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Multi-space authentication and access management. Every business operation
-    requires client credentials and a nonzero execution UUID.
+  description: Multi-space authentication and access management. Client-authenticated
+    operations require credentials and a nonzero execution UUID; Google browser navigation
+    uses saved flow state and binding.
   title: Lockmate
   version: 1.0.0-dev.1
 paths:
+  /v1/auth/exchange:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Nonzero execution UUID
+        format: uuid
+        in: header
+        name: X-Client-Exec-Id
+        required: true
+        type: string
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthExchangeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "412":
+          description: Precondition Failed
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+      security:
+      - ClientExecId: []
+        ClientSecret: []
+        ClientSlug: []
+      summary: Exchange a single-use authentication handoff for a session
+      tags:
+      - 01. Auth
+  /v1/auth/google/callback:
+    get:
+      parameters:
+      - description: state
+        in: query
+        name: state
+        required: true
+        type: string
+      - description: code
+        in: query
+        name: code
+        type: string
+      - description: error
+        in: query
+        name: error
+        type: string
+      produces:
+      - application/json
+      responses:
+        "303":
+          description: Redirect to client backend
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "412":
+          description: Precondition Failed
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+      summary: Complete Google sign-in and redirect with a handoff code
+      tags:
+      - 01. Auth
+  /v1/auth/google/launch:
+    get:
+      parameters:
+      - description: ticket
+        in: query
+        name: ticket
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "303":
+          description: Redirect to Google
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "412":
+          description: Precondition Failed
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+      summary: Launch Google authentication in the browser
+      tags:
+      - 01. Auth
+  /v1/auth/google/start:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Nonzero execution UUID
+        format: uuid
+        in: header
+        name: X-Client-Exec-Id
+        required: true
+        type: string
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.AuthGoogleStartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.AuthGoogleStartResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "412":
+          description: Precondition Failed
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+      security:
+      - ClientExecId: []
+        ClientSecret: []
+        ClientSlug: []
+      summary: Start Google sign-in or registration
+      tags:
+      - 01. Auth
   /v1/auth/refresh:
     post:
       consumes:
@@ -6720,7 +6967,8 @@ swagger: "2.0"
 tags:
 - description: Service information.
   name: 00. Version
-- description: Classic registration, sign-in, and refresh.
+- description: Classic registration, sign-in, refresh, Google sign-in/registration,
+    and single-use authentication handoff.
   name: 01. Auth
 - description: The authenticated user's own profile and credentials.
   name: 02. Profile

@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	applicationauthclient "github.com/MateWorkspace/lockmate/internal/application/auth/client"
@@ -58,21 +59,23 @@ func TestClientAuthentication(t *testing.T) {
 func TestGoogleInitiationBindsAuthenticatedScope(t *testing.T) {
 	f := testshared.NewFixture()
 	called := false
-	oauth := &testshared.GoogleOAuth{BeginFn: func(ctx context.Context, args domaincontractsutility.BeginGoogleOAuthArgs) (string, error) {
+	oauth := &testshared.GoogleOAuth{BeginFn: func(ctx context.Context, args domaincontractsutility.BeginGoogleOAuthArgs) (*domaincontractsutility.BeginGoogleOAuthResult, error) {
 		called = true
-		if args.ClientId != 30 || args.SpaceId != 10 || args.Binding != "binding" {
+		if args.ClientId != 30 || args.SpaceId != 10 || len(args.Binding) != 43 || args.RedirectUri != "https://app.example.com/auth/callback" {
 			t.Fatal("wrong OAuth scope/binding")
 		}
-		return "https://accounts.google.com/authorization", nil
+		return &domaincontractsutility.BeginGoogleOAuthResult{AuthorizationUrl: "https://accounts.google.com/authorization", State: "provider-state"}, nil
 	}}
-	result, err := google(f, oauth).BeginSignIn(context.Background(), clientIdentity(), domainusecasesauth.BeginGoogleSignInRequest{Binding: "binding"})
-	if err != nil || !called || result.AuthorizationUrl == "" || len(f.Logger.Entries) != 0 {
+	usecase := google(f, oauth)
+	result, err := usecase.Start(context.Background(), clientIdentity(), domainusecasesauth.StartGoogleSignInRequest{State: "0123456789abcdef0123456789abcdef"})
+	if err != nil || called || result.LaunchUrl == "" {
 		t.Fatalf("initiation: %v", err)
 	}
-	called = false
-	_, err = google(f, oauth).BeginSignIn(context.Background(), nil, domainusecasesauth.BeginGoogleSignInRequest{Binding: "binding"})
-	testshared.RequireError(t, err, domainmodelserror.Unauthorized)
-	if called {
-		t.Fatal("provider invoked without trusted client")
+	ticket := strings.Split(result.LaunchUrl, "ticket=")[1]
+	launch, err := usecase.Launch(context.Background(), ticket)
+	if err != nil || !called || launch.Binding == "" {
+		t.Fatalf("launch: %v", err)
 	}
+	_, err = usecase.Start(context.Background(), nil, domainusecasesauth.StartGoogleSignInRequest{State: "0123456789abcdef0123456789abcdef"})
+	testshared.RequireError(t, err, domainmodelserror.Unauthorized)
 }

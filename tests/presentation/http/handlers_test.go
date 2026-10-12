@@ -712,10 +712,15 @@ type httpFixture struct {
 }
 
 func newHTTPFixture() *httpFixture {
+	return newHTTPFixtureWithFlow(nil)
+}
+
+func newHTTPFixtureWithFlow(flow presentationhttproute.AuthFlowHandler) *httpFixture {
 	r := &recorder{}
 	fixture := &httpFixture{recorder: r, client: &clientAuthStub{}, origin: &originStub{global: true, scoped: true}, trace: &traceStub{}}
 	fixture.router = gin.New()
 	presentationhttproute.Route(fixture.router, presentationhttproute.Args{
+		Flow:    flow,
 		Auth:    presentationhttphandlerauth.NewHandler(&authSessionStub{r}),
 		Profile: presentationhttphandlerprofile.NewHandler(&profileAccountStub{r}, &profileSecurityStub{r}),
 		Management: presentationhttphandlermanagement.NewHandler(

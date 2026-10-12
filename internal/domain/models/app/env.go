@@ -36,4 +36,15 @@ type Env struct {
 
 	PasswordBcryptCost int
 	ControlSpaceSlug   string
+	HttpPublicUrl      string
+
+	GoogleOAuthEnabled         bool
+	GoogleOAuthClientId        string
+	GoogleOAuthClientSecret    string
+	GoogleOAuthLaunchDuration  time.Duration
+	GoogleOAuthAttemptDuration time.Duration
+	GoogleOAuthHttpTimeout     time.Duration
+
+	AuthHandoffDuration     time.Duration
+	AuthFlowCleanupInterval time.Duration
 }

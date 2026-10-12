@@ -68,3 +68,20 @@ func TestValidator(t *testing.T) {
 		t.Fatal("malformed local part accepted")
 	}
 }
+
+func TestClientAuthRedirectUri(t *testing.T) {
+	v := infrastructureutilityvalidator.NewValidatorImpl()
+	for _, value := range []string{"https://app.example.com/auth/callback", "http://localhost:3000/callback", "http://127.0.0.1:3000/callback", "https://app.example.com/"} {
+		if err := v.ClientAuthRedirectUri(value); err != nil {
+			t.Fatalf("valid URI %q: %v", value, err)
+		}
+	}
+	for _, value := range []string{"https://app.example.com", "https://app.example.com/callback?next=elsewhere", "https://app.example.com/callback#", "https://user:pass@app.example.com/callback", "http://app.example.com/callback", "https://APP.example.com/callback", "https://app.example.com/a/../callback", "https://app.example.com/%0a", "https://app.example.com/callback\\evil", "https://app.example.com:443/callback"} {
+		if err := v.ClientAuthRedirectUri(value); !errors.Is(err, domainmodelserror.ClientAuthRedirectUriInvalid) {
+			t.Fatalf("invalid URI %q: %v", value, err)
+		}
+	}
+	if err := v.ClientAuthRedirectUri("https://app.example.com/" + strings.Repeat("a", 2048)); !errors.Is(err, domainmodelserror.ClientAuthRedirectUriTooLong) {
+		t.Fatal(err)
+	}
+}

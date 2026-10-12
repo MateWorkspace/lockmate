@@ -6,6 +6,7 @@ import (
 	_ "github.com/MateWorkspace/lockmate/docs/swagger"
 	domainusecasesauth "github.com/MateWorkspace/lockmate/internal/domain/usecases/auth"
 	domainusecasesmisc "github.com/MateWorkspace/lockmate/internal/domain/usecases/misc"
+	presentationhttphandlerauth "github.com/MateWorkspace/lockmate/internal/presentation/http/handler/auth"
 	presentationhttpmiddleware "github.com/MateWorkspace/lockmate/internal/presentation/http/middleware"
 	presentationhttpresponse "github.com/MateWorkspace/lockmate/internal/presentation/http/response"
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,7 @@ import (
 )
 
 type Args struct {
+	Flow          AuthFlowHandler
 	Auth          AuthHandler
 	Profile       ProfileHandler
 	Management    ManagementHandler
@@ -38,6 +40,10 @@ func Route(e *gin.Engine, args Args) {
 	publicV1 := api.Group("/v1")
 	publicV1.Use(presentationhttpmiddleware.Client(args.Client, args.AllowedOrigin))
 	routeAuth(publicV1, args.Auth)
+	if args.Flow == nil {
+		args.Flow = presentationhttphandlerauth.NewFlowHandler(nil, nil)
+	}
+	routeAuthFlow(publicV1, api.Group("/v1"), args.Flow)
 
 	v1 := api.Group("/v1")
 	v1.Use(presentationhttpmiddleware.Client(args.Client, args.AllowedOrigin))

@@ -61,11 +61,17 @@ func TestSwaggerMatchesRoutesAndSecurity(t *testing.T) {
 		if route.Method == "PATCH" && !strings.HasSuffix(path, "/secret") || route.Method == "DELETE" {
 			status = 204
 		}
+		if path == "/v1/auth/google/start" || path == "/v1/auth/exchange" {
+			status = 200
+		}
+		if path == "/v1/auth/google/launch" || path == "/v1/auth/google/callback" {
+			status = 303
+		}
 		responses := operation["responses"].(map[string]any)
 		if _, ok := responses[strconv.Itoa(status)]; !ok {
 			t.Fatalf("wrong success status in Swagger: %s %s", route.Method, path)
 		}
-		if path == "/version" {
+		if path == "/version" || path == "/v1/auth/google/launch" || path == "/v1/auth/google/callback" {
 			if _, exists := operation["security"]; exists {
 				t.Fatal("public version requires credentials")
 			}
@@ -93,7 +99,7 @@ func TestSwaggerMatchesRoutesAndSecurity(t *testing.T) {
 	for _, methods := range paths {
 		docsCount += len(methods.(map[string]any))
 	}
-	if count != docsCount || count != len(operationCases)+1 {
+	if count != docsCount || count != len(operationCases)+5 {
 		t.Fatalf("route/doc coverage: routes=%d docs=%d", count, docsCount)
 	}
 	raw := swaggerdocs.SwaggerInfo.ReadDoc()
@@ -106,7 +112,7 @@ func TestSwaggerMatchesRoutesAndSecurity(t *testing.T) {
 func TestUsecaseOperationCoverage(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	domain := filepath.Join(filepath.Dir(file), "../../../internal/domain/usecases")
-	covered := map[string]bool{}
+	covered := map[string]bool{"auth.Google.Start": true, "auth.Google.Launch": true, "auth.Google.SignInCallback": true, "auth.Handoff.Exchange": true}
 	for _, item := range operationCases {
 		covered[item.operation] = true
 	}
@@ -129,7 +135,7 @@ func TestUsecaseOperationCoverage(t *testing.T) {
 				if !ok {
 					return true
 				}
-				if group == "auth" && spec.Name.Name != "Session" {
+				if group == "auth" && spec.Name.Name == "Client" {
 					return false
 				}
 				for _, method := range iface.Methods.List {
