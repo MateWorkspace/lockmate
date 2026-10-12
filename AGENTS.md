@@ -63,6 +63,8 @@ align all affected layers rather than introducing isolated conventions.
 - `database/migrations/`: ordered SQL up/down migrations.
 - `docs/`: ERD, generated Swagger, and the Google integration guide.
 - `tests/`: behavior and integration tests organized by layer and capability.
+- `Dockerfile` and `docker-compose.yml`: application image and environment-driven
+  container configuration; `.dockerignore` limits the build context to source.
 
 Domain defines the vocabulary and interfaces. Application depends on those
 interfaces, infrastructure implements contracts, and presentation calls usecase
@@ -138,3 +140,27 @@ behavior. Keep tests under the corresponding `tests/` layer. Regenerate Swagger
 with `make swagger` after annotation or wire-model changes; never hand-edit
 `docs/swagger` outputs. Documentation-only changes need content, link, and
 whitespace checks rather than a full Go test run.
+
+## Docker
+
+Run `docker compose up -d --build` from this repository with an existing `.env`.
+Compose supplies `../mate-golang` as a named build context for the local module
+replacement. Standalone builds use
+`docker build --build-context mate-golang=../mate-golang -t lockmate .`.
+
+DOCKER_COMPOSE_CONTAINER_NAME selects the container name; DOCKER_COMPOSE_HTTP_HOST_PORT
+and DOCKER_COMPOSE_GRPC_HOST_PORT select published host ports. Container targets
+come from LOCKMATE_PORT_HTTP_SERVER and LOCKMATE_PORT_GRPC_SERVER. These settings
+also determine image EXPOSE metadata during Compose builds. The application and
+health check use runtime server ports. The gRPC mapping reserves a port; there is
+no gRPC listener yet. Keep cloudflared pointed at the published HTTP host port.
+
+The image runs a static Go binary as a non-root user, with CA certificates for
+Google requests and an HTTP version-endpoint health check. Secrets are supplied
+at runtime through env_file; never copy `.env` into an image or print resolved
+Compose configuration containing secrets. Existing PostgreSQL and migrations are
+managed separately. In a container, 127.0.0.1 refers to that container; use
+dodol.local or host.docker.internal for host services, both mapped to host-gateway.
+Keep the Compose stop grace period longer than the application's shutdown timeout.
+Validate Docker changes with Compose configuration checks, an image build, and an
+isolated container smoke test.
