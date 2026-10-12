@@ -61,7 +61,7 @@ func TestSeedFailuresStopWithoutSuccessLogs(t *testing.T) {
 				nil,
 				nil,
 				infrastructureutilitykeygen.NewGeneratorImpl(),
-				infrastructureutilityvalidator.NewValidatorImpl(),
+				infrastructureutilityvalidator.NewValidatorImpl(true),
 				transactor,
 				logger,
 				&data,

@@ -27,6 +27,8 @@ const (
 )
 
 type validatorImpl struct {
+	authRedirectAllowHttp bool
+
 	permissionSlugRegex *regexp.Regexp
 	slugRegex           *regexp.Regexp
 	nameRegex           *regexp.Regexp
@@ -35,14 +37,15 @@ type validatorImpl struct {
 	phoneRegex          *regexp.Regexp
 }
 
-func NewValidatorImpl() domaincontractsutility.Validator {
+func NewValidatorImpl(authRedirectAllowHttp bool) domaincontractsutility.Validator {
 	return &validatorImpl{
-		permissionSlugRegex: regexp.MustCompile(`^[a-z][a-z0-9_.:-]*$`),
-		slugRegex:           regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`),
-		nameRegex:           regexp.MustCompile(`^[\p{L}\p{N}][\p{L}\p{M}\p{N} ._'-]*$`),
-		usernameRegex:       regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`),
-		emailRegex:          regexp.MustCompile("^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"),
-		phoneRegex:          regexp.MustCompile(`^\+?[0-9]+$`),
+		authRedirectAllowHttp: authRedirectAllowHttp,
+		permissionSlugRegex:   regexp.MustCompile(`^[a-z][a-z0-9_.:-]*$`),
+		slugRegex:             regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`),
+		nameRegex:             regexp.MustCompile(`^[\p{L}\p{N}][\p{L}\p{M}\p{N} ._'-]*$`),
+		usernameRegex:         regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`),
+		emailRegex:            regexp.MustCompile("^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"),
+		phoneRegex:            regexp.MustCompile(`^\+?[0-9]+$`),
 	}
 }
 
@@ -268,7 +271,7 @@ func (v *validatorImpl) ClientAuthRedirectUri(val string) error {
 	if len(val) > 2048 {
 		return domainmodelserror.NewError("authentication redirect URI is too long", domainmodelserror.ClientAuthRedirectUriTooLong, nil)
 	}
-	if !validAuthRedirectUri(val) {
+	if !validAuthRedirectUri(val, v.authRedirectAllowHttp) {
 		return domainmodelserror.NewError("authentication redirect URI has an invalid format", domainmodelserror.ClientAuthRedirectUriInvalid, nil)
 	}
 	return nil

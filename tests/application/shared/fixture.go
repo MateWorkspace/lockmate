@@ -52,7 +52,7 @@ func NewFixture() *Fixture {
 		ClassicAuth: &ClassicAuth{}, GoogleAuth: &GoogleAuth{}, SpaceMemberRole: &SpaceMemberRole{},
 		Role: &Role{}, Permission: &Permission{}, RolePermission: &RolePermission{},
 		Guard: &PermissionGuard{}, Password: &Password{}, Token: &Token{}, Keygen: &Keygen{}, Transactor: &Transactor{}, Logger: &Logger{},
-		Validator: infrastructureutilityvalidator.NewValidatorImpl(),
+		Validator: infrastructureutilityvalidator.NewValidatorImpl(true),
 		Users:     map[int64]*domainmodelsentity.User{1: {Id: 1, Name: "Current name"}},
 		Members:   map[int64]*domainmodelsentity.SpaceMember{20: {Id: 20, SpaceId: 10, UserId: 1, IsActive: true}},
 		Classics:  map[int64]*domainmodelsentity.ClassicAuth{1: {Id: 40, UserId: 1, Username: "user", PasswordHash: "hash:password"}},

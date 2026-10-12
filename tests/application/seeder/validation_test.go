@@ -74,7 +74,7 @@ func TestInvalidDefinitionsFailBeforePersistence(t *testing.T) {
 				data.Clients[0].AuthRedirectUri = &uri
 			}
 			logger := &testshared.Logger{}
-			usecase := applicationseeder.NewUsecaseImpl(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, infrastructureutilitykeygen.NewGeneratorImpl(), infrastructureutilityvalidator.NewValidatorImpl(), nil, logger, &data)
+			usecase := applicationseeder.NewUsecaseImpl(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, infrastructureutilitykeygen.NewGeneratorImpl(), infrastructureutilityvalidator.NewValidatorImpl(true), nil, logger, &data)
 			err := usecase.Run(context.Background())
 			if err == nil || len(logger.Entries) != 1 || logger.Entries[0].Level != "error" || strings.Contains(err.Error(), "PRIVATE_SECRET") {
 				t.Fatalf("invalid input accepted or exposed: %v", err)

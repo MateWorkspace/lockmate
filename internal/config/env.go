@@ -101,6 +101,7 @@ func LoadEnv() error {
 	Env.GoogleOAuthClientSecret = envGetString("LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET", Env.GoogleOAuthClientSecret)
 	Env.GoogleOAuthLaunchDuration = envGetDuration("LOCKMATE_GOOGLE_OAUTH_LAUNCH_DURATION", Env.GoogleOAuthLaunchDuration)
 	Env.GoogleOAuthAttemptDuration = envGetDuration("LOCKMATE_GOOGLE_OAUTH_ATTEMPT_DURATION", Env.GoogleOAuthAttemptDuration)
+	Env.AuthRedirectAllowHttp = envGetBool("LOCKMATE_AUTH_REDIRECT_ALLOW_HTTP", Env.AuthRedirectAllowHttp)
 	Env.AuthHandoffDuration = envGetDuration("LOCKMATE_AUTH_HANDOFF_DURATION", Env.AuthHandoffDuration)
 
 	Env.GoogleOAuthHttpTimeout = envGetDuration("LOCKMATE_GOOGLE_OAUTH_HTTP_TIMEOUT", Env.GoogleOAuthHttpTimeout)

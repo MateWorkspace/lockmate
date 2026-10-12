@@ -106,4 +106,5 @@ safe client views. GoogleOAuthLaunch, GoogleOAuthAttempt, and AuthHandoff are
 internal expiring records whose fields have json:"-". They store digests and
 trusted scope; handoffs have identity references, not tokens. Env includes public
 HTTP origin, optional Google credentials, flow lifetimes, provider timeout, and
-cleanup interval. Never serialize these configuration or transient records.
+cleanup interval, and AuthRedirectAllowHttp (default false, enabling HTTP client
+callbacks explicitly). Never serialize these configuration or transient records.

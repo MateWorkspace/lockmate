@@ -10,7 +10,7 @@ import (
 )
 
 func TestClientOriginValidation(t *testing.T) {
-	validator := infrastructureutilityvalidator.NewValidatorImpl()
+	validator := infrastructureutilityvalidator.NewValidatorImpl(true)
 	for _, origin := range []string{
 		"https://app.example.com", "https://staging.example.com:8443",
 		"https://xn--bcher-kva.example", "https://192.0.2.1", "https://[2001:db8::1]:65535",

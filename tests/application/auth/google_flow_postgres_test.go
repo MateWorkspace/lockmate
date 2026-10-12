@@ -59,7 +59,7 @@ func TestPostgresGoogleHandoffLifecycle(t *testing.T) {
 	provider := &testshared.GoogleOAuth{CompleteFn: func(context.Context, domaincontractsutility.CompleteGoogleOAuthArgs) (*domaincontractsutility.CompleteGoogleOAuthResult, error) {
 		return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: clientId, SpaceId: spaceId, RedirectUri: redirect, ClientState: "project-state", Identity: domaincontractsutility.GoogleOAuthIdentity{Subject: "stable-google-sub", Email: "user@example.com", IsEmailVerified: true}}, nil
 	}}
-	google := applicationauthgoogle.NewUsecaseImpl(f.Client, f.Space, f.User, f.SpaceMember, f.SpaceMemberRole, infrastructureutilityvalidator.NewValidatorImpl(), f.Transactor, logger, identities, provider, launches, handoffs, flow, applicationauthgoogle.Config{Enabled: true, PublicUrl: "https://lockmate-dev.dhonan.my.id", LaunchDuration: time.Minute, AttemptDuration: time.Minute, HandoffDuration: time.Minute})
+	google := applicationauthgoogle.NewUsecaseImpl(f.Client, f.Space, f.User, f.SpaceMember, f.SpaceMemberRole, infrastructureutilityvalidator.NewValidatorImpl(true), f.Transactor, logger, identities, provider, launches, handoffs, flow, applicationauthgoogle.Config{Enabled: true, PublicUrl: "https://lockmate-dev.dhonan.my.id", LaunchDuration: time.Minute, AttemptDuration: time.Minute, HandoffDuration: time.Minute})
 	token := infrastructureutilitytoken.NewJwtImpl("test-access", "test-refresh", time.Minute, time.Hour)
 	makeExchange := func(token domaincontractsutility.Token) domainusecasesauth.Handoff {
 		return applicationauthhandoff.NewUsecaseImpl(handoffs, f.Client, f.Space, f.User, f.SpaceMember, f.SpaceMemberRole, flow, token, f.Transactor, logger)

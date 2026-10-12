@@ -101,7 +101,7 @@ func (l *launcher) newInfrastructure() {
 		password:        infrastructureutilitypassword.NewBcryptImpl(config.Env.PasswordBcryptCost),
 		transactor:      infrastructureutilitytransactor.NewPgxdtImpl(pgxdt.NewTransactor(l.drv.postgresPool)),
 		token:           infrastructureutilitytoken.NewJwtImpl(config.Env.TokenAccessSecret, config.Env.TokenRefreshSecret, config.Env.TokenAccessDuration, config.Env.TokenRefreshDuration),
-		validator:       infrastructureutilityvalidator.NewValidatorImpl(),
+		validator:       infrastructureutilityvalidator.NewValidatorImpl(config.Env.AuthRedirectAllowHttp),
 		permissionGuard: infrastructureutilitypermissionguard.NewClaimsImpl(),
 	}
 }

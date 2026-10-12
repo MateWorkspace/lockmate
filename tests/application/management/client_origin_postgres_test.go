@@ -49,7 +49,7 @@ func TestPostgresClientOriginManagementAndAllowlist(t *testing.T) {
 		UserId: userId, SpaceId: spaceId, SpaceMemberId: memberId,
 		Permissions: []string{"client_origin:add", "client_origin:get", "client_origin:set", "client_origin:remove"},
 	}
-	validator := infrastructureutilityvalidator.NewValidatorImpl()
+	validator := infrastructureutilityvalidator.NewValidatorImpl(true)
 	guard := infrastructureutilitypermissionguard.NewClaimsImpl()
 	logger := &testshared.Logger{}
 	newManagement := func(transactor domaincontractsutility.Transactor) domainusecasesmanagement.Client {

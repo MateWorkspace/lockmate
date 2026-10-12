@@ -75,8 +75,10 @@ endpoints, setting its nullable `auth_redirect_uri`, for example:
 
 The URL is the integrating application's **backend** callback. Each client has one
 exact URI. Clients in the same space can have different URIs. Queries, fragments,
-credentials, and wildcards are rejected; HTTP is permitted only for localhost or
-loopback development. The URI is independent of CORS origins.
+credentials, and wildcards are rejected. HTTPS callback URLs are always accepted;
+HTTP requires LOCKMATE_AUTH_REDIRECT_ALLOW_HTTP=true. The default is false,
+which requires HTTPS even for localhost callbacks. The URI is independent of
+CORS origins.
 
 Clear it with `{"auth_redirect_uri_set_null":true}`. Do not supply a replacement
 and clearing flag together. Clearing/changing it invalidates flows saved against

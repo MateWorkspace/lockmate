@@ -50,6 +50,8 @@ type Env struct {
 	GoogleOAuthAttemptDuration time.Duration
 	GoogleOAuthHttpTimeout     time.Duration
 
+	AuthRedirectAllowHttp bool
+
 	AuthHandoffDuration     time.Duration
 	AuthFlowCleanupInterval time.Duration
 }

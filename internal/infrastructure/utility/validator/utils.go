@@ -64,6 +64,10 @@ func validateText(field, val string, invalid, tooLong domainmodelserror.Type) er
 }
 
 func validClientOrigin(val string) bool {
+	return validOrigin(val, false)
+}
+
+func validOrigin(val string, allowHTTP bool) bool {
 	for _, char := range val {
 		if char <= ' ' || char > '~' {
 			return false
@@ -105,7 +109,7 @@ func validClientOrigin(val string) bool {
 		return false
 	}
 
-	if parsed.Scheme == "http" && !local {
+	if parsed.Scheme == "http" && !local && !allowHTTP {
 		return false
 	}
 
@@ -160,7 +164,7 @@ func validOriginHostname(host string) bool {
 	return true
 }
 
-func validAuthRedirectUri(val string) bool {
+func validAuthRedirectUri(val string, allowHTTP bool) bool {
 	for _, char := range val {
 		if char <= ' ' || char > '~' {
 			return false
@@ -170,7 +174,10 @@ func validAuthRedirectUri(val string) bool {
 	if err != nil || parsed.Opaque != "" || parsed.User != nil || parsed.Path == "" || !strings.HasPrefix(parsed.Path, "/") || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" || strings.Contains(val, "#") {
 		return false
 	}
-	if !validClientOrigin(parsed.Scheme + "://" + parsed.Host) {
+	if parsed.Scheme == "http" && !allowHTTP {
+		return false
+	}
+	if !validOrigin(parsed.Scheme+"://"+parsed.Host, allowHTTP) {
 		return false
 	}
 	for _, char := range parsed.Path {

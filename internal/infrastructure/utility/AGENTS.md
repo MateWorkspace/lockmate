@@ -111,3 +111,10 @@ PKCE/nonce, single-use attempt consumption, and ID-token verification through a
 repository contract. This utility's transient persistence is part of its OAuth
 responsibility; identity persistence remains application-owned. It emits no logs.
 Never propagate provider errors containing token response bodies or request URLs.
+
+ClientAuthRedirectUri accepts canonical HTTPS callback URLs with paths. Constructor
+injection from config.Env.AuthRedirectAllowHttp enables HTTP callbacks explicitly
+through LOCKMATE_AUTH_REDIRECT_ALLOW_HTTP, default false. Do not read env/config
+in the adapter. Reuse origin-format validation with HTTP enabled for redirects only. Keep its
+existing port, host, credential, query, fragment, and path checks. ClientOrigin's
+HTTP policy remains limited to localhost and loopback addresses.

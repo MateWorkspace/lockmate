@@ -22,7 +22,7 @@ func setupEnvironment(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	for _, key := range []string{
-		"LOCKMATE_HTTP_PUBLIC_URL", "LOCKMATE_GOOGLE_OAUTH_ENABLED", "LOCKMATE_GOOGLE_OAUTH_CLIENT_ID", "LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET", "LOCKMATE_GOOGLE_OAUTH_LAUNCH_DURATION", "LOCKMATE_GOOGLE_OAUTH_ATTEMPT_DURATION", "LOCKMATE_AUTH_HANDOFF_DURATION", "LOCKMATE_GOOGLE_OAUTH_HTTP_TIMEOUT", "LOCKMATE_AUTH_FLOW_CLEANUP_INTERVAL",
+		"LOCKMATE_HTTP_PUBLIC_URL", "LOCKMATE_GOOGLE_OAUTH_ENABLED", "LOCKMATE_GOOGLE_OAUTH_CLIENT_ID", "LOCKMATE_GOOGLE_OAUTH_CLIENT_SECRET", "LOCKMATE_GOOGLE_OAUTH_LAUNCH_DURATION", "LOCKMATE_GOOGLE_OAUTH_ATTEMPT_DURATION", "LOCKMATE_AUTH_REDIRECT_ALLOW_HTTP", "LOCKMATE_AUTH_HANDOFF_DURATION", "LOCKMATE_GOOGLE_OAUTH_HTTP_TIMEOUT", "LOCKMATE_AUTH_FLOW_CLEANUP_INTERVAL",
 		"LOCKMATE_LOGGER_FORMAT", "LOCKMATE_LOGGER_LEVEL", "LOCKMATE_LOGGER_USE_TRACE",
 		"LOCKMATE_PORT_GRPC_SERVER", "LOCKMATE_PORT_HTTP_SERVER",
 		"LOCKMATE_HTTP_SERVER_READ_HEADER_TIMEOUT", "LOCKMATE_HTTP_SERVER_READ_TIMEOUT",
@@ -300,5 +300,31 @@ func TestSeederCredentialsLoadedFromEnvironment(t *testing.T) {
 		config.Env.SeederUserPassword != "custom-user-password" ||
 		config.Env.SeederClientSecretKey != "lockmate-"+strings.Repeat("b", 64) {
 		t.Fatal("seeder credential overrides ignored")
+	}
+}
+
+func TestAuthRedirectHTTPEnvironment(t *testing.T) {
+	setupEnvironment(t)
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if config.Env.AuthRedirectAllowHttp {
+		t.Fatal("HTTP callbacks enabled by default")
+	}
+
+	t.Setenv("LOCKMATE_AUTH_REDIRECT_ALLOW_HTTP", "true")
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if !config.Env.AuthRedirectAllowHttp {
+		t.Fatal("HTTP callback toggle ignored")
+	}
+
+	t.Setenv("LOCKMATE_AUTH_REDIRECT_ALLOW_HTTP", "false")
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if config.Env.AuthRedirectAllowHttp {
+		t.Fatal("HTTP callbacks could not be disabled")
 	}
 }

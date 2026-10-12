@@ -94,7 +94,7 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	if otherClientId == clientId {
 		t.Fatal("client identity collision")
 	}
-	validator := infrastructureutilityvalidator.NewValidatorImpl()
+	validator := infrastructureutilityvalidator.NewValidatorImpl(true)
 	password := infrastructureutilitypassword.NewBcryptImpl(4)
 	guard := infrastructureutilitypermissionguard.NewClaimsImpl()
 	token := infrastructureutilitytoken.NewJwtImpl("test-access-secret", "test-refresh-secret", 15*time.Minute, 24*time.Hour)

@@ -53,7 +53,7 @@ func seedDatabase(t *testing.T) *seedFixture {
 	dt := pgxdt.NewPgxdt(base.Pool)
 	q := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Question)
 	d := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
-	return &seedFixture{PostgresFixture: base, data: definitions(t), permission: infrastructurerepositorypermission.NewPostgresImpl(dt, &q, &d), rolePermission: infrastructurerepositoryrolepermission.NewPostgresImpl(dt, &q, &d), logger: &testshared.Logger{}, password: infrastructureutilitypassword.NewBcryptImpl(4), keygen: infrastructureutilitykeygen.NewGeneratorImpl(), validator: infrastructureutilityvalidator.NewValidatorImpl()}
+	return &seedFixture{PostgresFixture: base, data: definitions(t), permission: infrastructurerepositorypermission.NewPostgresImpl(dt, &q, &d), rolePermission: infrastructurerepositoryrolepermission.NewPostgresImpl(dt, &q, &d), logger: &testshared.Logger{}, password: infrastructureutilitypassword.NewBcryptImpl(4), keygen: infrastructureutilitykeygen.NewGeneratorImpl(), validator: infrastructureutilityvalidator.NewValidatorImpl(true)}
 }
 func (f *seedFixture) seeder(logger domaincontractsutility.Logger) domainusecasesseeder.Seeder {
 	return applicationseeder.NewUsecaseImpl(f.Space, f.permission, f.Role, f.rolePermission, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.Client, f.ClientOrigin, f.password, f.keygen, f.validator, f.Transactor, logger, &f.data)

@@ -36,7 +36,7 @@ func TestPostgresRegistrationCommitBoundary(t *testing.T) {
 	client := &domainmodelsentity.ClientIdentity{Id: clientId, SpaceId: spaceId, Slug: "web"}
 	password := infrastructureutilitypassword.NewBcryptImpl(4)
 	token := infrastructureutilitytoken.NewJwtImpl("test-access-secret", "test-refresh-secret", time.Minute, time.Hour)
-	validator := infrastructureutilityvalidator.NewValidatorImpl()
+	validator := infrastructureutilityvalidator.NewValidatorImpl(true)
 	logger := &testshared.Logger{}
 	u := applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, password, token, validator, f.Transactor, logger)
 	result, err := u.Register(ctx, client, registerRequest())
