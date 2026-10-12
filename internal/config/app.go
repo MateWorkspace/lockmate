@@ -4,5 +4,5 @@ import domainmodelsapp "github.com/MateWorkspace/lockmate/internal/domain/models
 
 var App = domainmodelsapp.Info{
 	Name:    "lockmate",
-	Version: "v1.1.0-dev.1",
+	Version: "v1.1.0-dev.2",
 }
