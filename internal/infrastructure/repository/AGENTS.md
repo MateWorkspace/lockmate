@@ -12,8 +12,8 @@ query builders. `shared/` contains BasePostgres, pagination, parent/default-role
 locks, explicit scanners, and PostgreSQL error classification.
 
 The entity folders are `space`, `permission`, `role`, `user`, `classic_auth`,
-`google_auth`, `client`, `client_origin`, `space_member`, `role_permission`, and
-`space_member_role`. Use the existing concatenated
+`google_auth`, `client`, `client_origin`, `space_member`, `role_permission`,
+`space_member_role`, and `signing_key`. Use the existing concatenated
 `infrastructurerepository<entity>` package names and private `postgresImpl`
 structs embedding `shared.BasePostgres`.
 
@@ -96,3 +96,11 @@ and ownership/binding predicates. Launches/attempts require nonexpired rows;
 handoff expiry is classified by application inside the exchange transaction.
 Bound PurgeExpired to 1–1000 rows. Respect the pgxdt transaction context so failed
 exchanges roll back consumption. No general management endpoints expose records.
+
+The signing_key adapter stores sealed private material and never performs
+cryptography. Reads exclude soft-deleted rows; `ReadActive` and `DemoteActive`
+target live active rows; `ListVerifiable` returns active and retiring keys in
+creation order; `ListStale` returns live rows whose fingerprint differs;
+`DeleteRetiringBefore` soft-deletes retiring keys past the cutoff. Map the
+`uq_signing_keys_kid` and `uq_signing_keys_active` partial unique indexes to
+SigningKeyConflict. Return SigningKeyNotFound for missing exact rows.

@@ -35,28 +35,36 @@ func TestPostgresRegistrationCommitBoundary(t *testing.T) {
 	}
 	client := &domainmodelsentity.ClientIdentity{Id: clientId, SpaceId: spaceId, Slug: "web"}
 	password := infrastructureutilitypassword.NewBcryptImpl(4)
-	token := infrastructureutilitytoken.NewJwtImpl("test-access-secret", "test-refresh-secret", time.Minute, time.Hour)
+	token := infrastructureutilitytoken.NewJwtImpl("test-refresh-secret", time.Minute, time.Hour)
 	validator := infrastructureutilityvalidator.NewValidatorImpl(true)
 	logger := &testshared.Logger{}
-	u := applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, password, token, validator, f.Transactor, logger)
+	u := applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.SigningKey, password, token, f.Secret, validator, f.Transactor, logger)
 	result, err := u.Register(ctx, client, registerRequest())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.AccessToken == "" || result.RefreshToken == "" || len(result.Roles) != 1 || result.Roles[0].Id != roleId {
-		t.Fatal("missing tokens or atomic default-role assignment")
+	if result.AccessToken == "" || result.RefreshToken == "" {
+		t.Fatal("missing tokens")
 	}
-	if _, err := token.ValidateAccess(spaceId, result.AccessToken); err != nil {
+	assignments := 0
+	if err := f.Pool.QueryRow(ctx, "SELECT count(*) FROM space_member_role").Scan(&assignments); err != nil || assignments != 1 {
+		t.Fatalf("default-role assignment not committed: %v", err)
+	}
+	keys, err := f.SigningKey.ListVerifiable(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := token.ValidateAccess(keys, result.AccessToken); err != nil {
 		t.Fatal(err)
 	}
 	before := 0
 	if err := f.Pool.QueryRow(ctx, "SELECT count(*) FROM users").Scan(&before); err != nil {
 		t.Fatal(err)
 	}
-	fail := &testshared.Token{GenerateAccessFn: func(*domainmodelsentity.AccessClaims) (string, error) {
+	fail := &testshared.Token{GenerateAccessFn: func(*domainmodelsentity.AccessClaims, string, []byte) (string, error) {
 		return "", testshared.NotFound(domainmodelserror.TokenFailed)
 	}}
-	failing := applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, password, fail, validator, f.Transactor, logger)
+	failing := applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.SigningKey, password, fail, f.Secret, validator, f.Transactor, logger)
 	request := registerRequest()
 	request.Username = "failed-user"
 	failed, err := failing.Register(ctx, client, request)

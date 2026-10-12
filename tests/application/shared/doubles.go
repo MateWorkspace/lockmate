@@ -2,6 +2,7 @@ package applicationsharedtest
 
 import (
 	"context"
+	"time"
 
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
 	domaincontractsutility "github.com/MateWorkspace/lockmate/internal/domain/contracts/utility"
@@ -849,26 +850,26 @@ func (s *PermissionGuard) Check(claims *domainmodelsentity.AccessClaims, permiss
 }
 
 type Token struct {
-	GenerateAccessFn  func(claims *domainmodelsentity.AccessClaims) (string, error)
-	ValidateAccessFn  func(spaceId int64, token string) (*domainmodelsentity.AccessClaims, error)
+	GenerateAccessFn  func(claims *domainmodelsentity.AccessClaims, kid string, privateKeyPKCS8 []byte) (string, error)
+	ValidateAccessFn  func(keys []domainmodelsentity.SigningKey, token string) (*domainmodelsentity.AccessClaims, error)
 	GenerateRefreshFn func(claims *domainmodelsentity.RefreshClaims) (string, error)
 	ValidateRefreshFn func(spaceId int64, token string) (*domainmodelsentity.RefreshClaims, error)
 }
 
 var _ domaincontractsutility.Token = (*Token)(nil)
 
-func (s *Token) GenerateAccess(claims *domainmodelsentity.AccessClaims) (string, error) {
+func (s *Token) GenerateAccess(claims *domainmodelsentity.AccessClaims, kid string, privateKeyPKCS8 []byte) (string, error) {
 	if s.GenerateAccessFn == nil {
 		panic("unexpected Token.GenerateAccess call")
 	}
-	return s.GenerateAccessFn(claims)
+	return s.GenerateAccessFn(claims, kid, privateKeyPKCS8)
 }
 
-func (s *Token) ValidateAccess(spaceId int64, token string) (*domainmodelsentity.AccessClaims, error) {
+func (s *Token) ValidateAccess(keys []domainmodelsentity.SigningKey, token string) (*domainmodelsentity.AccessClaims, error) {
 	if s.ValidateAccessFn == nil {
 		panic("unexpected Token.ValidateAccess call")
 	}
-	return s.ValidateAccessFn(spaceId, token)
+	return s.ValidateAccessFn(keys, token)
 }
 
 func (s *Token) GenerateRefresh(claims *domainmodelsentity.RefreshClaims) (string, error) {
@@ -1052,4 +1053,118 @@ func (s *Validator) ClientAuthRedirectUri(val string) error {
 		panic("unexpected Validator.ClientAuthRedirectUri call")
 	}
 	return s.ClientAuthRedirectUriFn(val)
+}
+
+type SigningKey struct {
+	CreateFn               func(ctx context.Context, value domainmodelsentity.SigningKey) (int64, error)
+	ReadActiveFn           func(ctx context.Context) (*domainmodelsentity.SigningKey, error)
+	ReadByKidFn            func(ctx context.Context, kid string) (*domainmodelsentity.SigningKey, error)
+	ListVerifiableFn       func(ctx context.Context) ([]domainmodelsentity.SigningKey, error)
+	ListStaleFn            func(ctx context.Context, fingerprint string) ([]domainmodelsentity.SigningKey, error)
+	DemoteActiveFn         func(ctx context.Context, retiringAt time.Time, by *int64) (int64, error)
+	UpdateSealedFn         func(ctx context.Context, id int64, fingerprint string, cipher []byte, nonce []byte) error
+	DeleteRetiringBeforeFn func(ctx context.Context, cutoff time.Time, by *int64) (int64, error)
+}
+
+var _ domaincontractsrepository.SigningKey = (*SigningKey)(nil)
+
+func (s *SigningKey) Create(ctx context.Context, value domainmodelsentity.SigningKey) (int64, error) {
+	if s.CreateFn == nil {
+		panic("unexpected SigningKey.Create call")
+	}
+	return s.CreateFn(ctx, value)
+}
+
+func (s *SigningKey) ReadActive(ctx context.Context) (*domainmodelsentity.SigningKey, error) {
+	if s.ReadActiveFn == nil {
+		panic("unexpected SigningKey.ReadActive call")
+	}
+	return s.ReadActiveFn(ctx)
+}
+
+func (s *SigningKey) ReadByKid(ctx context.Context, kid string) (*domainmodelsentity.SigningKey, error) {
+	if s.ReadByKidFn == nil {
+		panic("unexpected SigningKey.ReadByKid call")
+	}
+	return s.ReadByKidFn(ctx, kid)
+}
+
+func (s *SigningKey) ListVerifiable(ctx context.Context) ([]domainmodelsentity.SigningKey, error) {
+	if s.ListVerifiableFn == nil {
+		panic("unexpected SigningKey.ListVerifiable call")
+	}
+	return s.ListVerifiableFn(ctx)
+}
+
+func (s *SigningKey) ListStale(ctx context.Context, fingerprint string) ([]domainmodelsentity.SigningKey, error) {
+	if s.ListStaleFn == nil {
+		panic("unexpected SigningKey.ListStale call")
+	}
+	return s.ListStaleFn(ctx, fingerprint)
+}
+
+func (s *SigningKey) DemoteActive(ctx context.Context, retiringAt time.Time, by *int64) (int64, error) {
+	if s.DemoteActiveFn == nil {
+		panic("unexpected SigningKey.DemoteActive call")
+	}
+	return s.DemoteActiveFn(ctx, retiringAt, by)
+}
+
+func (s *SigningKey) UpdateSealed(ctx context.Context, id int64, fingerprint string, cipher []byte, nonce []byte) error {
+	if s.UpdateSealedFn == nil {
+		panic("unexpected SigningKey.UpdateSealed call")
+	}
+	return s.UpdateSealedFn(ctx, id, fingerprint, cipher, nonce)
+}
+
+func (s *SigningKey) DeleteRetiringBefore(ctx context.Context, cutoff time.Time, by *int64) (int64, error) {
+	if s.DeleteRetiringBeforeFn == nil {
+		panic("unexpected SigningKey.DeleteRetiringBefore call")
+	}
+	return s.DeleteRetiringBeforeFn(ctx, cutoff, by)
+}
+
+type Secret struct {
+	FingerprintFn         func() string
+	PreviousFingerprintFn func() string
+	SealFn                func(plaintext []byte) (cipher []byte, nonce []byte, err error)
+	OpenFn                func(cipher []byte, nonce []byte, fingerprint string) ([]byte, error)
+	GenerateKeypairFn     func() (privateKeyPKCS8 []byte, publicJWK []byte, kid string, algorithm string, err error)
+}
+
+var _ domaincontractsutility.Secret = (*Secret)(nil)
+
+func (s *Secret) Fingerprint() string {
+	if s.FingerprintFn == nil {
+		panic("unexpected Secret.Fingerprint call")
+	}
+	return s.FingerprintFn()
+}
+
+func (s *Secret) PreviousFingerprint() string {
+	if s.PreviousFingerprintFn == nil {
+		panic("unexpected Secret.PreviousFingerprint call")
+	}
+	return s.PreviousFingerprintFn()
+}
+
+func (s *Secret) Seal(plaintext []byte) ([]byte, []byte, error) {
+	if s.SealFn == nil {
+		panic("unexpected Secret.Seal call")
+	}
+	return s.SealFn(plaintext)
+}
+
+func (s *Secret) Open(cipher []byte, nonce []byte, fingerprint string) ([]byte, error) {
+	if s.OpenFn == nil {
+		panic("unexpected Secret.Open call")
+	}
+	return s.OpenFn(cipher, nonce, fingerprint)
+}
+
+func (s *Secret) GenerateKeypair() ([]byte, []byte, string, string, error) {
+	if s.GenerateKeypairFn == nil {
+		panic("unexpected Secret.GenerateKeypair call")
+	}
+	return s.GenerateKeypairFn()
 }

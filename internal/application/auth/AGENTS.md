@@ -23,6 +23,12 @@ directly at the failed step and at the retry handler immediately before a retry,
 with the next attempt number;
 exhausted retries emit the specific step error and the outer transaction error.
 
+Before minting tokens, sessions and handoffs resolve the active ES256 signing key
+through the shared resolver and open its sealed private half via the Secret
+utility; AuthenticateAccessToken validates with the active and retiring public
+keys. Access tokens are ES256-signed; refresh tokens stay HMAC. Sessions return
+only TokenResult (tokens plus IsNewUser).
+
 Google provider exchange/attempt consumption occurs once before persistence.
 Match verified subject, never email. Retry subject/membership conflicts once
 without repeating exchange. Warn only when another attempt will occur. Synchronize

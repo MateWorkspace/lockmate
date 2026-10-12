@@ -38,12 +38,13 @@ cd lockmate
 cp .env.example .env
 ```
 
-Edit `.env` to set your PostgreSQL connection, two different JWT secrets, and
-bootstrap credentials:
+Edit `.env` to set your PostgreSQL connection, the refresh-token secret, a
+signing-key encryption key, and bootstrap credentials:
 
 ```dotenv
-LOCKMATE_TOKEN_ACCESS_SECRET=<your-access-token-secret>
 LOCKMATE_TOKEN_REFRESH_SECRET=<your-refresh-token-secret>
+# openssl rand -base64 32
+LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY=<32-byte-base64-key>
 LOCKMATE_SEEDER_SUPER_PASSWORD=<your-super-password>
 LOCKMATE_SEEDER_ADMIN_PASSWORD=<your-admin-password>
 LOCKMATE_SEEDER_USER_PASSWORD=<your-user-password>
@@ -53,7 +54,9 @@ LOCKMATE_SEEDER_CLIENT_SECRET_KEY=<lockmate-followed-by-64-lowercase-hex-charact
 Docker startup applies the ordered [migrations](database/migrations) automatically.
 For native Go startup, apply them with your migration tool first. Lockmate then
 seeds its control space, permissions, roles, users, and client before serving HTTP.
-See the [database diagram](docs/erd.dbml) for the relationships.
+Startup also reconciles the ES256 access-token signing key: it creates the active
+key when missing and rotates it on the configured interval. See the
+[database diagram](docs/erd.dbml) for the relationships.
 
 ### Run with Go
 

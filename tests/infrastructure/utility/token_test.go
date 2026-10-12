@@ -1,24 +1,42 @@
 package utility_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/x509"
 	"errors"
-	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
-	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
-	infrastructureutilitytoken "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/token"
-	"github.com/golang-jwt/jwt/v5"
 	"reflect"
 	"testing"
 	"time"
+
+	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
+	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
+	infrastructureutilitysecret "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/secret"
+	infrastructureutilitytoken "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/token"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-func TestTokenRoundTripAndPurpose(t *testing.T) {
-	token := infrastructureutilitytoken.NewJwtImpl("same-secret", "same-secret", time.Minute, time.Hour)
-	want := &domainmodelsentity.AccessClaims{UserId: 1, SpaceId: 2, SpaceMemberId: 3, Name: "Google User", Roles: []string{"user"}, Permissions: []string{"profile:get"}}
-	access, err := token.GenerateAccess(want)
+func newAccessKey(t *testing.T) (domainmodelsentity.SigningKey, []byte) {
+	t.Helper()
+	secret, err := infrastructureutilitysecret.NewSealImpl([]byte("0123456789abcdef0123456789abcdef"), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := token.ValidateAccess(2, access)
+	privateKey, publicJWK, kid, algorithm, err := secret.GenerateKeypair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return domainmodelsentity.SigningKey{Id: 1, Kid: kid, Algorithm: algorithm, PublicJWK: publicJWK, Status: domainmodelsentity.SigningKeyStatusActive}, privateKey
+}
+
+func TestTokenRoundTripAndPurpose(t *testing.T) {
+	key, privateKey := newAccessKey(t)
+	token := infrastructureutilitytoken.NewJwtImpl("refresh-secret", time.Minute, time.Hour)
+	want := &domainmodelsentity.AccessClaims{UserId: 1, SpaceId: 2, SpaceMemberId: 3, Name: "Google User", SpaceName: "Lockmate", Roles: []string{"user"}, Permissions: []string{"profile:get"}}
+	access, err := token.GenerateAccess(want, key.Kid, privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := token.ValidateAccess([]domainmodelsentity.SigningKey{key}, access)
 	if err != nil || !reflect.DeepEqual(want, got) {
 		t.Fatalf("unexpected claims: %v %v", got, err)
 	}
@@ -31,70 +49,78 @@ func TestTokenRoundTripAndPurpose(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(refreshClaims, gotRefresh) {
 		t.Fatalf("unexpected refresh: %v %v", gotRefresh, err)
 	}
-	if _, err := token.ValidateAccess(9, access); !errors.Is(err, domainmodelserror.TokenInvalid) {
-		t.Fatal("wrong space accepted")
-	}
-	if _, err := token.ValidateAccess(2, refresh); !errors.Is(err, domainmodelserror.TokenInvalid) {
+	if _, err := token.ValidateAccess([]domainmodelsentity.SigningKey{key}, refresh); !errors.Is(err, domainmodelserror.TokenInvalid) {
 		t.Fatal("refresh used as access")
 	}
 	if _, err := token.ValidateRefresh(2, access); !errors.Is(err, domainmodelserror.TokenInvalid) {
 		t.Fatal("access used as refresh")
 	}
+
+	other, _ := newAccessKey(t)
+	if _, err := token.ValidateAccess([]domainmodelsentity.SigningKey{other}, access); !errors.Is(err, domainmodelserror.TokenInvalid) {
+		t.Fatal("unknown signing key accepted")
+	}
+	if _, err := token.ValidateAccess([]domainmodelsentity.SigningKey{key}, access+"x"); !errors.Is(err, domainmodelserror.TokenInvalid) {
+		t.Fatal("tampered token accepted")
+	}
+	if _, err := token.ValidateAccess([]domainmodelsentity.SigningKey{key}, "malformed"); !errors.Is(err, domainmodelserror.TokenInvalid) {
+		t.Fatal("malformed token accepted")
+	}
 }
 
-func TestTokenValidationFailures(t *testing.T) {
-	token := infrastructureutilitytoken.NewJwtImpl("secret", "refresh", time.Minute, time.Hour)
-	for _, test := range []struct {
-		name     string
-		change   func(jwt.MapClaims)
-		method   jwt.SigningMethod
-		secret   string
-		expected error
-	}{
-		{"expired", func(c jwt.MapClaims) {
-			c["iat"] = time.Now().Add(-2 * time.Hour).Unix()
-			c["nbf"] = c["iat"]
-			c["exp"] = time.Now().Add(-time.Hour).Unix()
-		}, jwt.SigningMethodHS256, "secret", domainmodelserror.TokenExpired},
-		{"signature", func(c jwt.MapClaims) {}, jwt.SigningMethodHS256, "wrong", domainmodelserror.TokenInvalid},
-		{"algorithm", func(c jwt.MapClaims) {}, jwt.SigningMethodHS512, "secret", domainmodelserror.TokenInvalid},
-		{"no expiration", func(c jwt.MapClaims) { delete(c, "exp") }, jwt.SigningMethodHS256, "secret", domainmodelserror.TokenInvalid},
-		{"no issued at", func(c jwt.MapClaims) { delete(c, "iat") }, jwt.SigningMethodHS256, "secret", domainmodelserror.TokenInvalid},
-		{"no not before", func(c jwt.MapClaims) { delete(c, "nbf") }, jwt.SigningMethodHS256, "secret", domainmodelserror.TokenInvalid},
-		{"subject mismatch", func(c jwt.MapClaims) { c["sub"] = "9" }, jwt.SigningMethodHS256, "secret", domainmodelserror.TokenInvalid},
-		{"scope mismatch", func(c jwt.MapClaims) { c["space_id"] = 9 }, jwt.SigningMethodHS256, "secret", domainmodelserror.TokenInvalid},
-		{"invalid membership", func(c jwt.MapClaims) { c["space_member_id"] = 0 }, jwt.SigningMethodHS256, "secret", domainmodelserror.TokenInvalid},
-		{"future", func(c jwt.MapClaims) { c["nbf"] = time.Now().Add(time.Hour).Unix() }, jwt.SigningMethodHS256, "secret", domainmodelserror.TokenInvalid},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			now := time.Now().Unix()
-			claims := jwt.MapClaims{"user_id": 1, "space_id": 2, "space_member_id": 3, "sub": "1", "aud": "lockmate:space:2", "token_type": "access", "iat": now, "nbf": now, "exp": now + 60}
-			test.change(claims)
-			signed, err := jwt.NewWithClaims(test.method, claims).SignedString([]byte(test.secret))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := token.ValidateAccess(2, signed); !errors.Is(err, test.expected) {
-				t.Fatalf("expected %v got %v", test.expected, err)
-			}
-		})
-	}
-	if _, err := token.ValidateAccess(2, "malformed"); !errors.Is(err, domainmodelserror.TokenInvalid) || !errors.Is(err, jwt.ErrTokenMalformed) {
-		t.Fatalf("lost malformed cause: %v", err)
-	}
-	if _, err := token.GenerateAccess(nil); !errors.Is(err, domainmodelserror.BadArgs) {
+func TestTokenSigningAndAudienceFailures(t *testing.T) {
+	key, privateKey := newAccessKey(t)
+	token := infrastructureutilitytoken.NewJwtImpl("refresh-secret", time.Minute, time.Hour)
+
+	if _, err := token.GenerateAccess(nil, key.Kid, privateKey); !errors.Is(err, domainmodelserror.BadArgs) {
 		t.Fatal("nil claims accepted")
+	}
+	if _, err := token.GenerateAccess(&domainmodelsentity.AccessClaims{UserId: 1, SpaceId: 2, SpaceMemberId: 3}, "", nil); !errors.Is(err, domainmodelserror.TokenFailed) {
+		t.Fatal("missing signing key accepted")
 	}
 	if _, err := token.GenerateRefresh(&domainmodelsentity.RefreshClaims{}); !errors.Is(err, domainmodelserror.BadArgs) {
 		t.Fatal("invalid identity accepted")
 	}
-	for _, test := range []struct {
-		secret   string
-		duration time.Duration
-	}{{"", time.Minute}, {"secret", 0}, {"secret", time.Millisecond}} {
-		invalid := infrastructureutilitytoken.NewJwtImpl(test.secret, "refresh", test.duration, time.Hour)
-		if _, err := invalid.GenerateAccess(&domainmodelsentity.AccessClaims{UserId: 1, SpaceId: 2, SpaceMemberId: 3}); !errors.Is(err, domainmodelserror.TokenFailed) {
-			t.Fatalf("invalid configuration accepted: %v", err)
-		}
+	invalid := infrastructureutilitytoken.NewJwtImpl("", time.Minute, time.Hour)
+	if _, err := invalid.GenerateRefresh(&domainmodelsentity.RefreshClaims{UserId: 1, SpaceId: 2, SpaceMemberId: 3}); !errors.Is(err, domainmodelserror.TokenFailed) {
+		t.Fatal("missing refresh secret accepted")
 	}
+	if _, err := token.ValidateAccess(nil, "token"); !errors.Is(err, domainmodelserror.BadArgs) {
+		t.Fatal("missing verification keys accepted")
+	}
+
+	// A token whose audience does not match its own space claim is rejected.
+	now := time.Now().Unix()
+	claims := jwt.MapClaims{"user_id": 1, "space_id": 2, "space_member_id": 3, "sub": "1", "aud": "lockmate:space:9", "token_type": "access", "iat": now, "nbf": now, "exp": now + 60}
+	signed, err := signES256(t, privateKey, key.Kid, claims)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := token.ValidateAccess([]domainmodelsentity.SigningKey{key}, signed); !errors.Is(err, domainmodelserror.TokenInvalid) {
+		t.Fatalf("audience mismatch accepted: %v", err)
+	}
+
+	expired := jwt.MapClaims{"user_id": 1, "space_id": 2, "space_member_id": 3, "sub": "1", "aud": "lockmate:space:2", "token_type": "access", "iat": now - 7200, "nbf": now - 7200, "exp": now - 3600}
+	signed, err = signES256(t, privateKey, key.Kid, expired)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := token.ValidateAccess([]domainmodelsentity.SigningKey{key}, signed); !errors.Is(err, domainmodelserror.TokenExpired) {
+		t.Fatalf("expired token accepted: %v", err)
+	}
+}
+
+func signES256(t *testing.T, privateKeyPKCS8 []byte, kid string, claims jwt.MapClaims) (string, error) {
+	t.Helper()
+	parsed, err := x509.ParsePKCS8PrivateKey(privateKeyPKCS8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, ok := parsed.(*ecdsa.PrivateKey)
+	if !ok {
+		t.Fatal("not an ECDSA key")
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token.Header["kid"] = kid
+	return token.SignedString(key)
 }

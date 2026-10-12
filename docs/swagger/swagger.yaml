@@ -582,6 +582,16 @@ definitions:
         example: 1
         type: integer
     type: object
+  github_com_MateWorkspace_lockmate_internal_presentation_http_response.JwksResponse:
+    properties:
+      keys:
+        items:
+          items:
+            format: int32
+            type: integer
+          type: array
+        type: array
+    type: object
   ? github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClassicAuthResponse
   : properties:
       data:
@@ -807,32 +817,6 @@ definitions:
         example: 1
         type: integer
     type: object
-  github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse:
-    properties:
-      access_token:
-        example: eyJ...
-        type: string
-      is_new_user:
-        example: false
-        type: boolean
-      permissions:
-        items:
-          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.PermissionResponse'
-        type: array
-      refresh_token:
-        example: eyJ...
-        type: string
-      roles:
-        items:
-          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.RoleResponse'
-        type: array
-      space:
-        $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SpaceResponse'
-      space_member:
-        $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SpaceMemberResponse'
-      user:
-        $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.UserResponse'
-    type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_response.SpaceMemberResponse:
     properties:
       created_at:
@@ -957,6 +941,18 @@ definitions:
         example: 1
         type: integer
     type: object
+  github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse:
+    properties:
+      access_token:
+        example: eyJ...
+        type: string
+      is_new_user:
+        example: false
+        type: boolean
+      refresh_token:
+        example: eyJ...
+        type: string
+    type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_response.UserResponse:
     properties:
       avatar_path:
@@ -1032,7 +1028,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse'
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -1250,7 +1246,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse'
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -1313,7 +1309,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse'
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -1376,7 +1372,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse'
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -1414,6 +1410,37 @@ paths:
         ClientSecret: []
         ClientSlug: []
       summary: Sign in using classic credentials
+      tags:
+      - 01. Auth
+  /v1/jwks:
+    get:
+      parameters:
+      - description: Nonzero execution UUID
+        format: uuid
+        in: header
+        name: X-Client-Exec-Id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.JwksResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse'
+      security:
+      - ClientExecId: []
+        ClientSecret: []
+        ClientSlug: []
+      summary: Read the public JSON Web Key Set
       tags:
       - 01. Auth
   /v1/management/classic-auths:

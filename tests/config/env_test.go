@@ -30,8 +30,10 @@ func setupEnvironment(t *testing.T) {
 		"LOCKMATE_POSTGRES_HOST", "LOCKMATE_POSTGRES_PORT", "LOCKMATE_POSTGRES_USERNAME",
 		"LOCKMATE_POSTGRES_PASSWORD", "LOCKMATE_POSTGRES_DATABASE", "LOCKMATE_POSTGRES_SSL_MODE",
 		"LOCKMATE_POSTGRES_MAX_CONNECTIONS", "LOCKMATE_POSTGRES_CONNECT_TIMEOUT",
-		"LOCKMATE_TOKEN_ACCESS_SECRET", "LOCKMATE_TOKEN_REFRESH_SECRET",
+		"LOCKMATE_TOKEN_REFRESH_SECRET",
 		"LOCKMATE_TOKEN_ACCESS_DURATION", "LOCKMATE_TOKEN_REFRESH_DURATION",
+		"LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", "LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY_PREVIOUS",
+		"LOCKMATE_SIGNING_KEY_ROTATION_INTERVAL", "LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL",
 		"LOCKMATE_PASSWORD_BCRYPT_COST", "LOCKMATE_SEEDER_ENABLED",
 		"LOCKMATE_SEEDER_SUPER_PASSWORD", "LOCKMATE_SEEDER_ADMIN_PASSWORD",
 		"LOCKMATE_SEEDER_USER_PASSWORD", "LOCKMATE_SEEDER_CLIENT_SECRET_KEY",
@@ -39,13 +41,16 @@ func setupEnvironment(t *testing.T) {
 		t.Setenv(key, "")
 	}
 
-	t.Setenv("LOCKMATE_TOKEN_ACCESS_SECRET", "test-access-secret")
 	t.Setenv("LOCKMATE_TOKEN_REFRESH_SECRET", "test-refresh-secret")
+	t.Setenv("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", testEncryptionKey)
 	t.Setenv("LOCKMATE_SEEDER_SUPER_PASSWORD", "super-seed-password")
 	t.Setenv("LOCKMATE_SEEDER_ADMIN_PASSWORD", "admin-seed-password")
 	t.Setenv("LOCKMATE_SEEDER_USER_PASSWORD", "user-seed-password")
 	t.Setenv("LOCKMATE_SEEDER_CLIENT_SECRET_KEY", "lockmate-"+strings.Repeat("a", 64))
 }
+
+// testEncryptionKey is the base64 encoding of a 32-byte key.
+const testEncryptionKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 
 func TestLoadEnvDefaultsAndOverrides(t *testing.T) {
 	setupEnvironment(t)
@@ -98,7 +103,7 @@ func TestLoadEnvCallsValidate(t *testing.T) {
 		key, value string
 		kind       error
 	}{
-		{"LOCKMATE_TOKEN_ACCESS_SECRET", "", domainmodelserror.EnvironmentRequired},
+		{"LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", "!!not-base64!!", domainmodelserror.EnvironmentInvalid},
 		{"LOCKMATE_TOKEN_REFRESH_SECRET", " ", domainmodelserror.EnvironmentRequired},
 		{"LOCKMATE_TOKEN_ACCESS_DURATION", "999ms", domainmodelserror.EnvironmentInvalid},
 		{"LOCKMATE_TOKEN_REFRESH_DURATION", "0", domainmodelserror.EnvironmentInvalid},

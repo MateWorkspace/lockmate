@@ -19,7 +19,7 @@ import (
 // @Security ClientSlug && ClientSecret && ClientExecId
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param request body presentationhttprequest.AuthSignInRequest true "Request"
-// @Success 200 {object} presentationhttpresponse.SessionResponse
+// @Success 200 {object} presentationhttpresponse.TokenResponse
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
 // @Failure 403 {object} presentationhttpresponse.ErrorResponse
@@ -68,7 +68,7 @@ func (h *handler) AuthSignInPost(c *gin.Context) {
 	}
 
 	c.Header("Cache-Control", "no-store")
-	c.JSON(http.StatusOK, presentationhttpresponse.Session(*result))
+	c.JSON(http.StatusOK, presentationhttpresponse.Token(*result))
 }
 
 // AuthRegisterPost godoc
@@ -80,7 +80,7 @@ func (h *handler) AuthSignInPost(c *gin.Context) {
 // @Security ClientSlug && ClientSecret && ClientExecId
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param request body presentationhttprequest.AuthRegisterRequest true "Request"
-// @Success 201 {object} presentationhttpresponse.SessionResponse
+// @Success 201 {object} presentationhttpresponse.TokenResponse
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
 // @Failure 403 {object} presentationhttpresponse.ErrorResponse
@@ -139,7 +139,7 @@ func (h *handler) AuthRegisterPost(c *gin.Context) {
 	}
 
 	c.Header("Cache-Control", "no-store")
-	c.JSON(http.StatusCreated, presentationhttpresponse.Session(*result))
+	c.JSON(http.StatusCreated, presentationhttpresponse.Token(*result))
 }
 
 // AuthRefreshPost godoc
@@ -151,7 +151,7 @@ func (h *handler) AuthRegisterPost(c *gin.Context) {
 // @Security ClientSlug && ClientSecret && ClientExecId
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param request body presentationhttprequest.AuthRefreshRequest true "Request"
-// @Success 200 {object} presentationhttpresponse.SessionResponse
+// @Success 200 {object} presentationhttpresponse.TokenResponse
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
 // @Failure 403 {object} presentationhttpresponse.ErrorResponse
@@ -193,5 +193,5 @@ func (h *handler) AuthRefreshPost(c *gin.Context) {
 	}
 
 	c.Header("Cache-Control", "no-store")
-	c.JSON(http.StatusOK, presentationhttpresponse.Session(*result))
+	c.JSON(http.StatusOK, presentationhttpresponse.Token(*result))
 }

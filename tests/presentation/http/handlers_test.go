@@ -45,7 +45,7 @@ func (r *recorder) record(ctx context.Context, name string, args ...any) {
 
 type authSessionStub struct{ recorder *recorder }
 
-func (s *authSessionStub) SignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.SignInRequest) (*domainusecasesauth.SessionResult, error) {
+func (s *authSessionStub) SignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.SignInRequest) (*domainusecasesauth.TokenResult, error) {
 	s.recorder.record(ctx, "auth.Session.SignIn", client, request)
 	if s.recorder.failure != nil {
 		return nil, s.recorder.failure
@@ -53,9 +53,9 @@ func (s *authSessionStub) SignIn(ctx context.Context, client *domainmodelsentity
 	if s.recorder.nilResult {
 		return nil, nil
 	}
-	return &domainusecasesauth.SessionResult{AccessToken: "access-once", RefreshToken: "refresh-once"}, nil
+	return &domainusecasesauth.TokenResult{AccessToken: "access-once", RefreshToken: "refresh-once"}, nil
 }
-func (s *authSessionStub) Register(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RegisterRequest) (*domainusecasesauth.SessionResult, error) {
+func (s *authSessionStub) Register(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RegisterRequest) (*domainusecasesauth.TokenResult, error) {
 	s.recorder.record(ctx, "auth.Session.Register", client, request)
 	if s.recorder.failure != nil {
 		return nil, s.recorder.failure
@@ -63,9 +63,9 @@ func (s *authSessionStub) Register(ctx context.Context, client *domainmodelsenti
 	if s.recorder.nilResult {
 		return nil, nil
 	}
-	return &domainusecasesauth.SessionResult{AccessToken: "access-once", RefreshToken: "refresh-once"}, nil
+	return &domainusecasesauth.TokenResult{AccessToken: "access-once", RefreshToken: "refresh-once"}, nil
 }
-func (s *authSessionStub) Refresh(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RefreshRequest) (*domainusecasesauth.SessionResult, error) {
+func (s *authSessionStub) Refresh(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RefreshRequest) (*domainusecasesauth.TokenResult, error) {
 	s.recorder.record(ctx, "auth.Session.Refresh", client, request)
 	if s.recorder.failure != nil {
 		return nil, s.recorder.failure
@@ -73,7 +73,7 @@ func (s *authSessionStub) Refresh(ctx context.Context, client *domainmodelsentit
 	if s.recorder.nilResult {
 		return nil, nil
 	}
-	return &domainusecasesauth.SessionResult{AccessToken: "access-once", RefreshToken: "refresh-once"}, nil
+	return &domainusecasesauth.TokenResult{AccessToken: "access-once", RefreshToken: "refresh-once"}, nil
 }
 func (s *authSessionStub) AuthenticateAccessToken(ctx context.Context, client *domainmodelsentity.ClientIdentity, accessToken string) (*domainmodelsentity.AccessClaims, error) {
 	return &domainmodelsentity.AccessClaims{UserId: 3, SpaceId: 2, SpaceMemberId: 4, Permissions: []string{"fresh:get"}}, nil
@@ -722,6 +722,7 @@ func newHTTPFixtureWithFlow(flow presentationhttproute.AuthFlowHandler) *httpFix
 	presentationhttproute.Route(fixture.router, presentationhttproute.Args{
 		Flow:    flow,
 		Auth:    presentationhttphandlerauth.NewHandler(&authSessionStub{r}),
+		Jwks:    presentationhttphandlerauth.NewJwksHandler(jwksStub{}),
 		Profile: presentationhttphandlerprofile.NewHandler(&profileAccountStub{r}, &profileSecurityStub{r}),
 		Management: presentationhttphandlermanagement.NewHandler(
 			&managementSpaceStub{r}, &managementPermissionStub{r}, &managementRoleStub{r}, &managementUserStub{r},

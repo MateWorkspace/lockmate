@@ -9,14 +9,15 @@ Keep business rules and request handling in their existing layers.
 
 `main/launcher.go` exposes Launch() int, invoked by cmd/main/main.go. Load global
 configuration and embedded seed definitions first, then initialize driver,
-infrastructure, and application. Seed before presentation and maintenance startup. Use private structs holding each layer's dependencies.
+infrastructure, and application. Seed before presentation and cron startup. Use private structs holding each layer's dependencies.
 
 - driver.go: slog JSON/text output, PostgreSQL pool, Gin engine, and http.Server.
 - infrastructure.go: interface-typed repositories and utility adapters.
 - application.go: interface-typed usecases and explicit constructor wiring.
 - seeder.go: clone embedded user/client definitions and inject runtime credentials
   from config.Env before constructor wiring; never mutate global SeedData.
-- presentation.go: handlers, middleware usecase dependencies, and route setup.
+- presentation.go: handlers, middleware usecase dependencies, route setup, and
+  the cron scheduler lifecycle started alongside HTTP.
 - launcher.go: signal handling and lifecycle; RunServer provides a testable HTTP
   serving/draining boundary without prematurely closing application resources.
 
@@ -40,6 +41,14 @@ configuration or connection strings. Docker entrypoint applies migrations before
 Launch; native Go startup requires migrations externally. Run the application
 seeder when config.Env.SeederEnabled is true, and fail startup on seeding errors.
 
+After seeding, `presentation.go` registers the HTTP routes and starts the cron
+presentation through `presentation/cron/runner.Run`, which runs each job once
+synchronously (failing launch on a required error) and then schedules it with the
+cron engine. The signing-key job reconciles the active key and re-seals keys under
+the current key-encryption key; the auth-flow job is optional best-effort cleanup.
+Store the returned stop function on the presentation and call it before
+PostgreSQL closes. Never parse environment variables outside config.
+
 Embedded seed definitions provision the control-space baseline. Its slug comes
 from seederdata.SeedData.Space.Slug and is passed to management constructors even
 when seeding is disabled. Google OAuth and handoff wiring are included; gRPC and
@@ -53,6 +62,7 @@ LOCKMATE_TEST_DATABASE_URL.
 Google is enabled explicitly through config.Env. HTTP defaults to 10701 behind
 cloudflared; the public HTTPS origin config determines launch/callback URLs.
 Wire AuthFlow random generation, PostgreSQL launch/attempt/handoff repositories,
-Google OAuth, Google usecases, generic Handoff, and misc expiration cleanup.
-Cleanup runs at startup and on a timer with bounded work/deadlines; cancel and
-join maintenance before closing PostgreSQL. Never log OAuth settings or secrets.
+Google OAuth, Google usecases, generic Handoff, signing-key reconciliation, and
+misc expiration cleanup. Cron jobs run at startup and on their cron schedule with
+bounded work/deadlines; stop and join them before closing PostgreSQL. Never log
+OAuth settings or secrets.

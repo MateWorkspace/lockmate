@@ -3,7 +3,8 @@
 Support feature orchestration without depending on concrete infrastructure.
 identity.go owns live identity/client and management-scope checks; validation.go
 checks IDs, pagination, JSON, and nullable updates; projection.go maps safe
-credential views; session.go resolves grants and assembles token claims.
+credential views; session.go resolves grants and assembles token claims;
+signing_key.go resolves the active signing key and the verifiable key set.
 
 Helpers depend on domain contracts and models. Keep each responsibility explicit,
 with small functions, import aliases, early returns, and whitespace. Do not add

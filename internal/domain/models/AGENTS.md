@@ -45,7 +45,10 @@ spaces, and assignment entities connect memberships to roles and roles to
 permissions. Clients contain their space, identity, secret hash, and redaction.
 ClientOrigin stores a client-owned canonical browser origin, active state, and
 creation/update/deletion audit fields. Its space is derived through the client;
-do not embed origin collections in Client or ClientIdentity.
+do not embed origin collections in Client or ClientIdentity. SigningKey stores a
+global asymmetric signing key: `kid`, algorithm, sealed private material with its
+nonce and key fingerprint, the public JWK, status (`active` or `retiring`), and
+timestamps. Its sealed fields are never serialized.
 
 Keep repository-specific filters, arguments, summaries, and joined projections
 in repository contracts. Entity models represent stored records. Some entity
@@ -56,15 +59,17 @@ fields, and repository list contracts use summaries that omit hashes.
 ## Claims, trace, and logging
 
 Access and refresh claims use domain fields rather than JWT library types.
-Both identify the user, space, and space member; access claims also carry role
-and permission slugs. Keep them usable for users without classic authentication.
+Both identify the user, space, and space member; access claims also carry the
+space name for observability and role and permission slugs. Keep them usable for
+users without classic authentication.
 
 `app.Trace` contains `EventId`, `ClientExecId`, and `ClientSlug` with snake_case
 JSON tags. Context storage belongs to the tracer adapter, not the trace model.
 Keep environment parsing and defaults in configuration code. `app.Env` contains
 logger settings, server ports and HTTP lifecycle timeouts, PostgreSQL settings,
 JWT secrets/lifetimes, bcrypt
-cost, the startup seeder toggle, three seed passwords, and the seed client secret. Control-space slug comes from space.json,
+cost, the startup seeder toggle, three seed passwords, the seed client secret,
+the signing-key encryption keys and rotation/retention intervals. Control-space slug comes from space.json,
 not the environment. Domain fields use standard Go types,
 including time.Duration, uint16 ports, and an int32 PostgreSQL connection limit.
 Do not include driver-specific configuration objects or log the entire Env model.

@@ -83,7 +83,7 @@ func TestSwaggerMatchesRoutesAndSecurity(t *testing.T) {
 		}
 		requirements := security[0].(map[string]any)
 		expected := 3
-		if !strings.Contains(path, "/auth/") {
+		if !strings.Contains(path, "/auth/") && path != "/v1/jwks" {
 			expected = 4
 		}
 		if len(requirements) != expected {
@@ -99,7 +99,7 @@ func TestSwaggerMatchesRoutesAndSecurity(t *testing.T) {
 	for _, methods := range paths {
 		docsCount += len(methods.(map[string]any))
 	}
-	if count != docsCount || count != len(operationCases)+5 {
+	if count != docsCount || count != len(operationCases)+6 {
 		t.Fatalf("route/doc coverage: routes=%d docs=%d", count, docsCount)
 	}
 	raw := swaggerdocs.SwaggerInfo.ReadDoc()

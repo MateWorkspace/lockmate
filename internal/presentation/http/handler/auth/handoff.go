@@ -20,7 +20,7 @@ import (
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Accept json
 // @Param request body presentationhttprequest.AuthExchangeRequest true "Request"
-// @Success 200 {object} presentationhttpresponse.SessionResponse
+// @Success 200 {object} presentationhttpresponse.TokenResponse
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
 // @Failure 403 {object} presentationhttpresponse.ErrorResponse
@@ -54,5 +54,5 @@ func (h *flowHandler) AuthExchangePost(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, presentationhttpresponse.Session(*result))
+	c.JSON(http.StatusOK, presentationhttpresponse.Token(*result))
 }

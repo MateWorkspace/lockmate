@@ -32,10 +32,10 @@ func (s *googleFlowStub) SignInCallback(ctx context.Context, request domainuseca
 }
 
 type handoffHTTPStub struct {
-	exchange func(context.Context, *domainmodelsentity.ClientIdentity, domainusecasesauth.ExchangeAuthHandoffRequest) (*domainusecasesauth.SessionResult, error)
+	exchange func(context.Context, *domainmodelsentity.ClientIdentity, domainusecasesauth.ExchangeAuthHandoffRequest) (*domainusecasesauth.TokenResult, error)
 }
 
-func (s *handoffHTTPStub) Exchange(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.ExchangeAuthHandoffRequest) (*domainusecasesauth.SessionResult, error) {
+func (s *handoffHTTPStub) Exchange(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.ExchangeAuthHandoffRequest) (*domainusecasesauth.TokenResult, error) {
 	return s.exchange(ctx, client, request)
 }
 
@@ -66,12 +66,12 @@ func TestGoogleHTTPBrowserFlow(t *testing.T) {
 			return &domainusecasesauth.GoogleSignInCallbackResult{RedirectUrl: "https://app.example.com/callback?code=handoff&state=project-state"}, nil
 		},
 	}
-	handoff := &handoffHTTPStub{exchange: func(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.ExchangeAuthHandoffRequest) (*domainusecasesauth.SessionResult, error) {
+	handoff := &handoffHTTPStub{exchange: func(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.ExchangeAuthHandoffRequest) (*domainusecasesauth.TokenResult, error) {
 		called["exchange"]++
 		if client.Id != 1 || client.SpaceId != 2 || request.Code != "handoff" {
 			t.Fatal("exchange lost trusted client")
 		}
-		return &domainusecasesauth.SessionResult{AccessToken: "access", RefreshToken: "refresh"}, nil
+		return &domainusecasesauth.TokenResult{AccessToken: "access", RefreshToken: "refresh"}, nil
 	}}
 	f := newHTTPFixtureWithFlow(presentationhttphandlerauth.NewFlowHandler(google, handoff))
 	started := perform(f.router, businessRequest("POST", "/api/v1/auth/google/start", `{"state":"project-state","redirect_uri":"https://attacker.example.com"}`))

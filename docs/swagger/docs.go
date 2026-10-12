@@ -57,7 +57,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse"
                         }
                     },
                     "400": {
@@ -389,7 +389,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse"
                         }
                     },
                     "400": {
@@ -485,7 +485,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse"
                         }
                     },
                     "400": {
@@ -581,7 +581,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse"
                         }
                     },
                     "400": {
@@ -628,6 +628,54 @@ const docTemplate = `{
                     },
                     "504": {
                         "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/jwks": {
+            "get": {
+                "security": [
+                    {
+                        "ClientExecId": [],
+                        "ClientSecret": [],
+                        "ClientSlug": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "01. Auth"
+                ],
+                "summary": "Read the public JSON Web Key Set",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Nonzero execution UUID",
+                        "name": "X-Client-Exec-Id",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.JwksResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ErrorResponse"
                         }
@@ -9752,6 +9800,21 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_response.JwksResponse": {
+            "type": "object",
+            "properties": {
+                "keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                }
+            }
+        },
         "github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClassicAuthResponse": {
             "type": "object",
             "properties": {
@@ -10082,44 +10145,6 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_MateWorkspace_lockmate_internal_presentation_http_response.SessionResponse": {
-            "type": "object",
-            "properties": {
-                "access_token": {
-                    "type": "string",
-                    "example": "eyJ..."
-                },
-                "is_new_user": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.PermissionResponse"
-                    }
-                },
-                "refresh_token": {
-                    "type": "string",
-                    "example": "eyJ..."
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.RoleResponse"
-                    }
-                },
-                "space": {
-                    "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SpaceResponse"
-                },
-                "space_member": {
-                    "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.SpaceMemberResponse"
-                },
-                "user": {
-                    "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.UserResponse"
-                }
-            }
-        },
         "github_com_MateWorkspace_lockmate_internal_presentation_http_response.SpaceMemberResponse": {
             "type": "object",
             "properties": {
@@ -10293,6 +10318,23 @@ const docTemplate = `{
                 "updated_by": {
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_response.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "eyJ..."
+                },
+                "is_new_user": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "refresh_token": {
+                    "type": "string",
+                    "example": "eyJ..."
                 }
             }
         },

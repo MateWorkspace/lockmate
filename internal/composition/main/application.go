@@ -18,6 +18,8 @@ import (
 	applicationmanagementuser "github.com/MateWorkspace/lockmate/internal/application/management/user"
 	applicationmiscallowedorigin "github.com/MateWorkspace/lockmate/internal/application/misc/allowed_origin"
 	applicationmiscauthflow "github.com/MateWorkspace/lockmate/internal/application/misc/auth_flow"
+	applicationmiscjwks "github.com/MateWorkspace/lockmate/internal/application/misc/jwks"
+	applicationmiscsigningkey "github.com/MateWorkspace/lockmate/internal/application/misc/signing_key"
 	applicationmisctracer "github.com/MateWorkspace/lockmate/internal/application/misc/tracer"
 	applicationprofileaccount "github.com/MateWorkspace/lockmate/internal/application/profile/account"
 	applicationprofilesecurity "github.com/MateWorkspace/lockmate/internal/application/profile/security"
@@ -51,6 +53,8 @@ type application struct {
 	managementSpaceMemberRole domainusecasesmanagement.SpaceMemberRole
 	miscTracer                domainusecasesmisc.Tracer
 	miscAllowedOrigin         domainusecasesmisc.AllowedOrigin
+	miscSigningKey            domainusecasesmisc.SigningKey
+	miscJwks                  domainusecasesmisc.Jwks
 }
 
 func (l *launcher) newApplication() {
@@ -104,8 +108,10 @@ func (l *launcher) newApplication() {
 			l.infra.user,
 			l.infra.spaceMember,
 			l.infra.spaceMemberRole,
+			l.infra.signingKey,
 			l.infra.authFlow,
 			l.infra.token,
+			l.infra.secret,
 			l.infra.transactor,
 			l.infra.logger,
 		),
@@ -128,8 +134,10 @@ func (l *launcher) newApplication() {
 			l.infra.classicAuth,
 			l.infra.spaceMember,
 			l.infra.spaceMemberRole,
+			l.infra.signingKey,
 			l.infra.password,
 			l.infra.token,
+			l.infra.secret,
 			l.infra.validator,
 			l.infra.transactor,
 			l.infra.logger,
@@ -274,5 +282,16 @@ func (l *launcher) newApplication() {
 			l.infra.validator,
 			l.infra.logger,
 		),
+		miscSigningKey: applicationmiscsigningkey.NewUsecaseImpl(
+			l.infra.signingKey,
+			l.infra.secret,
+			l.infra.transactor,
+			l.infra.logger,
+			applicationmiscsigningkey.Config{
+				RotationInterval:  config.Env.SigningKeyRotationInterval,
+				RetentionInterval: config.Env.SigningKeyRetentionInterval,
+			},
+		),
+		miscJwks: applicationmiscjwks.NewUsecaseImpl(l.infra.signingKey),
 	}
 }

@@ -9,7 +9,8 @@ these adapters. Utilities return domain models and errors through their contract
 - `keygen/generator.go`: random secret generation, hashing, redaction, and checking.
 - `password/bcrypt.go`: password hashing and comparison.
 - `transactor/pgxdt.go`: adaptation of the shared mate-golang transaction helper.
-- `token/jwt.go`: access and refresh JWT generation and validation.
+- `token/jwt.go`: ES256 access and HMAC refresh JWT generation and validation.
+- `secret/seal.go`: AES-256-GCM sealing plus ES256 keypair and public-JWK generation.
 - `validator/validator.go`: all validator contract methods; `utils.go`: shared
   helpers, including URL and address checks for client origins.
 - `permission_guard/claims.go`: permission checks against access claims.
@@ -65,12 +66,21 @@ Password uses bcrypt. Preserve native failure causes and distinguish a mismatch
 from malformed hashes or hashing failures. Keep the existing default-cost
 fallback and the 72-byte password limit; never truncate a password.
 
-Token uses HS256 with separate access and refresh secrets and lifetimes. Preserve
-token-type separation, space audience checks, identity checks, and required time
+Token uses ES256 for access tokens and HS256 for refresh tokens, with separate
+secrets/lifetimes. Access tokens embed a `kid` header and are verified against
+the supplied active/retiring public JWKs; refresh tokens use the refresh secret.
+Preserve token-type separation, audience/identity checks, and required time
 claims. Map expiration separately from invalid tokens and generation failures.
 Domain claims stay independent of JWT library types. JWT validation does not
 query live memberships, grants, or revocation state; application code handles
 those checks.
+
+Secret uses AES-256-GCM with a random per-record nonce and a 32-byte
+key-encryption key, plus an optional previous key for rotation. It reports a
+fingerprint per key, selects the key by fingerprint on open, and generates
+ECDSA P-256 keypairs encoded as PKCS#8 with a public JWK (EC/P-256, ES256). Never
+log key material. Invalid key-encryption keys are SecretKeyInvalid; encryption,
+decryption, and parse failures keep their specific classifications.
 
 Permission guard requires every supplied permission to exist exactly in access
 claims. Nil claims are invalid; an empty requirement list passes for nonnil

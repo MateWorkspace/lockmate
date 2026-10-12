@@ -35,8 +35,9 @@ The current scoped guides are:
 - Infrastructure: [repository](internal/infrastructure/repository/AGENTS.md) and
   [utility](internal/infrastructure/utility/AGENTS.md).
 - Seed definitions: [embedded JSON](database/seeder/AGENTS.md).
-- Delivery and wiring: [HTTP presentation](internal/presentation/http/AGENTS.md)
-  and [composition](internal/composition/AGENTS.md).
+- Delivery and wiring: [HTTP presentation](internal/presentation/http/AGENTS.md),
+  [cron presentation](internal/presentation/cron/AGENTS.md), and
+  [composition](internal/composition/AGENTS.md).
 
 Treat scoped guides as refinements of this overview. Keep them accurate when
 responsibilities, interfaces, or behavior change. Follow explicit user instructions
@@ -60,6 +61,8 @@ align all affected layers rather than introducing isolated conventions.
   repositories separate query building from execution and error handling.
 - `internal/presentation/http/`: Gin handlers, DTOs, response mapping, routes,
   middleware, and transport helpers.
+- `internal/presentation/cron/`: scheduled maintenance jobs and the cron runner,
+  wired by presentation composition alongside HTTP.
 - `internal/composition/main/`: explicit driver, infrastructure, application,
   presentation, and lifecycle wiring.
 - `database/migrations/`: ordered SQL up/down migrations.
@@ -129,8 +132,9 @@ Native Go startup requires migrations to be applied separately. SeederEnabled
 defaults true; disable it with LOCKMATE_SEEDER_ENABLED=false. space.json supplies
 the control-space slug, including management authorization; there is no slug env
 setting. Seed credentials come from required LOCKMATE_SEEDER_* variables when
-seeding is enabled, with no embedded defaults. Expiring auth records are cleaned periodically, while expiration is
-also enforced during consumption. gRPC presentation, Redis integration, hosted login UI, OTP/recovery, and logout/revocation remain future work.
+seeding is enabled, with no embedded defaults. The cron presentation creates and
+rotates the ES256 access-token signing key and purges expired records at startup
+and on schedule, while expiration is also enforced during consumption. gRPC presentation, Redis integration, hosted login UI, OTP/recovery, and logout/revocation remain future work.
 
 For Go changes, run from this repository:
 

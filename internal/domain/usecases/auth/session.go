@@ -11,13 +11,13 @@ import (
 type Session interface {
 	// SignIn verifies classic credentials before enrolling a missing membership.
 	// Suspended memberships are never reactivated by authentication.
-	SignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request SignInRequest) (*SessionResult, error)
+	SignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request SignInRequest) (*TokenResult, error)
 	// Register creates user, credentials, membership, and default role atomically.
 	// Return generated tokens only after the transaction commits successfully.
-	Register(ctx context.Context, client *domainmodelsentity.ClientIdentity, request RegisterRequest) (*SessionResult, error)
+	Register(ctx context.Context, client *domainmodelsentity.ClientIdentity, request RegisterRequest) (*TokenResult, error)
 	// Refresh requires an existing active membership and reloads current grants.
 	// It issues a new pair without revoking the previously issued refresh token.
-	Refresh(ctx context.Context, client *domainmodelsentity.ClientIdentity, request RefreshRequest) (*SessionResult, error)
+	Refresh(ctx context.Context, client *domainmodelsentity.ClientIdentity, request RefreshRequest) (*TokenResult, error)
 	// AuthenticateAccessToken validates the token, rechecks live identity and
 	// membership ownership, and returns current grants. It never enrolls users.
 	AuthenticateAccessToken(ctx context.Context, client *domainmodelsentity.ClientIdentity, accessToken string) (*domainmodelsentity.AccessClaims, error)
@@ -42,7 +42,8 @@ type RefreshRequest struct {
 	RefreshToken string
 }
 
-// SessionResult contains application tokens, never credential hashes or provider tokens.
+// SessionResult is the internal identity and grant snapshot used to build token
+// claims. It is never returned to transport callers.
 type SessionResult struct {
 	User        domainmodelsentity.User         `json:"user"`
 	Space       domainmodelsentity.Space        `json:"space"`
@@ -50,6 +51,13 @@ type SessionResult struct {
 	Roles       []domainmodelsentity.Role       `json:"roles"`
 	Permissions []domainmodelsentity.Permission `json:"permissions"`
 
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	IsNewUser    bool   `json:"is_new_user"`
+}
+
+// TokenResult is the transport-facing session output: tokens only.
+type TokenResult struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	IsNewUser    bool   `json:"is_new_user"`

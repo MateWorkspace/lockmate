@@ -366,3 +366,31 @@ TableGroup auth_flows [color: #059669] {
     google_oauth_attempts
     auth_handoffs
 }
+
+Table signing_keys [headercolor: #7c3aed] {
+    id BIGINT [pk, not null]
+    kid TEXT [not null]
+    algorithm TEXT [not null]
+    private_key_cipher BYTEA [not null]
+    private_key_nonce BYTEA [not null]
+    key_fingerprint TEXT [not null]
+    public_jwk JSONB [not null]
+    status TEXT [not null]
+    not_before TIMESTAMPTZ [not null]
+    retiring_at TIMESTAMPTZ
+    created_at TIMESTAMPTZ [not null]
+    updated_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ
+    created_by BIGINT
+    updated_by BIGINT
+    deleted_by BIGINT
+    Indexes {
+        kid [unique, name: 'uq_signing_keys_kid']
+        deleted_at [name: 'idx_signing_keys_deleted_at']
+    }
+    Note: 'Sealed ES256 signing keys; one live active row (partial unique index uq_signing_keys_active).'
+}
+
+TableGroup signing [color: #7c3aed] {
+    signing_keys
+}

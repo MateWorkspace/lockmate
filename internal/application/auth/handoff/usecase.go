@@ -16,15 +16,17 @@ import (
 const tagPath = "auth/handoff"
 
 type usecase struct {
-	handoffs   domaincontractsrepository.AuthHandoff
-	client     domaincontractsrepository.Client
-	space      domaincontractsrepository.Space
-	grants     domaincontractsrepository.SpaceMemberRole
-	flow       domaincontractsutility.AuthFlow
-	token      domaincontractsutility.Token
-	transactor domaincontractsutility.Transactor
-	logger     domaincontractsutility.Logger
-	identity   *applicationshared.IdentityReader
+	handoffs    domaincontractsrepository.AuthHandoff
+	client      domaincontractsrepository.Client
+	space       domaincontractsrepository.Space
+	grants      domaincontractsrepository.SpaceMemberRole
+	signingKeys domaincontractsrepository.SigningKey
+	flow        domaincontractsutility.AuthFlow
+	token       domaincontractsutility.Token
+	secret      domaincontractsutility.Secret
+	transactor  domaincontractsutility.Transactor
+	logger      domaincontractsutility.Logger
+	identity    *applicationshared.IdentityReader
 }
 
 func NewUsecaseImpl(
@@ -34,25 +36,29 @@ func NewUsecaseImpl(
 	user domaincontractsrepository.User,
 	members domaincontractsrepository.SpaceMember,
 	grants domaincontractsrepository.SpaceMemberRole,
+	signingKeys domaincontractsrepository.SigningKey,
 	flow domaincontractsutility.AuthFlow,
 	token domaincontractsutility.Token,
+	secret domaincontractsutility.Secret,
 	transactor domaincontractsutility.Transactor,
 	logger domaincontractsutility.Logger,
 ) domainusecasesauth.Handoff {
 	return &usecase{
-		handoffs:   handoffs,
-		client:     client,
-		space:      space,
-		grants:     grants,
-		flow:       flow,
-		token:      token,
-		transactor: transactor,
-		logger:     logger,
-		identity:   applicationshared.NewIdentityReader(user, space, members, ""),
+		handoffs:    handoffs,
+		client:      client,
+		space:       space,
+		grants:      grants,
+		signingKeys: signingKeys,
+		flow:        flow,
+		token:       token,
+		secret:      secret,
+		transactor:  transactor,
+		logger:      logger,
+		identity:    applicationshared.NewIdentityReader(user, space, members, ""),
 	}
 }
 
-func (u *usecase) Exchange(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.ExchangeAuthHandoffRequest) (*domainusecasesauth.SessionResult, error) {
+func (u *usecase) Exchange(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.ExchangeAuthHandoffRequest) (*domainusecasesauth.TokenResult, error) {
 	const tag = tagPath + "/Exchange"
 
 	if len(request.Code) != 43 {
@@ -62,7 +68,7 @@ func (u *usecase) Exchange(ctx context.Context, client *domainmodelsentity.Clien
 		return nil, err
 	}
 
-	var result *domainusecasesauth.SessionResult
+	var result *domainusecasesauth.TokenResult
 	err := u.transactor.WithTx(ctx, func(txCtx context.Context) error {
 		live, err := applicationshared.ReadClient(txCtx, u.client, u.space, client)
 		if err != nil {
@@ -99,15 +105,21 @@ func (u *usecase) Exchange(ctx context.Context, client *domainmodelsentity.Clien
 			return err
 		}
 
-		result, err = applicationshared.ResolveSession(txCtx, u.identity, u.grants, handoff.UserId, handoff.SpaceId, handoff.SpaceMemberId)
+		session, err := applicationshared.ResolveSession(txCtx, u.identity, u.grants, handoff.UserId, handoff.SpaceId, handoff.SpaceMemberId)
 		if err != nil {
 			u.logger.Error(txCtx, tag, "failed to resolve live handoff identity and grants", domainmodelslogger.Meta{"err": err})
 
 			return err
 		}
 
-		result.IsNewUser = handoff.IsNewUser
-		access, err := u.token.GenerateAccess(applicationshared.SessionClaims(result))
+		kid, privateKey, err := applicationshared.ResolveSigningKey(txCtx, u.signingKeys, u.secret)
+		if err != nil {
+			u.logger.Error(txCtx, tag, "failed to resolve access signing key", domainmodelslogger.Meta{"err": err})
+
+			return err
+		}
+
+		access, err := u.token.GenerateAccess(applicationshared.SessionClaims(session), kid, privateKey)
 		if err != nil {
 			u.logger.Error(txCtx, tag, "failed to generate handoff access token", domainmodelslogger.Meta{"err": err})
 
@@ -115,10 +127,10 @@ func (u *usecase) Exchange(ctx context.Context, client *domainmodelsentity.Clien
 		}
 
 		refresh, err := u.token.GenerateRefresh(&domainmodelsentity.RefreshClaims{
-			UserId:        result.User.Id,
-			SpaceId:       result.Space.Id,
-			SpaceMemberId: result.SpaceMember.Id,
-			Name:          result.User.Name,
+			UserId:        session.User.Id,
+			SpaceId:       session.Space.Id,
+			SpaceMemberId: session.SpaceMember.Id,
+			Name:          session.User.Name,
 		})
 		if err != nil {
 			u.logger.Error(txCtx, tag, "failed to generate handoff refresh token", domainmodelslogger.Meta{"err": err})
@@ -126,7 +138,8 @@ func (u *usecase) Exchange(ctx context.Context, client *domainmodelsentity.Clien
 			return err
 		}
 
-		result.AccessToken, result.RefreshToken = access, refresh
+		result = &domainusecasesauth.TokenResult{AccessToken: access, RefreshToken: refresh, IsNewUser: handoff.IsNewUser}
+
 		return nil
 	})
 	if err != nil {

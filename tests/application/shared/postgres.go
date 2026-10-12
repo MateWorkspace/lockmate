@@ -1,6 +1,7 @@
 package applicationsharedtest
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -8,18 +9,22 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
 	domaincontractsutility "github.com/MateWorkspace/lockmate/internal/domain/contracts/utility"
+	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 	infrastructurerepositoryclassicauth "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/classic_auth"
 	infrastructurerepositoryclient "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client"
 	infrastructurerepositoryclientorigin "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client_origin"
 	infrastructurerepositoryrole "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/role"
+	infrastructurerepositorysigningkey "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/signing_key"
 	infrastructurerepositoryspace "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space"
 	infrastructurerepositoryspacemember "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space_member"
 	infrastructurerepositoryspacememberrole "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space_member_role"
 	infrastructurerepositoryuser "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/user"
+	infrastructureutilitysecret "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/secret"
 	infrastructureutilitytransactor "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/transactor"
 	"github.com/MateWorkspace/mate-golang/pgxdt"
 	"github.com/google/uuid"
@@ -36,6 +41,8 @@ type PostgresFixture struct {
 	ClassicAuth     domaincontractsrepository.ClassicAuth
 	SpaceMember     domaincontractsrepository.SpaceMember
 	SpaceMemberRole domaincontractsrepository.SpaceMemberRole
+	SigningKey      domaincontractsrepository.SigningKey
+	Secret          domaincontractsutility.Secret
 	Transactor      domaincontractsutility.Transactor
 }
 
@@ -97,6 +104,32 @@ func NewPostgresFixture(t *testing.T) *PostgresFixture {
 	dt := pgxdt.NewPgxdt(pool)
 	question := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Question)
 	dollar := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
+	signingKey := infrastructurerepositorysigningkey.NewPostgresImpl(dt, &question, &dollar)
+	secret, err := infrastructureutilitysecret.NewSealImpl(bytes.Repeat([]byte{7}, 32), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateKey, publicJWK, kid, algorithm, err := secret.GenerateKeypair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cipher, nonce, err := secret.Seal(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := signingKey.Create(ctx, domainmodelsentity.SigningKey{
+		Kid:              kid,
+		Algorithm:        algorithm,
+		PrivateKeyCipher: cipher,
+		PrivateKeyNonce:  nonce,
+		KeyFingerprint:   secret.Fingerprint(),
+		PublicJWK:        publicJWK,
+		Status:           domainmodelsentity.SigningKeyStatusActive,
+		NotBefore:        time.Now().UTC(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	return &PostgresFixture{
 		Pool:            pool,
 		User:            infrastructurerepositoryuser.NewPostgresImpl(dt, &question, &dollar),
@@ -107,6 +140,8 @@ func NewPostgresFixture(t *testing.T) *PostgresFixture {
 		ClassicAuth:     infrastructurerepositoryclassicauth.NewPostgresImpl(dt, &question, &dollar),
 		SpaceMember:     infrastructurerepositoryspacemember.NewPostgresImpl(dt, &question, &dollar),
 		SpaceMemberRole: infrastructurerepositoryspacememberrole.NewPostgresImpl(dt, &question, &dollar),
+		SigningKey:      signingKey,
+		Secret:          secret,
 		Transactor:      infrastructureutilitytransactor.NewPgxdtImpl(pgxdt.NewTransactor(pool)),
 	}
 }

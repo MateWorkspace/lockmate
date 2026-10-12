@@ -42,7 +42,10 @@ func Launch() int {
 	}
 	defer l.drv.cleanup()
 
-	l.newInfrastructure()
+	if err := l.newInfrastructure(); err != nil {
+		slog.Error("failed to initialize infrastructure", "tag", path+"/Launch", "err", err)
+		return 1
+	}
 	if err := l.infra.validator.SpaceSlug(seederdata.SeedData.Space.Slug); err != nil {
 		l.infra.logger.Error(ctx, path+"/Launch", "invalid control-space slug in seed definitions", domainmodelslogger.Meta{"err": err})
 		return 1
@@ -56,29 +59,11 @@ func Launch() int {
 		}
 		l.infra.logger.Info(ctx, path+"/Launch", "seeding completed successfully", nil)
 	}
-	l.newPresentation()
-
-	maintenanceCtx, cancelMaintenance := context.WithCancel(ctx)
-	maintenanceDone := make(chan struct{})
-	go func() {
-		defer close(maintenanceDone)
-		ticker := time.NewTicker(config.Env.AuthFlowCleanupInterval)
-		defer ticker.Stop()
-		for {
-			cleanupCtx, cancel := context.WithTimeout(maintenanceCtx, config.Env.PostgresConnectTimeout)
-			_ = l.app.miscAuthFlow.PurgeExpired(cleanupCtx)
-			cancel()
-			select {
-			case <-maintenanceCtx.Done():
-				return
-			case <-ticker.C:
-			}
-		}
-	}()
-	defer func() {
-		cancelMaintenance()
-		<-maintenanceDone
-	}()
+	if err := l.newPresentation(ctx); err != nil {
+		l.infra.logger.Error(ctx, path+"/Launch", "failed to start presentation", domainmodelslogger.Meta{"err": err})
+		return 1
+	}
+	defer l.pres.stop()
 
 	l.infra.logger.Info(ctx, path+"/Launch", "HTTP service starting", domainmodelslogger.Meta{
 		"port": config.Env.PortHttpServer,

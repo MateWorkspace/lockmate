@@ -139,8 +139,8 @@ func TestLaunchRejectsInvalidConfiguration(t *testing.T) {
 	before := config.Env
 	t.Cleanup(func() { config.Env = before })
 	t.Chdir(t.TempDir())
-	t.Setenv("LOCKMATE_TOKEN_ACCESS_SECRET", "")
-	config.Env.TokenAccessSecret = ""
+	t.Setenv("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", "")
+	config.Env.SigningKeyEncryptionKey = nil
 	if code := compositionmain.Launch(); code != 1 {
 		t.Fatalf("invalid configuration exit code %d", code)
 	}

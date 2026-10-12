@@ -1,6 +1,8 @@
 package compositionmain
 
 import (
+	"net/http"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/MateWorkspace/lockmate/internal/config"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
@@ -15,6 +17,7 @@ import (
 	infrastructurerepositorypermission "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/permission"
 	infrastructurerepositoryrole "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/role"
 	infrastructurerepositoryrolepermission "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/role_permission"
+	infrastructurerepositorysigningkey "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/signing_key"
 	infrastructurerepositoryspace "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space"
 	infrastructurerepositoryspacemember "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space_member"
 	infrastructurerepositoryspacememberrole "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space_member_role"
@@ -25,12 +28,12 @@ import (
 	infrastructureutilitylogger "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/logger"
 	infrastructureutilitypassword "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/password"
 	infrastructureutilitypermissionguard "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/permission_guard"
+	infrastructureutilitysecret "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/secret"
 	infrastructureutilitytoken "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/token"
 	infrastructureutilitytracer "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/tracer"
 	infrastructureutilitytransactor "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/transactor"
 	infrastructureutilityvalidator "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/validator"
 	"github.com/MateWorkspace/mate-golang/pgxdt"
-	"net/http"
 )
 
 type infrastructure struct {
@@ -50,21 +53,28 @@ type infrastructure struct {
 	spaceMember     domaincontractsrepository.SpaceMember
 	rolePermission  domaincontractsrepository.RolePermission
 	spaceMemberRole domaincontractsrepository.SpaceMemberRole
+	signingKey      domaincontractsrepository.SigningKey
 	tracer          domaincontractsutility.Tracer
 	logger          domaincontractsutility.Logger
 	keygen          domaincontractsutility.Keygen
 	password        domaincontractsutility.Password
 	transactor      domaincontractsutility.Transactor
 	token           domaincontractsutility.Token
+	secret          domaincontractsutility.Secret
 	validator       domaincontractsutility.Validator
 	permissionGuard domaincontractsutility.PermissionGuard
 }
 
-func (l *launcher) newInfrastructure() {
+func (l *launcher) newInfrastructure() error {
 	question := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Question)
 	dollar := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 	dt := pgxdt.NewPgxdt(l.drv.postgresPool)
 	tracer := infrastructureutilitytracer.NewContextImpl()
+
+	secret, err := infrastructureutilitysecret.NewSealImpl(config.Env.SigningKeyEncryptionKey, config.Env.SigningKeyEncryptionKeyPrevious)
+	if err != nil {
+		return err
+	}
 
 	launches := infrastructurerepositorygoogleoauthlaunch.NewPostgresImpl(dt, &dollar)
 	attempts := infrastructurerepositorygoogleoauthattempt.NewPostgresImpl(dt, &dollar)
@@ -95,13 +105,17 @@ func (l *launcher) newInfrastructure() {
 		spaceMember:     infrastructurerepositoryspacemember.NewPostgresImpl(dt, &question, &dollar),
 		rolePermission:  infrastructurerepositoryrolepermission.NewPostgresImpl(dt, &question, &dollar),
 		spaceMemberRole: infrastructurerepositoryspacememberrole.NewPostgresImpl(dt, &question, &dollar),
+		signingKey:      infrastructurerepositorysigningkey.NewPostgresImpl(dt, &question, &dollar),
 		tracer:          tracer,
 		logger:          infrastructureutilitylogger.NewSlogImpl(l.drv.slogLogger, tracer, config.Env.LoggerLevel, config.Env.LoggerUseTrace),
 		keygen:          infrastructureutilitykeygen.NewGeneratorImpl(),
 		password:        infrastructureutilitypassword.NewBcryptImpl(config.Env.PasswordBcryptCost),
 		transactor:      infrastructureutilitytransactor.NewPgxdtImpl(pgxdt.NewTransactor(l.drv.postgresPool)),
-		token:           infrastructureutilitytoken.NewJwtImpl(config.Env.TokenAccessSecret, config.Env.TokenRefreshSecret, config.Env.TokenAccessDuration, config.Env.TokenRefreshDuration),
+		token:           infrastructureutilitytoken.NewJwtImpl(config.Env.TokenRefreshSecret, config.Env.TokenAccessDuration, config.Env.TokenRefreshDuration),
+		secret:          secret,
 		validator:       infrastructureutilityvalidator.NewValidatorImpl(config.Env.AuthRedirectAllowHttp),
 		permissionGuard: infrastructureutilitypermissionguard.NewClaimsImpl(),
 	}
+
+	return nil
 }

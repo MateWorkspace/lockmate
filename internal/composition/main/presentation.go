@@ -1,7 +1,11 @@
 package compositionmain
 
 import (
+	"context"
+
 	"github.com/MateWorkspace/lockmate/internal/config"
+	presentationcronjob "github.com/MateWorkspace/lockmate/internal/presentation/cron/job"
+	presentationcronrunner "github.com/MateWorkspace/lockmate/internal/presentation/cron/runner"
 	presentationhttphandlerauth "github.com/MateWorkspace/lockmate/internal/presentation/http/handler/auth"
 	presentationhttphandlermanagement "github.com/MateWorkspace/lockmate/internal/presentation/http/handler/management"
 	presentationhttphandlerprofile "github.com/MateWorkspace/lockmate/internal/presentation/http/handler/profile"
@@ -9,10 +13,20 @@ import (
 	presentationhttproute "github.com/MateWorkspace/lockmate/internal/presentation/http/route"
 )
 
-type presentation struct{}
+// presentation owns the HTTP routes and the cron scheduler lifecycle.
+type presentation struct {
+	cronStop func()
+}
 
-func (l *launcher) newPresentation() {
+func (p *presentation) stop() {
+	if p.cronStop != nil {
+		p.cronStop()
+	}
+}
+
+func (l *launcher) newPresentation(ctx context.Context) error {
 	auth := presentationhttphandlerauth.NewHandler(l.app.authSession)
+	jwks := presentationhttphandlerauth.NewJwksHandler(l.app.miscJwks)
 	profile := presentationhttphandlerprofile.NewHandler(l.app.profileAccount, l.app.profileSecurity)
 	management := presentationhttphandlermanagement.NewHandler(
 		l.app.managementSpace, l.app.managementPermission, l.app.managementRole,
@@ -23,9 +37,23 @@ func (l *launcher) newPresentation() {
 
 	presentationhttproute.Route(l.drv.gin, presentationhttproute.Args{
 		Flow: presentationhttphandlerauth.NewFlowHandler(l.app.authGoogle, l.app.authHandoff),
-		Auth: auth, Profile: profile, Management: management, Version: version,
+		Auth: auth, Jwks: jwks, Profile: profile, Management: management, Version: version,
 		Client: l.app.authClient, Session: l.app.authSession,
 		Tracer: l.app.miscTracer, AllowedOrigin: l.app.miscAllowedOrigin,
 	})
-	l.pres = &presentation{}
+
+	cronStop, err := presentationcronrunner.Run(ctx, presentationcronrunner.Args{
+		Timeout: config.Env.PostgresConnectTimeout,
+		Jobs: []presentationcronrunner.Schedule{
+			{Name: "signing_key", Interval: config.Env.SigningKeyRotationInterval, Run: presentationcronjob.SigningKey(l.app.miscSigningKey)},
+			{Name: "auth_flow", Interval: config.Env.AuthFlowCleanupInterval, Optional: true, Run: presentationcronjob.AuthFlow(l.app.miscAuthFlow)},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	l.pres = &presentation{cronStop: cronStop}
+
+	return nil
 }

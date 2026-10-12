@@ -20,7 +20,8 @@ and management operations.
 - `management/`: one interface file per current entity; Google identities expose
   monitoring reads only. Assignment entities retain separate files.
 - `misc/`: small helper usecases exposed to presentation through application,
-  including tracer injection and the pre-authentication allowed-origin helper.
+  including tracer injection, the pre-authentication allowed-origin helper, the
+  public JWK set, and signing-key reconciliation.
 - `shared/`: `Page[T]` and credential-free classic-auth/client views that reuse
   existing repository summaries.
 
@@ -39,7 +40,8 @@ are diagnostics, not authenticated identity or numeric audit actors.
 Repository-oriented creates return an ID; mutations return an error. Exact reads
 return pointers. Filter results use `Page[T]` with items and total, preserving
 repository pagination semantics. Client creation/rotation return metadata and
-the raw secret once. Session operations return one shared `SessionResult`.
+the raw secret once. Session operations return one shared `TokenResult` (tokens
+plus `IsNewUser`); the internal identity/grant snapshot stays unexported.
 
 Requests cannot accept audit actors or hashes. Optional updates use pointers;
 explicit SetNull flags clear nullable fields. A value and its clear flag together
@@ -91,6 +93,13 @@ then resolve the live user, active space, active membership, and membership
 ownership. Reload current grants rather than trust stale signed snapshots.
 Neither operation enrolls users. Refresh returns a new pair without revoking the
 old refresh token. Preserve TokenInvalid/TokenExpired and operational failures.
+
+Access tokens are ES256-signed by the persisted active signing key; issuance
+resolves and opens that key. Misc.SigningKey.Reconcile creates the active key
+when missing, rotates a stale active key, re-seals keys sealed under a previous
+key-encryption key, and removes keys past retention. Misc.Jwks exposes the active
+and retiring public JWKs. Both are invoked by composition-owned scheduling, never
+by HTTP callers.
 
 ## Google authentication
 

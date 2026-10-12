@@ -22,8 +22,10 @@ type usecase struct {
 	classicAuth     domaincontractsrepository.ClassicAuth
 	spaceMember     domaincontractsrepository.SpaceMember
 	spaceMemberRole domaincontractsrepository.SpaceMemberRole
+	signingKeys     domaincontractsrepository.SigningKey
 	password        domaincontractsutility.Password
 	token           domaincontractsutility.Token
+	secret          domaincontractsutility.Secret
 	validator       domaincontractsutility.Validator
 	transactor      domaincontractsutility.Transactor
 	logger          domaincontractsutility.Logger
@@ -37,8 +39,10 @@ func NewUsecaseImpl(
 	classicAuth domaincontractsrepository.ClassicAuth,
 	spaceMember domaincontractsrepository.SpaceMember,
 	spaceMemberRole domaincontractsrepository.SpaceMemberRole,
+	signingKeys domaincontractsrepository.SigningKey,
 	password domaincontractsutility.Password,
 	token domaincontractsutility.Token,
+	secret domaincontractsutility.Secret,
 	validator domaincontractsutility.Validator,
 	transactor domaincontractsutility.Transactor,
 	logger domaincontractsutility.Logger,
@@ -50,8 +54,10 @@ func NewUsecaseImpl(
 		classicAuth:     classicAuth,
 		spaceMember:     spaceMember,
 		spaceMemberRole: spaceMemberRole,
+		signingKeys:     signingKeys,
 		password:        password,
 		token:           token,
+		secret:          secret,
 		validator:       validator,
 		transactor:      transactor,
 		logger:          logger,
@@ -59,7 +65,7 @@ func NewUsecaseImpl(
 	}
 }
 
-func (u *usecase) SignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.SignInRequest) (result *domainusecasesauth.SessionResult, err error) {
+func (u *usecase) SignIn(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.SignInRequest) (result *domainusecasesauth.TokenResult, err error) {
 	const tag = tagPath + "/SignIn"
 
 	if request.Username == "" || request.Password == "" {
@@ -71,9 +77,10 @@ func (u *usecase) SignIn(ctx context.Context, client *domainmodelsentity.ClientI
 		return nil, failure
 	}
 
+	var session *domainusecasesauth.SessionResult
 	enrolled := false
 	for attempt := 0; attempt < 2; attempt++ {
-		result, enrolled = nil, false
+		session, result, enrolled = nil, nil, false
 		err = u.transactor.WithTx(ctx, func(txCtx context.Context) error {
 			if _, err := applicationshared.ReadClient(txCtx, u.client, u.space, client); err != nil {
 				u.logger.Error(txCtx, tag, "failed to validate client identity", domainmodelslogger.Meta{
@@ -142,7 +149,7 @@ func (u *usecase) SignIn(ctx context.Context, client *domainmodelsentity.ClientI
 				return err
 			}
 			enrolled = created
-			result, err = applicationshared.ResolveSession(txCtx, u.identity, u.spaceMemberRole, auth.UserId, client.SpaceId, memberId)
+			session, err = applicationshared.ResolveSession(txCtx, u.identity, u.spaceMemberRole, auth.UserId, client.SpaceId, memberId)
 			if err != nil {
 				u.logger.Error(txCtx, tag, "failed to resolve session identity and grants", domainmodelslogger.Meta{
 					"err": err,
@@ -151,36 +158,45 @@ func (u *usecase) SignIn(ctx context.Context, client *domainmodelsentity.ClientI
 				return err
 			}
 
-			accessToken, err := u.token.GenerateAccess(applicationshared.SessionClaims(result))
+			kid, privateKey, err := applicationshared.ResolveSigningKey(txCtx, u.signingKeys, u.secret)
+			if err != nil {
+				u.logger.Error(txCtx, tag, "failed to resolve access signing key", domainmodelslogger.Meta{
+					"err": err,
+				})
+
+				return err
+			}
+
+			accessToken, err := u.token.GenerateAccess(applicationshared.SessionClaims(session), kid, privateKey)
 			if err != nil {
 				u.logger.Error(txCtx, tag, "failed to generate access token", domainmodelslogger.Meta{
 					"err":             err,
-					"user_id":         result.User.Id,
-					"space_id":        result.Space.Id,
-					"space_member_id": result.SpaceMember.Id,
+					"user_id":         session.User.Id,
+					"space_id":        session.Space.Id,
+					"space_member_id": session.SpaceMember.Id,
 				})
 
 				return err
 			}
 
 			refreshToken, err := u.token.GenerateRefresh(&domainmodelsentity.RefreshClaims{
-				UserId:        result.User.Id,
-				SpaceId:       result.Space.Id,
-				SpaceMemberId: result.SpaceMember.Id,
-				Name:          result.User.Name,
+				UserId:        session.User.Id,
+				SpaceId:       session.Space.Id,
+				SpaceMemberId: session.SpaceMember.Id,
+				Name:          session.User.Name,
 			})
 			if err != nil {
 				u.logger.Error(txCtx, tag, "failed to generate refresh token", domainmodelslogger.Meta{
 					"err":             err,
-					"user_id":         result.User.Id,
-					"space_id":        result.Space.Id,
-					"space_member_id": result.SpaceMember.Id,
+					"user_id":         session.User.Id,
+					"space_id":        session.Space.Id,
+					"space_member_id": session.SpaceMember.Id,
 				})
 
 				return err
 			}
 
-			result.AccessToken, result.RefreshToken = accessToken, refreshToken
+			result = &domainusecasesauth.TokenResult{AccessToken: accessToken, RefreshToken: refreshToken, IsNewUser: session.IsNewUser}
 
 			return nil
 		})
@@ -206,18 +222,19 @@ func (u *usecase) SignIn(ctx context.Context, client *domainmodelsentity.ClientI
 
 	if enrolled {
 		u.logger.Info(ctx, tag, "created membership", domainmodelslogger.Meta{
-			"user_id":         result.User.Id,
-			"space_id":        result.Space.Id,
-			"space_member_id": result.SpaceMember.Id,
+			"user_id":         session.User.Id,
+			"space_id":        session.Space.Id,
+			"space_member_id": session.SpaceMember.Id,
 		})
 	}
 
 	return result, nil
 }
 
-func (u *usecase) Register(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RegisterRequest) (result *domainusecasesauth.SessionResult, err error) {
+func (u *usecase) Register(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RegisterRequest) (result *domainusecasesauth.TokenResult, err error) {
 	const tag = tagPath + "/Register"
 
+	var session *domainusecasesauth.SessionResult
 	err = u.transactor.WithTx(ctx, func(txCtx context.Context) error {
 		if _, err := applicationshared.ReadClient(txCtx, u.client, u.space, client); err != nil {
 			u.logger.Error(txCtx, tag, "failed to validate client identity", domainmodelslogger.Meta{
@@ -322,7 +339,7 @@ func (u *usecase) Register(ctx context.Context, client *domainmodelsentity.Clien
 			return err
 		}
 
-		result, err = applicationshared.ResolveSession(txCtx, u.identity, u.spaceMemberRole, userId, client.SpaceId, memberId)
+		session, err = applicationshared.ResolveSession(txCtx, u.identity, u.spaceMemberRole, userId, client.SpaceId, memberId)
 		if err != nil {
 			u.logger.Error(txCtx, tag, "failed to resolve session identity and grants", domainmodelslogger.Meta{
 				"err": err,
@@ -331,37 +348,47 @@ func (u *usecase) Register(ctx context.Context, client *domainmodelsentity.Clien
 			return err
 		}
 
-		result.IsNewUser = true
-		accessToken, err := u.token.GenerateAccess(applicationshared.SessionClaims(result))
+		session.IsNewUser = true
+
+		kid, privateKey, err := applicationshared.ResolveSigningKey(txCtx, u.signingKeys, u.secret)
+		if err != nil {
+			u.logger.Error(txCtx, tag, "failed to resolve access signing key", domainmodelslogger.Meta{
+				"err": err,
+			})
+
+			return err
+		}
+
+		accessToken, err := u.token.GenerateAccess(applicationshared.SessionClaims(session), kid, privateKey)
 		if err != nil {
 			u.logger.Error(txCtx, tag, "failed to generate access token", domainmodelslogger.Meta{
 				"err":             err,
-				"user_id":         result.User.Id,
-				"space_id":        result.Space.Id,
-				"space_member_id": result.SpaceMember.Id,
+				"user_id":         session.User.Id,
+				"space_id":        session.Space.Id,
+				"space_member_id": session.SpaceMember.Id,
 			})
 
 			return err
 		}
 
 		refreshToken, err := u.token.GenerateRefresh(&domainmodelsentity.RefreshClaims{
-			UserId:        result.User.Id,
-			SpaceId:       result.Space.Id,
-			SpaceMemberId: result.SpaceMember.Id,
-			Name:          result.User.Name,
+			UserId:        session.User.Id,
+			SpaceId:       session.Space.Id,
+			SpaceMemberId: session.SpaceMember.Id,
+			Name:          session.User.Name,
 		})
 		if err != nil {
 			u.logger.Error(txCtx, tag, "failed to generate refresh token", domainmodelslogger.Meta{
 				"err":             err,
-				"user_id":         result.User.Id,
-				"space_id":        result.Space.Id,
-				"space_member_id": result.SpaceMember.Id,
+				"user_id":         session.User.Id,
+				"space_id":        session.Space.Id,
+				"space_member_id": session.SpaceMember.Id,
 			})
 
 			return err
 		}
 
-		result.AccessToken, result.RefreshToken = accessToken, refreshToken
+		result = &domainusecasesauth.TokenResult{AccessToken: accessToken, RefreshToken: refreshToken, IsNewUser: session.IsNewUser}
 
 		return nil
 	})
@@ -375,14 +402,14 @@ func (u *usecase) Register(ctx context.Context, client *domainmodelsentity.Clien
 	}
 
 	u.logger.Info(ctx, tag, "registered user", domainmodelslogger.Meta{
-		"user_id":         result.User.Id,
-		"space_id":        result.Space.Id,
-		"space_member_id": result.SpaceMember.Id,
+		"user_id":         session.User.Id,
+		"space_id":        session.Space.Id,
+		"space_member_id": session.SpaceMember.Id,
 	})
 	return result, nil
 }
 
-func (u *usecase) Refresh(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RefreshRequest) (result *domainusecasesauth.SessionResult, err error) {
+func (u *usecase) Refresh(ctx context.Context, client *domainmodelsentity.ClientIdentity, request domainusecasesauth.RefreshRequest) (result *domainusecasesauth.TokenResult, err error) {
 	const tag = tagPath + "/Refresh"
 
 	if request.RefreshToken == "" {
@@ -420,7 +447,7 @@ func (u *usecase) Refresh(ctx context.Context, client *domainmodelsentity.Client
 		return nil, failure
 	}
 
-	result, err = applicationshared.ResolveSession(ctx, u.identity, u.spaceMemberRole, claims.UserId, claims.SpaceId, claims.SpaceMemberId)
+	session, err := applicationshared.ResolveSession(ctx, u.identity, u.spaceMemberRole, claims.UserId, claims.SpaceId, claims.SpaceMemberId)
 	if err != nil {
 		u.logger.Error(ctx, tag, "failed to resolve session identity and grants", domainmodelslogger.Meta{
 			"err": err,
@@ -429,38 +456,45 @@ func (u *usecase) Refresh(ctx context.Context, client *domainmodelsentity.Client
 		return nil, err
 	}
 
-	accessToken, err := u.token.GenerateAccess(applicationshared.SessionClaims(result))
+	kid, privateKey, err := applicationshared.ResolveSigningKey(ctx, u.signingKeys, u.secret)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to resolve access signing key", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return nil, err
+	}
+
+	accessToken, err := u.token.GenerateAccess(applicationshared.SessionClaims(session), kid, privateKey)
 	if err != nil {
 		u.logger.Error(ctx, tag, "failed to generate access token", domainmodelslogger.Meta{
 			"err":             err,
-			"user_id":         result.User.Id,
-			"space_id":        result.Space.Id,
-			"space_member_id": result.SpaceMember.Id,
+			"user_id":         session.User.Id,
+			"space_id":        session.Space.Id,
+			"space_member_id": session.SpaceMember.Id,
 		})
 
 		return nil, err
 	}
 
 	refreshToken, err := u.token.GenerateRefresh(&domainmodelsentity.RefreshClaims{
-		UserId:        result.User.Id,
-		SpaceId:       result.Space.Id,
-		SpaceMemberId: result.SpaceMember.Id,
-		Name:          result.User.Name,
+		UserId:        session.User.Id,
+		SpaceId:       session.Space.Id,
+		SpaceMemberId: session.SpaceMember.Id,
+		Name:          session.User.Name,
 	})
 	if err != nil {
 		u.logger.Error(ctx, tag, "failed to generate refresh token", domainmodelslogger.Meta{
 			"err":             err,
-			"user_id":         result.User.Id,
-			"space_id":        result.Space.Id,
-			"space_member_id": result.SpaceMember.Id,
+			"user_id":         session.User.Id,
+			"space_id":        session.Space.Id,
+			"space_member_id": session.SpaceMember.Id,
 		})
 
 		return nil, err
 	}
 
-	result.AccessToken, result.RefreshToken = accessToken, refreshToken
-
-	return result, nil
+	return &domainusecasesauth.TokenResult{AccessToken: accessToken, RefreshToken: refreshToken, IsNewUser: false}, nil
 }
 
 func (u *usecase) AuthenticateAccessToken(ctx context.Context, client *domainmodelsentity.ClientIdentity, accessToken string) (result *domainmodelsentity.AccessClaims, err error) {
@@ -483,7 +517,16 @@ func (u *usecase) AuthenticateAccessToken(ctx context.Context, client *domainmod
 		return nil, err
 	}
 
-	claims, err := u.token.ValidateAccess(client.SpaceId, accessToken)
+	keys, err := applicationshared.VerifiableKeys(ctx, u.signingKeys)
+	if err != nil {
+		u.logger.Error(ctx, tag, "failed to read verifiable signing keys", domainmodelslogger.Meta{
+			"err": err,
+		})
+
+		return nil, err
+	}
+
+	claims, err := u.token.ValidateAccess(keys, accessToken)
 	if err != nil {
 		u.logger.Error(ctx, tag, "failed to validate access token", domainmodelslogger.Meta{
 			"err": err,

@@ -319,8 +319,8 @@ func TestPostgresSeededAuthenticationAndAuthority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	token := infrastructureutilitytoken.NewJwtImpl("test-access", "test-refresh", time.Minute, time.Hour)
-	session := applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.password, token, f.validator, f.Transactor, f.logger)
+	token := infrastructureutilitytoken.NewJwtImpl("test-refresh", time.Minute, time.Hour)
+	session := applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.SigningKey, f.password, token, f.Secret, f.validator, f.Transactor, f.logger)
 	guard := infrastructureutilitypermissionguard.NewClaimsImpl()
 	management := applicationmanagementspace.NewUsecaseImpl(f.User, f.Space, f.SpaceMember, guard, f.validator, f.logger, f.Transactor, f.data.Space.Slug)
 	for _, user := range f.data.Users {
@@ -328,7 +328,7 @@ func TestPostgresSeededAuthenticationAndAuthority(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if result.AccessToken == "" || result.RefreshToken == "" || result.Space.Slug != "custom-control" {
+		if result.AccessToken == "" || result.RefreshToken == "" {
 			t.Fatal("seeded session incomplete")
 		}
 		claims, err := session.AuthenticateAccessToken(ctx, client, result.AccessToken)

@@ -10,6 +10,7 @@ owns permissions, value validation, transactions, and operation logging.
 - `handler/auth`, `handler/profile`, and `handler/management`: private handler
   structs with `NewHandler` constructors receiving domain usecase interfaces.
   Keep dependencies in handler.go and implementations in capability/entity files.
+  `handler/auth/jwks.go` exposes the client-gated public JWK set.
 - `handler/version`: expose the app information supplied by composition.
 - `request`: explicit snake_case body DTOs, preserving pointers and set-null flags.
 - `response`: safe wire models and explicit entity/join mappers. Never serialize
@@ -72,6 +73,9 @@ Pagination defaults to page 1/limit 10, caps limit at 100, and normalizes
 nonpositive page/limit values like the reference. Preserve all usecase filters.
 Creates return 201, reads/session refresh/sign-in/secret rotation return 200,
 and ordinary mutations return 204. Tokens and one-time secrets use no-store.
+Sign-in, registration, refresh, and handoff exchange return only the token pair
+plus `is_new_user`. The `/v1/jwks` route requires client credentials and returns
+the public JWK set with no-store.
 
 Classify every domain sentinel with errors.Is. Extract safe Message with errors.As;
 never expose Error() or Source. Unknown/internal errors return a fixed sanitized

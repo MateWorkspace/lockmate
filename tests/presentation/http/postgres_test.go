@@ -97,11 +97,11 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	validator := infrastructureutilityvalidator.NewValidatorImpl(true)
 	password := infrastructureutilitypassword.NewBcryptImpl(4)
 	guard := infrastructureutilitypermissionguard.NewClaimsImpl()
-	token := infrastructureutilitytoken.NewJwtImpl("test-access-secret", "test-refresh-secret", 15*time.Minute, 24*time.Hour)
+	token := infrastructureutilitytoken.NewJwtImpl("test-refresh-secret", 15*time.Minute, 24*time.Hour)
 	tracer := infrastructureutilitytracer.NewContextImpl()
 	logger := &testshared.Logger{}
 	clientAuth := applicationauthclient.NewUsecaseImpl(fixture.Client, fixture.Space, keygen, logger)
-	session := applicationauthsession.NewUsecaseImpl(fixture.Client, fixture.Space, fixture.User, fixture.ClassicAuth, fixture.SpaceMember, fixture.SpaceMemberRole, password, token, validator, fixture.Transactor, logger)
+	session := applicationauthsession.NewUsecaseImpl(fixture.Client, fixture.Space, fixture.User, fixture.ClassicAuth, fixture.SpaceMember, fixture.SpaceMemberRole, fixture.SigningKey, password, token, fixture.Secret, validator, fixture.Transactor, logger)
 	account := applicationprofileaccount.NewUsecaseImpl(fixture.User, fixture.Space, fixture.SpaceMember, fixture.SpaceMemberRole, guard, validator, fixture.Transactor, logger)
 	security := applicationprofilesecurity.NewUsecaseImpl(fixture.User, fixture.Space, fixture.SpaceMember, fixture.ClassicAuth, googleAuth, password, guard, validator, fixture.Transactor, logger)
 	clientManagement := applicationmanagementclient.NewUsecaseImpl(fixture.User, fixture.Space, fixture.SpaceMember, fixture.Client, fixture.ClientOrigin, guard, validator, logger, fixture.Transactor, keygen, "lockmate")
@@ -127,11 +127,11 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	if response.Code != 201 {
 		t.Fatalf("register: %d %s", response.Code, response.Body.String())
 	}
-	var registered presentationhttpresponse.SessionResponse
+	var registered presentationhttpresponse.TokenResponse
 	if err := json.Unmarshal(response.Body.Bytes(), &registered); err != nil {
 		t.Fatal(err)
 	}
-	if registered.AccessToken == "" || registered.RefreshToken == "" || !registered.IsNewUser || registered.Space.Id != spaceId {
+	if registered.AccessToken == "" || registered.RefreshToken == "" || !registered.IsNewUser {
 		t.Fatal("registration did not issue a scoped session")
 	}
 	access = registered.AccessToken

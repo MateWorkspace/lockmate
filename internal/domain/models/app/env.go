@@ -29,10 +29,14 @@ type Env struct {
 	PostgresMaxConnections int32
 	PostgresConnectTimeout time.Duration
 
-	TokenAccessSecret    string
 	TokenRefreshSecret   string
 	TokenAccessDuration  time.Duration
 	TokenRefreshDuration time.Duration
+
+	SigningKeyEncryptionKey         []byte
+	SigningKeyEncryptionKeyPrevious []byte
+	SigningKeyRotationInterval      time.Duration
+	SigningKeyRetentionInterval     time.Duration
 
 	SeederEnabled         bool
 	SeederSuperPassword   string

@@ -5,6 +5,7 @@ type AccessClaims struct {
 	SpaceId       int64    `json:"space_id"`
 	SpaceMemberId int64    `json:"space_member_id"`
 	Name          string   `json:"name"`
+	SpaceName     string   `json:"space_name"`
 	Roles         []string `json:"roles"`
 	Permissions   []string `json:"permissions"`
 }

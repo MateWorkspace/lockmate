@@ -23,6 +23,7 @@ import (
 	infrastructurerepositoryauthhandoff "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/auth_handoff"
 	infrastructurerepositorygoogleauth "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/google_auth"
 	infrastructurerepositorygoogleoauthlaunch "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/google_oauth_launch"
+	infrastructurerepositorysigningkey "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/signing_key"
 	infrastructureutilityauthflow "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/auth_flow"
 	infrastructureutilitylogger "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/logger"
 	infrastructureutilitytoken "github.com/MateWorkspace/lockmate/internal/infrastructure/utility/token"
@@ -60,9 +61,10 @@ func TestPostgresGoogleHandoffLifecycle(t *testing.T) {
 		return &domaincontractsutility.CompleteGoogleOAuthResult{ClientId: clientId, SpaceId: spaceId, RedirectUri: redirect, ClientState: "project-state", Identity: domaincontractsutility.GoogleOAuthIdentity{Subject: "stable-google-sub", Email: "user@example.com", IsEmailVerified: true}}, nil
 	}}
 	google := applicationauthgoogle.NewUsecaseImpl(f.Client, f.Space, f.User, f.SpaceMember, f.SpaceMemberRole, infrastructureutilityvalidator.NewValidatorImpl(true), f.Transactor, logger, identities, provider, launches, handoffs, flow, applicationauthgoogle.Config{Enabled: true, PublicUrl: "https://lockmate-dev.dhonan.my.id", LaunchDuration: time.Minute, AttemptDuration: time.Minute, HandoffDuration: time.Minute})
-	token := infrastructureutilitytoken.NewJwtImpl("test-access", "test-refresh", time.Minute, time.Hour)
+	token := infrastructureutilitytoken.NewJwtImpl("test-refresh", time.Minute, time.Hour)
+	signingKeys := infrastructurerepositorysigningkey.NewPostgresImpl(dt, &q, &d)
 	makeExchange := func(token domaincontractsutility.Token) domainusecasesauth.Handoff {
-		return applicationauthhandoff.NewUsecaseImpl(handoffs, f.Client, f.Space, f.User, f.SpaceMember, f.SpaceMemberRole, flow, token, f.Transactor, logger)
+		return applicationauthhandoff.NewUsecaseImpl(handoffs, f.Client, f.Space, f.User, f.SpaceMember, f.SpaceMemberRole, signingKeys, flow, token, f.Secret, f.Transactor, logger)
 	}
 	exchange := makeExchange(token)
 	callback := func() string {
@@ -102,7 +104,7 @@ func TestPostgresGoogleHandoffLifecycle(t *testing.T) {
 	}
 	// A token generation failure rolls back consumption; a subsequent exchange succeeds.
 	retry := callback()
-	failedToken := &testshared.Token{GenerateAccessFn: func(*domainmodelsentity.AccessClaims) (string, error) {
+	failedToken := &testshared.Token{GenerateAccessFn: func(*domainmodelsentity.AccessClaims, string, []byte) (string, error) {
 		return "", domainmodelserror.NewError("token failure", domainmodelserror.TokenFailed, nil)
 	}}
 	if _, err := makeExchange(failedToken).Exchange(ctx, client, domainusecasesauth.ExchangeAuthHandoffRequest{Code: retry}); !errors.Is(err, domainmodelserror.TokenFailed) {
@@ -125,13 +127,17 @@ func TestPostgresGoogleHandoffLifecycle(t *testing.T) {
 	}
 	// Suspended memberships cannot exchange a saved code.
 	blocked := callback()
-	if _, err := f.Pool.Exec(ctx, "UPDATE space_members SET is_active=false WHERE id=$1", result.SpaceMember.Id); err != nil {
+	var memberId, memberUserId int64
+	if err := f.Pool.QueryRow(ctx, "SELECT id, user_id FROM space_members LIMIT 1").Scan(&memberId, &memberUserId); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Pool.Exec(ctx, "UPDATE space_members SET is_active=false WHERE id=$1", memberId); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := exchange.Exchange(ctx, client, domainusecasesauth.ExchangeAuthHandoffRequest{Code: blocked}); !errors.Is(err, domainmodelserror.Unauthorized) {
 		t.Fatal(err)
 	}
-	if _, err := f.Pool.Exec(ctx, "UPDATE space_members SET is_active=true WHERE id=$1", result.SpaceMember.Id); err != nil {
+	if _, err := f.Pool.Exec(ctx, "UPDATE space_members SET is_active=true WHERE id=$1", memberId); err != nil {
 		t.Fatal(err)
 	}
 	// Exactly one concurrent exchange commits.
@@ -158,19 +164,23 @@ func TestPostgresGoogleHandoffLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := handoffs.Create(ctx, domainmodelsentity.AuthHandoff{CodeHash: flow.Hash(expired), ClientId: clientId, SpaceId: spaceId, UserId: result.User.Id, SpaceMemberId: result.SpaceMember.Id, RedirectUri: redirect, ExpiresAt: time.Now().Add(-time.Second)}); err != nil {
+	if err := handoffs.Create(ctx, domainmodelsentity.AuthHandoff{CodeHash: flow.Hash(expired), ClientId: clientId, SpaceId: spaceId, UserId: memberUserId, SpaceMemberId: memberId, RedirectUri: redirect, ExpiresAt: time.Now().Add(-time.Second)}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := exchange.Exchange(ctx, client, domainusecasesauth.ExchangeAuthHandoffRequest{Code: expired}); !errors.Is(err, domainmodelserror.AuthHandoffExpired) {
 		t.Fatal(err)
 	}
 	// Later callbacks reuse the global identity and never overwrite profile edits.
-	if _, err := f.Pool.Exec(ctx, "UPDATE users SET name='Edited Name' WHERE id=$1", result.User.Id); err != nil {
+	if _, err := f.Pool.Exec(ctx, "UPDATE users SET name='Edited Name' WHERE id=$1", memberUserId); err != nil {
 		t.Fatal(err)
 	}
 	last := callback()
 	again, err := exchange.Exchange(ctx, client, domainusecasesauth.ExchangeAuthHandoffRequest{Code: last})
-	if err != nil || again.IsNewUser || again.User.Name != "Edited Name" {
+	var storedName string
+	if queryErr := f.Pool.QueryRow(ctx, "SELECT name FROM users WHERE id=$1", memberUserId).Scan(&storedName); queryErr != nil {
+		t.Fatal(queryErr)
+	}
+	if err != nil || again.IsNewUser || storedName != "Edited Name" {
 		t.Fatalf("existing identity changed: %v", err)
 	}
 }

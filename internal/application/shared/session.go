@@ -59,6 +59,7 @@ func SessionClaims(result *domainusecasesauth.SessionResult) *domainmodelsentity
 		SpaceId:       result.Space.Id,
 		SpaceMemberId: result.SpaceMember.Id,
 		Name:          result.User.Name,
+		SpaceName:     result.Space.Name,
 		Roles:         roles,
 		Permissions:   permissions,
 	}

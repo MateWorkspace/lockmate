@@ -14,7 +14,7 @@ import (
 )
 
 func session(f *testshared.Fixture) domainusecasesauth.Session {
-	return applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.Password, f.Token, f.Validator, f.Transactor, f.Logger)
+	return applicationauthsession.NewUsecaseImpl(f.Client, f.Space, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.SigningKey, f.Password, f.Token, f.Secret, f.Validator, f.Transactor, f.Logger)
 }
 func clientIdentity() *domainmodelsentity.ClientIdentity {
 	return &domainmodelsentity.ClientIdentity{Id: 30, SpaceId: 10, Slug: "web"}
@@ -71,7 +71,7 @@ func TestRegistrationAtomicResult(t *testing.T) {
 				}
 				return
 			}
-			if err != nil || result == nil || !result.IsNewUser || result.AccessToken == "" || result.RefreshToken == "" || result.User.Id != 2 || !f.Committed {
+			if err != nil || result == nil || !result.IsNewUser || result.AccessToken == "" || result.RefreshToken == "" || !f.Committed {
 				t.Fatalf("registration result: %v %v", result, err)
 			}
 			if len(f.Users) != 2 || len(f.Classics) != 2 || len(f.Members) != 2 {

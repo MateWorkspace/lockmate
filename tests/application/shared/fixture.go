@@ -26,10 +26,12 @@ type Fixture struct {
 	Role            *Role
 	Permission      *Permission
 	RolePermission  *RolePermission
+	SigningKey      *SigningKey
 	Guard           *PermissionGuard
 	Validator       domaincontractsutility.Validator
 	Password        *Password
 	Token           *Token
+	Secret          *Secret
 	Keygen          *Keygen
 	Transactor      *Transactor
 	Logger          *Logger
@@ -51,7 +53,8 @@ func NewFixture() *Fixture {
 		User: &User{}, Space: &Space{}, SpaceMember: &SpaceMember{}, Client: &Client{}, ClientOrigin: &ClientOrigin{},
 		ClassicAuth: &ClassicAuth{}, GoogleAuth: &GoogleAuth{}, SpaceMemberRole: &SpaceMemberRole{},
 		Role: &Role{}, Permission: &Permission{}, RolePermission: &RolePermission{},
-		Guard: &PermissionGuard{}, Password: &Password{}, Token: &Token{}, Keygen: &Keygen{}, Transactor: &Transactor{}, Logger: &Logger{},
+		SigningKey: &SigningKey{},
+		Guard:      &PermissionGuard{}, Password: &Password{}, Token: &Token{}, Secret: &Secret{}, Keygen: &Keygen{}, Transactor: &Transactor{}, Logger: &Logger{},
 		Validator: infrastructureutilityvalidator.NewValidatorImpl(true),
 		Users:     map[int64]*domainmodelsentity.User{1: {Id: 1, Name: "Current name"}},
 		Members:   map[int64]*domainmodelsentity.SpaceMember{20: {Id: 20, SpaceId: 10, UserId: 1, IsActive: true}},
@@ -220,9 +223,11 @@ func NewFixture() *Fixture {
 		}
 		return nil
 	}
-	f.Token.GenerateAccessFn = func(claims *domainmodelsentity.AccessClaims) (string, error) { return "access-token", f.TokenErr }
+	f.Token.GenerateAccessFn = func(claims *domainmodelsentity.AccessClaims, kid string, privateKeyPKCS8 []byte) (string, error) {
+		return "access-token", f.TokenErr
+	}
 	f.Token.GenerateRefreshFn = func(claims *domainmodelsentity.RefreshClaims) (string, error) { return "refresh-token", f.TokenErr }
-	f.Token.ValidateAccessFn = func(spaceId int64, value string) (*domainmodelsentity.AccessClaims, error) {
+	f.Token.ValidateAccessFn = func(keys []domainmodelsentity.SigningKey, value string) (*domainmodelsentity.AccessClaims, error) {
 		v := *f.Caller
 		v.Name = "stale"
 		v.Permissions = []string{"stale"}
@@ -230,6 +235,22 @@ func NewFixture() *Fixture {
 	}
 	f.Token.ValidateRefreshFn = func(spaceId int64, value string) (*domainmodelsentity.RefreshClaims, error) {
 		return &domainmodelsentity.RefreshClaims{UserId: 1, SpaceId: spaceId, SpaceMemberId: 20}, nil
+	}
+	f.Secret.FingerprintFn = func() string { return "current" }
+	f.Secret.PreviousFingerprintFn = func() string { return "" }
+	f.Secret.SealFn = func(plaintext []byte) ([]byte, []byte, error) { return []byte("cipher"), []byte("nonce"), nil }
+	f.Secret.OpenFn = func(cipher []byte, nonce []byte, fingerprint string) ([]byte, error) { return []byte("pkcs8"), nil }
+	f.Secret.GenerateKeypairFn = func() ([]byte, []byte, string, string, error) {
+		return []byte("pkcs8"), []byte(`{"kty":"EC","crv":"P-256"}`), "kid", "ES256", nil
+	}
+	f.SigningKey.ReadActiveFn = func(ctx context.Context) (*domainmodelsentity.SigningKey, error) {
+		return &domainmodelsentity.SigningKey{Id: 80, Kid: "kid", Algorithm: "ES256", PrivateKeyCipher: []byte("cipher"), PrivateKeyNonce: []byte("nonce"), KeyFingerprint: "current", Status: domainmodelsentity.SigningKeyStatusActive}, nil
+	}
+	f.SigningKey.ListVerifiableFn = func(ctx context.Context) ([]domainmodelsentity.SigningKey, error) {
+		return []domainmodelsentity.SigningKey{{Id: 80, Kid: "kid", Algorithm: "ES256", KeyFingerprint: "current", Status: domainmodelsentity.SigningKeyStatusActive}}, nil
+	}
+	f.SigningKey.ListStaleFn = func(ctx context.Context, fingerprint string) ([]domainmodelsentity.SigningKey, error) {
+		return []domainmodelsentity.SigningKey{}, nil
 	}
 	f.Keygen.GenerateFn = func() (string, string, string, error) { return "raw-secret", "hash:secret", "reda****cted", nil }
 	f.Keygen.CompareFn = func(hash, raw string) error {

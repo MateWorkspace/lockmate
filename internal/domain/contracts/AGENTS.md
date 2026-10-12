@@ -8,10 +8,10 @@ frameworks outside this scope.
 ## Layout
 
 - `repository/`: persistence interfaces for space, permission, role, user,
-  classic auth, Google auth, client, client origin, space member, role permission, and space
-  member role. Keep one contract file per entity.
+  classic auth, Google auth, client, client origin, space member, role permission, space
+  member role, and signing key. Keep one contract file per entity.
 - `utility/`: tracer, logger, keygen, password, transactor, token, validator,
-  permission guard, and Google OAuth interfaces. Keep one file per capability.
+  permission guard, Google OAuth, and secret interfaces. Keep one file per capability.
 
 Use `domaincontractsrepository` and `domaincontractsutility` as package names.
 Import domain packages with the existing explicit aliases. Dependencies belong
@@ -74,6 +74,16 @@ Token contracts use domain claims, and permission checks receive authenticated
 access claims. Validation and credential generation do not perform persistence.
 Logger calls receive an explicit tag; tracer injection and extraction carry the
 domain trace through context.
+
+Access tokens are ES256-signed with a persisted signing key identified by `kid`;
+refresh tokens remain HMAC-signed and are never externally verifiable. Signing
+keys are global and stored sealed; `SigningKey` exposes an active read, a `kid`
+read, verifiable (active/retiring) and stale-fingerprint lists, an atomic active
+demotion, a sealed-material update, and bounded retiring-key cleanup. The
+`Secret` utility seals and opens private material with the configured
+key-encryption keys (current plus optional previous), reports their fingerprints,
+and generates ES256 keypairs with public JWKs. Contracts must not expose crypto,
+JWT, or AEAD library types.
 
 Tracer also generates fresh event UUIDs through GenerateEventId. The misc
 application usecase accepts only external client slug/execution UUID and assembles

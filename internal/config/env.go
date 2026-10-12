@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"math"
 	"net/netip"
 	"net/url"
@@ -41,6 +42,9 @@ var Env = domainmodelsapp.Env{
 
 	TokenAccessDuration:  15 * time.Minute,
 	TokenRefreshDuration: 24 * time.Hour,
+
+	SigningKeyRotationInterval:  720 * time.Hour,
+	SigningKeyRetentionInterval: time.Hour,
 
 	SeederEnabled:      true,
 	PasswordBcryptCost: bcrypt.DefaultCost,
@@ -83,10 +87,24 @@ func LoadEnv() error {
 	Env.PostgresMaxConnections = envGetInt32("LOCKMATE_POSTGRES_MAX_CONNECTIONS", Env.PostgresMaxConnections)
 	Env.PostgresConnectTimeout = envGetDuration("LOCKMATE_POSTGRES_CONNECT_TIMEOUT", Env.PostgresConnectTimeout)
 
-	Env.TokenAccessSecret = envGetString("LOCKMATE_TOKEN_ACCESS_SECRET", Env.TokenAccessSecret)
 	Env.TokenRefreshSecret = envGetString("LOCKMATE_TOKEN_REFRESH_SECRET", Env.TokenRefreshSecret)
 	Env.TokenAccessDuration = envGetDuration("LOCKMATE_TOKEN_ACCESS_DURATION", Env.TokenAccessDuration)
 	Env.TokenRefreshDuration = envGetDuration("LOCKMATE_TOKEN_REFRESH_DURATION", Env.TokenRefreshDuration)
+
+	currentKey, err := envGetBase64("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", Env.SigningKeyEncryptionKey)
+	if err != nil {
+		return err
+	}
+	Env.SigningKeyEncryptionKey = currentKey
+
+	previousKey, err := envGetBase64("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY_PREVIOUS", Env.SigningKeyEncryptionKeyPrevious)
+	if err != nil {
+		return err
+	}
+	Env.SigningKeyEncryptionKeyPrevious = previousKey
+
+	Env.SigningKeyRotationInterval = envGetDuration("LOCKMATE_SIGNING_KEY_ROTATION_INTERVAL", Env.SigningKeyRotationInterval)
+	Env.SigningKeyRetentionInterval = envGetDuration("LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL", Env.SigningKeyRetentionInterval)
 
 	Env.PasswordBcryptCost = envGetInt("LOCKMATE_PASSWORD_BCRYPT_COST", Env.PasswordBcryptCost)
 	Env.SeederEnabled = envGetBool("LOCKMATE_SEEDER_ENABLED", Env.SeederEnabled)
@@ -127,8 +145,24 @@ func validate() error {
 		return domainmodelserror.NewError("LOCKMATE_HTTP_SERVER_SHUTDOWN_TIMEOUT must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
 	}
 
-	if strings.TrimSpace(Env.TokenAccessSecret) == "" {
-		return domainmodelserror.NewError("LOCKMATE_TOKEN_ACCESS_SECRET is required", domainmodelserror.EnvironmentRequired, nil)
+	if len(Env.SigningKeyEncryptionKey) != 32 {
+		return domainmodelserror.NewError("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY must be 32 base64-encoded bytes", domainmodelserror.EnvironmentRequired, nil)
+	}
+
+	if len(Env.SigningKeyEncryptionKeyPrevious) != 0 && len(Env.SigningKeyEncryptionKeyPrevious) != 32 {
+		return domainmodelserror.NewError("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY_PREVIOUS must be 32 base64-encoded bytes", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.SigningKeyRotationInterval < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_SIGNING_KEY_ROTATION_INTERVAL must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.SigningKeyRetentionInterval < time.Second {
+		return domainmodelserror.NewError("LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL must be at least one second", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if Env.SigningKeyRetentionInterval < Env.TokenAccessDuration {
+		return domainmodelserror.NewError("LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL must be at least the access-token duration", domainmodelserror.EnvironmentInvalid, nil)
 	}
 
 	if strings.TrimSpace(Env.TokenRefreshSecret) == "" {
@@ -228,6 +262,20 @@ func envGetString(key string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func envGetBase64(key string, fallback []byte) ([]byte, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback, nil
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return nil, domainmodelserror.NewError(key+" must be base64-encoded", domainmodelserror.EnvironmentInvalid, err)
+	}
+
+	return decoded, nil
 }
 
 func envGetStrings(key string, fallback []string) []string {

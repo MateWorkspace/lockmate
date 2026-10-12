@@ -17,6 +17,7 @@ import (
 type Args struct {
 	Flow          AuthFlowHandler
 	Auth          AuthHandler
+	Jwks          JwksHandler
 	Profile       ProfileHandler
 	Management    ManagementHandler
 	Version       VersionHandler
@@ -40,6 +41,9 @@ func Route(e *gin.Engine, args Args) {
 	publicV1 := api.Group("/v1")
 	publicV1.Use(presentationhttpmiddleware.Client(args.Client, args.AllowedOrigin))
 	routeAuth(publicV1, args.Auth)
+	if args.Jwks != nil {
+		routeJwks(publicV1, args.Jwks)
+	}
 	if args.Flow == nil {
 		args.Flow = presentationhttphandlerauth.NewFlowHandler(nil, nil)
 	}
