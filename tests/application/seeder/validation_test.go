@@ -37,7 +37,7 @@ func definitions(t *testing.T) domainmodelsseeder.Data {
 }
 
 func TestInvalidDefinitionsFailBeforePersistence(t *testing.T) {
-	for _, mode := range []string{"space", "duplicate permission", "duplicate role", "unknown grant", "duplicate grant", "missing default", "two defaults", "unknown user role", "duplicate username", "password", "client secret", "duplicate client", "duplicate origin", "origin", "redirect"} {
+	for _, mode := range []string{"space", "duplicate permission", "duplicate role", "unknown grant", "duplicate grant", "missing default", "two defaults", "unknown user role", "duplicate username", "password", "client secret", "duplicate client", "duplicate cidr", "cidr", "redirect"} {
 		t.Run(mode, func(t *testing.T) {
 			data := definitions(t)
 			switch mode {
@@ -65,10 +65,10 @@ func TestInvalidDefinitionsFailBeforePersistence(t *testing.T) {
 				data.Clients[0].SecretKey = "PRIVATE_SECRET"
 			case "duplicate client":
 				data.Clients = append(data.Clients, data.Clients[0])
-			case "duplicate origin":
-				data.Clients[0].Origins = append(data.Clients[0].Origins, data.Clients[0].Origins[0])
-			case "origin":
-				data.Clients[0].Origins = []string{"http://evil.example.com"}
+			case "duplicate cidr":
+				data.Clients[0].IpAllowlist = append(data.Clients[0].IpAllowlist, data.Clients[0].IpAllowlist[0])
+			case "cidr":
+				data.Clients[0].IpAllowlist = []string{"http://evil.example.com"}
 			case "redirect":
 				uri := "https://app.example.com/path?next=evil"
 				data.Clients[0].AuthRedirectUri = &uri

@@ -5,7 +5,6 @@ import (
 
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
 	domainusecasesauth "github.com/MateWorkspace/lockmate/internal/domain/usecases/auth"
-	domainusecasesmisc "github.com/MateWorkspace/lockmate/internal/domain/usecases/misc"
 	presentationhttputils "github.com/MateWorkspace/lockmate/internal/presentation/http/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +15,7 @@ const (
 	ClientExecIdHeader = "X-Client-Exec-Id"
 )
 
-func Client(auth domainusecasesauth.Client, origins domainusecasesmisc.AllowedOrigin) gin.HandlerFunc {
+func Client(auth domainusecasesauth.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		for _, header := range []string{ClientSlugHeader, ClientSecretHeader, ClientExecIdHeader} {
 			if len(c.Request.Header.Values(header)) > 1 {
@@ -44,18 +43,6 @@ func Client(auth domainusecasesauth.Client, origins domainusecasesmisc.AllowedOr
 		}
 		ctx := presentationhttputils.InjectClientIdentity(c.Request.Context(), client)
 		c.Request = c.Request.WithContext(ctx)
-
-		if origin := c.GetHeader("Origin"); origin != "" {
-			allowed, err := origins.IsAllowedOriginForClient(ctx, client.SpaceId, client.Id, origin)
-			if err != nil {
-				presentationhttputils.Error(c, err)
-				return
-			}
-			if !allowed {
-				presentationhttputils.Error(c, domainmodelserror.NewError("origin is not allowed for this client", domainmodelserror.Forbidden, nil))
-				return
-			}
-		}
 		c.Next()
 	}
 }

@@ -19,6 +19,6 @@ type Validator interface {
 	ClientSlug(val string) error
 	ClientName(val string) error
 	ClientDesc(val string) error
-	ClientOrigin(val string) error
+	ClientIpAllowlist(val string) error
 	ClientAuthRedirectUri(val string) error
 }

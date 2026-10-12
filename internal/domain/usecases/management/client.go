@@ -21,15 +21,15 @@ type Client interface {
 	RotateSecret(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, id int64) (*ClientSecretResult, error)
 	DeleteById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId int64, id int64) error
 
-	// Origin administration always addresses a client within the target space.
-	// Origin IDs from another client return ClientOriginNotFound.
-	CreateOrigin(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request CreateClientOriginRequest) (int64, error)
-	ReadOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) (*domainmodelsentity.ClientOrigin, error)
-	ReadOriginByValue(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, origin string) (*domainmodelsentity.ClientOrigin, error)
-	ReadOriginsByClientId(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64) ([]domainmodelsentity.ClientOrigin, error)
-	ReadOriginsByFilter(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request FilterClientOriginRequest) (domainusecasesshared.Page[domainmodelsentity.ClientOrigin], error)
-	UpdateOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64, request UpdateClientOriginRequest) error
-	DeleteOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) error
+	// IP allowlist administration always addresses a client within the target
+	// space. Entries from another client return ClientIpAllowlistNotFound.
+	CreateIpAllowlist(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request CreateClientIpAllowlistRequest) (int64, error)
+	ReadIpAllowlistById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) (*domainmodelsentity.ClientIpAllowlist, error)
+	ReadIpAllowlistByCidr(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, cidr string) (*domainmodelsentity.ClientIpAllowlist, error)
+	ReadIpAllowlistsByClientId(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64) ([]domainmodelsentity.ClientIpAllowlist, error)
+	ReadIpAllowlistsByFilter(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request FilterClientIpAllowlistRequest) (domainusecasesshared.Page[domainmodelsentity.ClientIpAllowlist], error)
+	UpdateIpAllowlistById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64, request UpdateClientIpAllowlistRequest) error
+	DeleteIpAllowlistById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) error
 }
 
 type CreateClientRequest struct {
@@ -64,17 +64,17 @@ type ClientSecretResult struct {
 	Secret string                          `json:"secret"`
 }
 
-type CreateClientOriginRequest struct {
-	Origin   string
+type CreateClientIpAllowlistRequest struct {
+	Cidr     string
 	IsActive *bool
 }
 
-type UpdateClientOriginRequest struct {
-	Origin   *string
+type UpdateClientIpAllowlistRequest struct {
+	Cidr     *string
 	IsActive *bool
 }
 
-type FilterClientOriginRequest struct {
+type FilterClientIpAllowlistRequest struct {
 	Page     int64
 	Limit    int64
 	Search   *string

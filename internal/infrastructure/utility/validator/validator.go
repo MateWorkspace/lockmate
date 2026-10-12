@@ -12,18 +12,18 @@ import (
 )
 
 const (
-	nameMinLength     = 3
-	nameMaxLength     = 100
-	textMaxLength     = 1000
-	usernameMinLength = 3
-	usernameMaxLength = 32
-	emailMinLength    = 3
-	emailMaxLength    = 254
-	phoneMinLength    = 8
-	phoneMaxLength    = 15
-	passwordMinLength = 8
-	passwordMaxLength = 72
-	originMaxLength   = 2048
+	nameMinLength        = 3
+	nameMaxLength        = 100
+	textMaxLength        = 1000
+	usernameMinLength    = 3
+	usernameMaxLength    = 32
+	emailMinLength       = 3
+	emailMaxLength       = 254
+	phoneMinLength       = 8
+	phoneMaxLength       = 15
+	passwordMinLength    = 8
+	passwordMaxLength    = 72
+	ipAllowlistMaxLength = 128
 )
 
 type validatorImpl struct {
@@ -255,13 +255,13 @@ func (v *validatorImpl) ClientDesc(val string) error {
 	)
 }
 
-func (v *validatorImpl) ClientOrigin(val string) error {
-	if len(val) > originMaxLength {
-		return domainmodelserror.NewError("client origin must not exceed 2048 bytes", domainmodelserror.ClientOriginTooLong, nil)
+func (v *validatorImpl) ClientIpAllowlist(val string) error {
+	if len(val) > ipAllowlistMaxLength {
+		return domainmodelserror.NewError("client IP allowlist entry is too long", domainmodelserror.ClientIpAllowlistTooLong, nil)
 	}
 
-	if !validClientOrigin(val) {
-		return domainmodelserror.NewError("client origin must be a canonical HTTPS or local HTTP origin", domainmodelserror.ClientOriginInvalid, nil)
+	if !validClientIpAllowlist(val) {
+		return domainmodelserror.NewError("client IP allowlist entry must be a canonical IP address or CIDR", domainmodelserror.ClientIpAllowlistInvalid, nil)
 	}
 
 	return nil

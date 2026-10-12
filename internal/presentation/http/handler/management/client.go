@@ -386,17 +386,17 @@ func (h *handler) ClientDelete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// ClientOriginPost godoc
+// ClientIpAllowlistPost godoc
 //
-// @Summary Create client origin
-// @Tags 10. Client Origins
+// @Summary Create client IP allowlist
+// @Tags 10. Client IP Allowlist
 // @Accept json
 // @Produce json
 // @Security ClientSlug && ClientSecret && ClientExecId && BearerAuth
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param space_id path int true "space_id"
 // @Param client_id path int true "client_id"
-// @Param request body presentationhttprequest.ManagementCreateClientOriginRequest true "Request"
+// @Param request body presentationhttprequest.ManagementCreateClientIpAllowlistRequest true "Request"
 // @Success 201 {object} presentationhttpresponse.IdResponse
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
@@ -406,8 +406,8 @@ func (h *handler) ClientDelete(c *gin.Context) {
 // @Failure 412 {object} presentationhttpresponse.ErrorResponse
 // @Failure 500 {object} presentationhttpresponse.ErrorResponse
 // @Failure 504 {object} presentationhttpresponse.ErrorResponse
-// @Router /v1/management/spaces/{space_id}/clients/{client_id}/origins [post]
-func (h *handler) ClientOriginPost(c *gin.Context) {
+// @Router /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist [post]
+func (h *handler) ClientIpAllowlistPost(c *gin.Context) {
 	ctx := c.Request.Context()
 	caller := presentationhttputils.AccessClaims(ctx)
 	spaceId, err := presentationhttputils.ParamInt64(c, "space_id")
@@ -422,24 +422,24 @@ func (h *handler) ClientOriginPost(c *gin.Context) {
 		return
 	}
 
-	var req presentationhttprequest.ManagementCreateClientOriginRequest
+	var req presentationhttprequest.ManagementCreateClientIpAllowlistRequest
 	if err := presentationhttputils.Bind(c, &req); err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	origin, err := presentationhttputils.RequiredString(req.Origin, "origin")
+	cidr, err := presentationhttputils.RequiredString(req.Cidr, "cidr")
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	request := domainusecasesmanagement.CreateClientOriginRequest{
-		Origin:   origin,
+	request := domainusecasesmanagement.CreateClientIpAllowlistRequest{
+		Cidr:     cidr,
 		IsActive: req.IsActive,
 	}
 
-	id, err := h.clientUseCase.CreateOrigin(ctx, caller, spaceId, clientId, request)
+	id, err := h.clientUseCase.CreateIpAllowlist(ctx, caller, spaceId, clientId, request)
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
@@ -453,17 +453,17 @@ func (h *handler) ClientOriginPost(c *gin.Context) {
 	c.JSON(http.StatusCreated, presentationhttpresponse.IdResponse{Id: id})
 }
 
-// ClientOriginGetById godoc
+// ClientIpAllowlistGetById godoc
 //
-// @Summary Read client origin by id
-// @Tags 10. Client Origins
+// @Summary Read client IP allowlist by id
+// @Tags 10. Client IP Allowlist
 // @Produce json
 // @Security ClientSlug && ClientSecret && ClientExecId && BearerAuth
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param space_id path int true "space_id"
 // @Param client_id path int true "client_id"
-// @Param origin_id path int true "origin_id"
-// @Success 200 {object} presentationhttpresponse.ClientOriginResponse
+// @Param ip_allowlist_id path int true "ip_allowlist_id"
+// @Success 200 {object} presentationhttpresponse.ClientIpAllowlistResponse
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
 // @Failure 403 {object} presentationhttpresponse.ErrorResponse
@@ -472,8 +472,8 @@ func (h *handler) ClientOriginPost(c *gin.Context) {
 // @Failure 412 {object} presentationhttpresponse.ErrorResponse
 // @Failure 500 {object} presentationhttpresponse.ErrorResponse
 // @Failure 504 {object} presentationhttpresponse.ErrorResponse
-// @Router /v1/management/spaces/{space_id}/clients/{client_id}/origins/{origin_id} [get]
-func (h *handler) ClientOriginGetById(c *gin.Context) {
+// @Router /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/{ip_allowlist_id} [get]
+func (h *handler) ClientIpAllowlistGetById(c *gin.Context) {
 	ctx := c.Request.Context()
 	caller := presentationhttputils.AccessClaims(ctx)
 	spaceId, err := presentationhttputils.ParamInt64(c, "space_id")
@@ -488,37 +488,37 @@ func (h *handler) ClientOriginGetById(c *gin.Context) {
 		return
 	}
 
-	id, err := presentationhttputils.ParamInt64(c, "origin_id")
+	id, err := presentationhttputils.ParamInt64(c, "ip_allowlist_id")
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	result, err := h.clientUseCase.ReadOriginById(ctx, caller, spaceId, clientId, id)
+	result, err := h.clientUseCase.ReadIpAllowlistById(ctx, caller, spaceId, clientId, id)
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
 	if result == nil {
-		presentationhttputils.Error(c, presentationhttputils.MissingResponse("client_origin"))
+		presentationhttputils.Error(c, presentationhttputils.MissingResponse("client_ip_allowlist"))
 		return
 	}
 
-	c.JSON(http.StatusOK, presentationhttpresponse.ClientOrigin(*result))
+	c.JSON(http.StatusOK, presentationhttpresponse.ClientIpAllowlist(*result))
 }
 
-// ClientOriginGetByValue godoc
+// ClientIpAllowlistGetByCidr godoc
 //
-// @Summary Read client origin by value
-// @Tags 10. Client Origins
+// @Summary Read client IP allowlist by value
+// @Tags 10. Client IP Allowlist
 // @Produce json
 // @Security ClientSlug && ClientSecret && ClientExecId && BearerAuth
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param space_id path int true "space_id"
 // @Param client_id path int true "client_id"
-// @Param origin query string true "origin"
-// @Success 200 {object} presentationhttpresponse.ClientOriginResponse
+// @Param cidr query string true "cidr"
+// @Success 200 {object} presentationhttpresponse.ClientIpAllowlistResponse
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
 // @Failure 403 {object} presentationhttpresponse.ErrorResponse
@@ -527,8 +527,8 @@ func (h *handler) ClientOriginGetById(c *gin.Context) {
 // @Failure 412 {object} presentationhttpresponse.ErrorResponse
 // @Failure 500 {object} presentationhttpresponse.ErrorResponse
 // @Failure 504 {object} presentationhttpresponse.ErrorResponse
-// @Router /v1/management/spaces/{space_id}/clients/{client_id}/origins/by-value [get]
-func (h *handler) ClientOriginGetByValue(c *gin.Context) {
+// @Router /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/by-cidr [get]
+func (h *handler) ClientIpAllowlistGetByCidr(c *gin.Context) {
 	ctx := c.Request.Context()
 	caller := presentationhttputils.AccessClaims(ctx)
 	spaceId, err := presentationhttputils.ParamInt64(c, "space_id")
@@ -543,36 +543,36 @@ func (h *handler) ClientOriginGetByValue(c *gin.Context) {
 		return
 	}
 
-	origin, err := presentationhttputils.RequiredQueryString(c, "origin")
+	cidr, err := presentationhttputils.RequiredQueryString(c, "cidr")
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	result, err := h.clientUseCase.ReadOriginByValue(ctx, caller, spaceId, clientId, origin)
+	result, err := h.clientUseCase.ReadIpAllowlistByCidr(ctx, caller, spaceId, clientId, cidr)
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
 	if result == nil {
-		presentationhttputils.Error(c, presentationhttputils.MissingResponse("client_origin"))
+		presentationhttputils.Error(c, presentationhttputils.MissingResponse("client_ip_allowlist"))
 		return
 	}
 
-	c.JSON(http.StatusOK, presentationhttpresponse.ClientOrigin(*result))
+	c.JSON(http.StatusOK, presentationhttpresponse.ClientIpAllowlist(*result))
 }
 
-// ClientOriginGetAll godoc
+// ClientIpAllowlistGetAll godoc
 //
-// @Summary Read client origin all
-// @Tags 10. Client Origins
+// @Summary Read client IP allowlist all
+// @Tags 10. Client IP Allowlist
 // @Produce json
 // @Security ClientSlug && ClientSecret && ClientExecId && BearerAuth
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param space_id path int true "space_id"
 // @Param client_id path int true "client_id"
-// @Success 200 {array} presentationhttpresponse.ClientOriginResponse
+// @Success 200 {array} presentationhttpresponse.ClientIpAllowlistResponse
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
 // @Failure 403 {object} presentationhttpresponse.ErrorResponse
@@ -581,8 +581,8 @@ func (h *handler) ClientOriginGetByValue(c *gin.Context) {
 // @Failure 412 {object} presentationhttpresponse.ErrorResponse
 // @Failure 500 {object} presentationhttpresponse.ErrorResponse
 // @Failure 504 {object} presentationhttpresponse.ErrorResponse
-// @Router /v1/management/spaces/{space_id}/clients/{client_id}/origins/all [get]
-func (h *handler) ClientOriginGetAll(c *gin.Context) {
+// @Router /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/all [get]
+func (h *handler) ClientIpAllowlistGetAll(c *gin.Context) {
 	ctx := c.Request.Context()
 	caller := presentationhttputils.AccessClaims(ctx)
 	spaceId, err := presentationhttputils.ParamInt64(c, "space_id")
@@ -597,19 +597,19 @@ func (h *handler) ClientOriginGetAll(c *gin.Context) {
 		return
 	}
 
-	result, err := h.clientUseCase.ReadOriginsByClientId(ctx, caller, spaceId, clientId)
+	result, err := h.clientUseCase.ReadIpAllowlistsByClientId(ctx, caller, spaceId, clientId)
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presentationhttpresponse.ClientOriginList(result))
+	c.JSON(http.StatusOK, presentationhttpresponse.ClientIpAllowlistList(result))
 }
 
-// ClientOriginGetList godoc
+// ClientIpAllowlistGetList godoc
 //
-// @Summary Read client origin list
-// @Tags 10. Client Origins
+// @Summary Read client IP allowlist list
+// @Tags 10. Client IP Allowlist
 // @Produce json
 // @Security ClientSlug && ClientSecret && ClientExecId && BearerAuth
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
@@ -619,7 +619,7 @@ func (h *handler) ClientOriginGetAll(c *gin.Context) {
 // @Param space_id path int true "space_id"
 // @Param client_id path int true "client_id"
 // @Param is_active query boolean false "is_active"
-// @Success 200 {object} presentationhttpresponse.PageDataResponse[presentationhttpresponse.ClientOriginResponse]
+// @Success 200 {object} presentationhttpresponse.PageDataResponse[presentationhttpresponse.ClientIpAllowlistResponse]
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
 // @Failure 403 {object} presentationhttpresponse.ErrorResponse
@@ -628,8 +628,8 @@ func (h *handler) ClientOriginGetAll(c *gin.Context) {
 // @Failure 412 {object} presentationhttpresponse.ErrorResponse
 // @Failure 500 {object} presentationhttpresponse.ErrorResponse
 // @Failure 504 {object} presentationhttpresponse.ErrorResponse
-// @Router /v1/management/spaces/{space_id}/clients/{client_id}/origins [get]
-func (h *handler) ClientOriginGetList(c *gin.Context) {
+// @Router /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist [get]
+func (h *handler) ClientIpAllowlistGetList(c *gin.Context) {
 	ctx := c.Request.Context()
 	caller := presentationhttputils.AccessClaims(ctx)
 	spaceId, err := presentationhttputils.ParamInt64(c, "space_id")
@@ -656,34 +656,34 @@ func (h *handler) ClientOriginGetList(c *gin.Context) {
 		return
 	}
 
-	request := domainusecasesmanagement.FilterClientOriginRequest{
+	request := domainusecasesmanagement.FilterClientIpAllowlistRequest{
 		Page:     page.Page,
 		Limit:    page.Limit,
 		Search:   page.Search,
 		IsActive: isActive,
 	}
 
-	result, err := h.clientUseCase.ReadOriginsByFilter(ctx, caller, spaceId, clientId, request)
+	result, err := h.clientUseCase.ReadIpAllowlistsByFilter(ctx, caller, spaceId, clientId, request)
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, presentationhttpresponse.PageDataResponse[presentationhttpresponse.ClientOriginResponse]{Data: presentationhttpresponse.ClientOriginList(result.Items), Page: presentationhttputils.PageResponse(page, result.Total)})
+	c.JSON(http.StatusOK, presentationhttpresponse.PageDataResponse[presentationhttpresponse.ClientIpAllowlistResponse]{Data: presentationhttpresponse.ClientIpAllowlistList(result.Items), Page: presentationhttputils.PageResponse(page, result.Total)})
 }
 
-// ClientOriginPatch godoc
+// ClientIpAllowlistPatch godoc
 //
-// @Summary Update client origin
-// @Tags 10. Client Origins
+// @Summary Update client IP allowlist
+// @Tags 10. Client IP Allowlist
 // @Accept json
 // @Produce json
 // @Security ClientSlug && ClientSecret && ClientExecId && BearerAuth
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param space_id path int true "space_id"
 // @Param client_id path int true "client_id"
-// @Param origin_id path int true "origin_id"
-// @Param request body presentationhttprequest.ManagementUpdateClientOriginRequest true "Request"
+// @Param ip_allowlist_id path int true "ip_allowlist_id"
+// @Param request body presentationhttprequest.ManagementUpdateClientIpAllowlistRequest true "Request"
 // @Success 204 "Operation completed"
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
@@ -693,8 +693,8 @@ func (h *handler) ClientOriginGetList(c *gin.Context) {
 // @Failure 412 {object} presentationhttpresponse.ErrorResponse
 // @Failure 500 {object} presentationhttpresponse.ErrorResponse
 // @Failure 504 {object} presentationhttpresponse.ErrorResponse
-// @Router /v1/management/spaces/{space_id}/clients/{client_id}/origins/{origin_id} [patch]
-func (h *handler) ClientOriginPatch(c *gin.Context) {
+// @Router /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/{ip_allowlist_id} [patch]
+func (h *handler) ClientIpAllowlistPatch(c *gin.Context) {
 	ctx := c.Request.Context()
 	caller := presentationhttputils.AccessClaims(ctx)
 	spaceId, err := presentationhttputils.ParamInt64(c, "space_id")
@@ -709,24 +709,24 @@ func (h *handler) ClientOriginPatch(c *gin.Context) {
 		return
 	}
 
-	id, err := presentationhttputils.ParamInt64(c, "origin_id")
+	id, err := presentationhttputils.ParamInt64(c, "ip_allowlist_id")
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	var req presentationhttprequest.ManagementUpdateClientOriginRequest
+	var req presentationhttprequest.ManagementUpdateClientIpAllowlistRequest
 	if err := presentationhttputils.Bind(c, &req); err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	request := domainusecasesmanagement.UpdateClientOriginRequest{
-		Origin:   req.Origin,
+	request := domainusecasesmanagement.UpdateClientIpAllowlistRequest{
+		Cidr:     req.Cidr,
 		IsActive: req.IsActive,
 	}
 
-	if err := h.clientUseCase.UpdateOriginById(ctx, caller, spaceId, clientId, id, request); err != nil {
+	if err := h.clientUseCase.UpdateIpAllowlistById(ctx, caller, spaceId, clientId, id, request); err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
@@ -734,16 +734,16 @@ func (h *handler) ClientOriginPatch(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// ClientOriginDelete godoc
+// ClientIpAllowlistDelete godoc
 //
-// @Summary Delete client origin
-// @Tags 10. Client Origins
+// @Summary Delete client IP allowlist
+// @Tags 10. Client IP Allowlist
 // @Produce json
 // @Security ClientSlug && ClientSecret && ClientExecId && BearerAuth
 // @Param X-Client-Exec-Id header string true "Nonzero execution UUID" format(uuid)
 // @Param space_id path int true "space_id"
 // @Param client_id path int true "client_id"
-// @Param origin_id path int true "origin_id"
+// @Param ip_allowlist_id path int true "ip_allowlist_id"
 // @Success 204 "Operation completed"
 // @Failure 400 {object} presentationhttpresponse.ErrorResponse
 // @Failure 401 {object} presentationhttpresponse.ErrorResponse
@@ -753,8 +753,8 @@ func (h *handler) ClientOriginPatch(c *gin.Context) {
 // @Failure 412 {object} presentationhttpresponse.ErrorResponse
 // @Failure 500 {object} presentationhttpresponse.ErrorResponse
 // @Failure 504 {object} presentationhttpresponse.ErrorResponse
-// @Router /v1/management/spaces/{space_id}/clients/{client_id}/origins/{origin_id} [delete]
-func (h *handler) ClientOriginDelete(c *gin.Context) {
+// @Router /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/{ip_allowlist_id} [delete]
+func (h *handler) ClientIpAllowlistDelete(c *gin.Context) {
 	ctx := c.Request.Context()
 	caller := presentationhttputils.AccessClaims(ctx)
 	spaceId, err := presentationhttputils.ParamInt64(c, "space_id")
@@ -769,13 +769,13 @@ func (h *handler) ClientOriginDelete(c *gin.Context) {
 		return
 	}
 
-	id, err := presentationhttputils.ParamInt64(c, "origin_id")
+	id, err := presentationhttputils.ParamInt64(c, "ip_allowlist_id")
 	if err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}
 
-	if err := h.clientUseCase.DeleteOriginById(ctx, caller, spaceId, clientId, id); err != nil {
+	if err := h.clientUseCase.DeleteIpAllowlistById(ctx, caller, spaceId, clientId, id); err != nil {
 		presentationhttputils.Error(c, err)
 		return
 	}

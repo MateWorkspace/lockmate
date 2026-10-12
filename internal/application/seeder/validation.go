@@ -144,17 +144,17 @@ func (u *usecase) validate() error {
 		}
 
 		clients[value.Slug] = true
-		origins := make(map[string]bool, len(value.Origins))
-		for _, origin := range value.Origins {
-			if err := u.validator.ClientOrigin(origin); err != nil {
+		ipAllowlist := make(map[string]bool, len(value.IpAllowlist))
+		for _, cidr := range value.IpAllowlist {
+			if err := u.validator.ClientIpAllowlist(cidr); err != nil {
 				return err
 			}
 
-			if origins[origin] {
-				return domainmodelserror.NewError("duplicate seed client origin", domainmodelserror.BadArgs, nil)
+			if ipAllowlist[cidr] {
+				return domainmodelserror.NewError("duplicate seed client IP allowlist", domainmodelserror.BadArgs, nil)
 			}
 
-			origins[origin] = true
+			ipAllowlist[cidr] = true
 		}
 	}
 

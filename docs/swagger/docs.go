@@ -3134,7 +3134,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/management/spaces/{space_id}/clients/{client_id}/origins": {
+        "/v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist": {
             "get": {
                 "security": [
                     {
@@ -3148,9 +3148,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "10. Client Origins"
+                    "10. Client IP Allowlist"
                 ],
-                "summary": "Read client origin list",
+                "summary": "Read client IP allowlist list",
                 "parameters": [
                     {
                         "type": "string",
@@ -3205,7 +3205,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClientOriginResponse"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClientIpAllowlistResponse"
                         }
                     },
                     "400": {
@@ -3274,9 +3274,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "10. Client Origins"
+                    "10. Client IP Allowlist"
                 ],
-                "summary": "Create client origin",
+                "summary": "Create client IP allowlist",
                 "parameters": [
                     {
                         "type": "string",
@@ -3306,7 +3306,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientOriginRequest"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientIpAllowlistRequest"
                         }
                     }
                 ],
@@ -3368,7 +3368,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/management/spaces/{space_id}/clients/{client_id}/origins/all": {
+        "/v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/all": {
             "get": {
                 "security": [
                     {
@@ -3382,9 +3382,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "10. Client Origins"
+                    "10. Client IP Allowlist"
                 ],
-                "summary": "Read client origin all",
+                "summary": "Read client IP allowlist all",
                 "parameters": [
                     {
                         "type": "string",
@@ -3415,7 +3415,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse"
+                                "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse"
                             }
                         }
                     },
@@ -3470,7 +3470,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/management/spaces/{space_id}/clients/{client_id}/origins/by-value": {
+        "/v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/by-cidr": {
             "get": {
                 "security": [
                     {
@@ -3484,9 +3484,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "10. Client Origins"
+                    "10. Client IP Allowlist"
                 ],
-                "summary": "Read client origin by value",
+                "summary": "Read client IP allowlist by value",
                 "parameters": [
                     {
                         "type": "string",
@@ -3512,8 +3512,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "origin",
-                        "name": "origin",
+                        "description": "cidr",
+                        "name": "cidr",
                         "in": "query",
                         "required": true
                     }
@@ -3522,7 +3522,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse"
                         }
                     },
                     "400": {
@@ -3576,7 +3576,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/management/spaces/{space_id}/clients/{client_id}/origins/{origin_id}": {
+        "/v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/{ip_allowlist_id}": {
             "get": {
                 "security": [
                     {
@@ -3590,9 +3590,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "10. Client Origins"
+                    "10. Client IP Allowlist"
                 ],
-                "summary": "Read client origin by id",
+                "summary": "Read client IP allowlist by id",
                 "parameters": [
                     {
                         "type": "string",
@@ -3618,8 +3618,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "origin_id",
-                        "name": "origin_id",
+                        "description": "ip_allowlist_id",
+                        "name": "ip_allowlist_id",
                         "in": "path",
                         "required": true
                     }
@@ -3628,7 +3628,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse"
                         }
                     },
                     "400": {
@@ -3694,9 +3694,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "10. Client Origins"
+                    "10. Client IP Allowlist"
                 ],
-                "summary": "Delete client origin",
+                "summary": "Delete client IP allowlist",
                 "parameters": [
                     {
                         "type": "string",
@@ -3722,8 +3722,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "origin_id",
-                        "name": "origin_id",
+                        "description": "ip_allowlist_id",
+                        "name": "ip_allowlist_id",
                         "in": "path",
                         "required": true
                     }
@@ -3798,9 +3798,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "10. Client Origins"
+                    "10. Client IP Allowlist"
                 ],
-                "summary": "Update client origin",
+                "summary": "Update client IP allowlist",
                 "parameters": [
                     {
                         "type": "string",
@@ -3826,8 +3826,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "origin_id",
-                        "name": "origin_id",
+                        "description": "ip_allowlist_id",
+                        "name": "ip_allowlist_id",
                         "in": "path",
                         "required": true
                     },
@@ -3837,7 +3837,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientOriginRequest"
+                            "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientIpAllowlistRequest"
                         }
                     }
                 ],
@@ -9083,16 +9083,16 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientOriginRequest": {
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientIpAllowlistRequest": {
             "type": "object",
             "properties": {
+                "cidr": {
+                    "type": "string",
+                    "example": "203.0.113.0/24"
+                },
                 "is_active": {
                     "type": "boolean",
                     "example": true
-                },
-                "origin": {
-                    "type": "string",
-                    "example": "https://app.example.com"
                 }
             }
         },
@@ -9323,16 +9323,16 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientOriginRequest": {
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientIpAllowlistRequest": {
             "type": "object",
             "properties": {
+                "cidr": {
+                    "type": "string",
+                    "example": "203.0.113.0/24"
+                },
                 "is_active": {
                     "type": "boolean",
                     "example": true
-                },
-                "origin": {
-                    "type": "string",
-                    "example": "https://app.example.com"
                 }
             }
         },
@@ -9605,9 +9605,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse": {
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse": {
             "type": "object",
             "properties": {
+                "cidr": {
+                    "type": "string",
+                    "example": "203.0.113.0/24"
+                },
                 "client_id": {
                     "type": "integer",
                     "example": 1
@@ -9635,10 +9639,6 @@ const docTemplate = `{
                 "is_active": {
                     "type": "boolean",
                     "example": true
-                },
-                "origin": {
-                    "type": "string",
-                    "example": "https://app.example.com"
                 },
                 "updated_at": {
                     "type": "string",
@@ -9829,13 +9829,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClientOriginResponse": {
+        "github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClientIpAllowlistResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse"
+                        "$ref": "#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse"
                     }
                 },
                 "page": {

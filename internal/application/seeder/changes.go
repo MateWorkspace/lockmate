@@ -17,5 +17,5 @@ type changes struct {
 	members         []record
 	memberRoles     []record
 	clients         []record
-	origins         []record
+	ipAllowlist     []record
 }

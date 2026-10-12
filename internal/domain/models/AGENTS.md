@@ -43,9 +43,9 @@ Users contain profile data. Username, password hash, email, and phone belong to
 Memberships connect global users to spaces. Roles and permissions belong to
 spaces, and assignment entities connect memberships to roles and roles to
 permissions. Clients contain their space, identity, secret hash, and redaction.
-ClientOrigin stores a client-owned canonical browser origin, active state, and
+ClientIpAllowlist stores a client-owned canonical CIDR, active state, and
 creation/update/deletion audit fields. Its space is derived through the client;
-do not embed origin collections in Client or ClientIdentity. SigningKey stores a
+do not embed allowlist collections in Client or ClientIdentity. SigningKey stores a
 global asymmetric signing key: `kid`, algorithm, sealed private material with its
 nonce and key fingerprint, the public JWK, status (`active` or `retiring`), and
 timestamps. Its sealed fields are never serialized.
@@ -106,7 +106,7 @@ Do not put passwords, raw keys, or tokens in messages or sources created here.
 Match the existing field ordering and explicit import aliases. Keep related
 fields readable with blank lines, and format changed Go files with gofmt.
 
-Client.AuthRedirectUri is nullable, separate from CORS origins, and exposed in
+Client.AuthRedirectUri is nullable, separate from client IP allowlists, and exposed in
 safe client views. GoogleOAuthLaunch, GoogleOAuthAttempt, and AuthHandoff are
 internal expiring records whose fields have json:"-". They store digests and
 trusted scope; handoffs have identity references, not tokens. Env includes public

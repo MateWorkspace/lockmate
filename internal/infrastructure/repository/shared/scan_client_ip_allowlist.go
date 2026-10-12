@@ -5,12 +5,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func ScanClientOrigin(row pgx.Row) (domainmodelsentity.ClientOrigin, error) {
-	var item domainmodelsentity.ClientOrigin
+func ScanClientIpAllowlist(row pgx.Row) (domainmodelsentity.ClientIpAllowlist, error) {
+	var item domainmodelsentity.ClientIpAllowlist
 	err := row.Scan(
 		&item.Id,
 		&item.ClientId,
-		&item.Origin,
+		&item.Cidr,
 		&item.IsActive,
 		&item.AuditCreate.At,
 		&item.AuditUpdate.At,
@@ -23,10 +23,10 @@ func ScanClientOrigin(row pgx.Row) (domainmodelsentity.ClientOrigin, error) {
 	return item, err
 }
 
-func ScanClientOriginList(rows pgx.Rows) ([]domainmodelsentity.ClientOrigin, error) {
-	items := make([]domainmodelsentity.ClientOrigin, 0)
+func ScanClientIpAllowlistList(rows pgx.Rows) ([]domainmodelsentity.ClientIpAllowlist, error) {
+	items := make([]domainmodelsentity.ClientIpAllowlist, 0)
 	for rows.Next() {
-		item, err := ScanClientOrigin(rows)
+		item, err := ScanClientIpAllowlist(rows)
 		if err != nil {
 			return nil, err
 		}

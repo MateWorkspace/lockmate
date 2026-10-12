@@ -18,8 +18,8 @@ owns permissions, value validation, transactions, and operation logging.
   to `{}` and empty lists to `[]`.
 - `route`: route handler interfaces followed by explicit registrations. route.go
   owns grouping, middleware ordering, documentation, and JSON 404/405 responses.
-- `middleware`: recovery, tracing, dynamic CORS, client authentication, and bearer
-  authentication. Middleware calls domain usecase interfaces only.
+- `middleware`: recovery, tracing, client authentication, caller IP allowlist,
+  and bearer authentication. Middleware calls domain usecase interfaces only.
 - `utils`: JSON binding, raw-shape parsing, pagination, private context keys, and
   the centralized error mapping table. Helpers do not log.
 
@@ -32,9 +32,9 @@ permission slugs.
 
 ## Request pipeline
 
-Recovery -> trace injection -> global CORS -> business client authentication and
-client-specific origin check -> bearer authentication on profile/management ->
-handler -> application. Preserve the request's context, cancellation, and deadline.
+Recovery -> trace injection -> business client authentication -> caller IP
+allowlist -> bearer authentication on profile/management -> handler -> application.
+Preserve the request's context, cancellation, and deadline.
 
 Every business route requires one X-Client-Slug, X-Client-Secret, and
 X-Client-Exec-Id header. Execution IDs must be nonzero UUIDs; they are tracing
@@ -43,23 +43,26 @@ ClientIdentity. Bearer authentication uses Session.AuthenticateAccessToken so
 permissions and live membership are reloaded. Never build trusted identity or
 claims from DTOs, query parameters, unsigned JWTs, or role names.
 
-Swagger, version, and CORS preflight do not require client credentials. Tracing
+Swagger, version, and health routes do not require client credentials. Tracing
 still generates an event ID; absent/invalid diagnostic metadata stays zero until
 business middleware rejects an invalid execution header. Secrets are preserved
 exactly, never trimmed, dumped, logged, or included in error responses.
 
-## Dynamic CORS
+## Caller IP allowlist
 
-Global origin lookup happens before authentication because browser preflight
-cannot carry client credentials. Actual requests with Origin also check the
-trusted client's own origin list. Missing Origin permits normal server-to-server
-requests; it does not bypass authentication. Origin lookup errors stop processing.
+The IPAllowlist middleware runs after client authentication because the allowlist
+is scoped to the authenticated client. It resolves the caller IP through
+`middleware/clientip` semantics: forwarded headers (LOCKMATE_CLIENT_IP_HEADER,
+typically CF-Connecting-IP behind cloudflared/Cloudflare or X-Forwarded-For
+behind nginx/Caddy) are honored only when the direct peer is a configured
+trusted proxy (LOCKMATE_TRUSTED_PROXIES); otherwise the socket peer is used, with
+X-Forwarded-For parsed right-to-left skipping trusted proxies. Use the resolved
+IP for the allowlist check; never rebuild it from DTOs.
 
-Use only exact canonical persisted origins. Do not add wildcard, same-host,
-localhost, or hardcoded development exemptions. CORS cookies/private-network
-access are disabled. Preflight returns 204 without invoking authentication or
-business handlers; max-age is zero and allowlists are not cached. Preserve Vary
-headers. CORS is not client authentication.
+Loopback is always permitted by the application usecase. Clients without an
+allowlist entry are rejected with Forbidden before the handler. Lookup errors
+stop processing. The allowlist is not client authentication and never identifies
+a client.
 
 ## DTOs, errors, and documentation
 
@@ -88,17 +91,17 @@ protected operations). `make swagger` runs the pinned generator and updates
 `docs/swagger/{docs.go,swagger.json,swagger.yaml}`; never hand-edit those outputs.
 Swagger is served at /api/docs/index.html, with base path /api and business
 operations under /api/v1. Keep resource wildcard names consistent throughout the
-Gin tree: space_id, client_id, space_member_id, and origin_id, for example.
+Gin tree: space_id, client_id, space_member_id, and ip_allowlist_id, for example.
 
 Tests live under tests/presentation/http. Cover route/usecase completeness,
 trusted context and DTO mapping, error sanitization, Swagger/runtime parity,
-preflight, origin revocation, and real PostgreSQL authentication. Logout/revocation, forgotten-password recovery, hosted login UI, and object storage
+caller IP resolution and allowlist revocation, and real PostgreSQL authentication. Logout/revocation, forgotten-password recovery, hosted login UI, and object storage
 remain deferred; existing Google identity monitoring is available.
 
 Google start and generic handoff exchange require the normal client headers.
 Google launch/callback are browser navigation routes without those headers or
 bearer authentication; saved state and the browser-binding cookie authorize the
 callback. Use attempt-specific __Host cookies, Secure/HttpOnly/SameSite=Lax with
-Path=/ and no Domain. Keep credentialed CORS disabled. Callback query values must
+Path=/ and no Domain. Callback query values must
 be unambiguous; read binding only from its cookie. Responses use no-store and
 no-referrer. Redirects carry short-lived handoff codes, never JWTs.

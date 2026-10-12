@@ -50,13 +50,14 @@ replacements only after commit. Separate checks and operation steps with blank
 lines. Tests live in tests/application/management, with strict contract doubles
 in tests/application/shared.
 
-Client origin administration stays in client/usecase.go and uses the injected
-ClientOrigin repository. Require the separate client_origin permission catalog
-constants immediately below each method tag. Verify live space/client ownership,
-and check each exact origin belongs to that client before exposing or mutating
-it. Filter requests always use the method's client ID. Inactive targets remain
-manageable. Validate supplied origins without normalization; derive audit actors
-from the caller. Log committed creates/deletes and updates supplying Origin or
+Client IP allowlist administration stays in client/usecase.go and uses the
+injected ClientIpAllowlist repository. Require the separate client_ip_allowlist
+permission catalog constants immediately below each method tag. Verify live
+space/client ownership, and check each entry belongs to that client before
+exposing or mutating it. Filter requests always use the method's client ID.
+Inactive targets remain manageable. Validate supplied CIDRs without
+normalization; derive audit actors from the caller. Log committed creates/deletes
+and updates supplying Cidr or
 IsActive; audit-only updates stay quiet. Use distinct explicit failure logs for
 each operation step and its outer transaction.
 

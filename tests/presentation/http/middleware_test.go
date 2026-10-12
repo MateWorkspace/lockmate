@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 
@@ -34,8 +35,8 @@ func (s *accessAuthStub) AuthenticateAccessToken(ctx context.Context, client *do
 }
 func middlewareRouter(fixture *httpFixture, session *accessAuthStub) *gin.Engine {
 	router := gin.New()
-	router.Use(presentationhttpmiddleware.Recovery(), presentationhttpmiddleware.Trace(fixture.trace), presentationhttpmiddleware.CORS(fixture.origin))
-	router.GET("/protected", presentationhttpmiddleware.Client(fixture.client, fixture.origin), presentationhttpmiddleware.Auth(session), func(c *gin.Context) {
+	router.Use(presentationhttpmiddleware.Recovery(), presentationhttpmiddleware.Trace(fixture.trace))
+	router.GET("/protected", presentationhttpmiddleware.Client(fixture.client), presentationhttpmiddleware.IPAllowlist(fixture.ipAllowlist, nil, "X-Forwarded-For"), presentationhttpmiddleware.Auth(session), func(c *gin.Context) {
 		claims := presentationhttputils.AccessClaims(c.Request.Context())
 		c.JSON(http.StatusOK, claims)
 	})
@@ -120,71 +121,57 @@ func TestAccessAuthentication(t *testing.T) {
 		t.Fatal("invalid usecase identity accepted")
 	}
 }
-func TestDynamicCORS(t *testing.T) {
+func TestIPAllowlist(t *testing.T) {
 	fixture := newHTTPFixture()
-	preflight := func(origin string) *http.Request {
-		req := httptest.NewRequest("OPTIONS", "/api/v1/profile", nil)
-		req.Header.Set("Origin", origin)
-		req.Header.Set("Access-Control-Request-Method", "PATCH")
-		req.Header.Set("Access-Control-Request-Headers", "x-client-slug,x-client-secret,x-client-exec-id,authorization,content-type")
-		return req
+	response := perform(fixture.router, businessRequest("GET", "/api/v1/profile", ""))
+	if response.Code != 200 || fixture.ipAllowlist.calls != 1 || len(fixture.ipAllowlist.ips) != 1 || fixture.ipAllowlist.ips[0] == "" {
+		t.Fatalf("allowed request rejected: %d %s", response.Code, response.Body.String())
 	}
-	response := perform(fixture.router, preflight("https://client.example.com"))
-	if response.Code != 204 || fixture.client.calls != 0 || fixture.origin.scopedCalls != 0 {
-		t.Fatal("preflight authenticated")
+	handled := len(fixture.recorder.calls)
+	fixture.ipAllowlist.allowed = false
+	response = perform(fixture.router, businessRequest("GET", "/api/v1/profile", ""))
+	if response.Code != 403 || len(fixture.recorder.calls) != handled {
+		t.Fatal("disallowed IP reached the handler")
 	}
-	if response.Header().Get("Access-Control-Allow-Origin") != "https://client.example.com" || response.Header().Get("Access-Control-Allow-Credentials") != "" || response.Header().Get("Access-Control-Max-Age") != "0" {
-		t.Fatalf("bad CORS headers: %+v", response.Header())
+	fixture.ipAllowlist.allowed = true
+	fixture.ipAllowlist.failure = domainmodelserror.NewError("database failed", domainmodelserror.Failure, errors.New("private database details"))
+	response = perform(fixture.router, businessRequest("GET", "/api/v1/profile", ""))
+	if response.Code != 500 || strings.Contains(response.Body.String(), "private database") || len(fixture.recorder.calls) != handled {
+		t.Fatal("allowlist lookup failure did not fail closed")
 	}
-	headers := strings.ToLower(response.Header().Get("Access-Control-Allow-Headers"))
-	for _, name := range []string{"x-client-slug", "x-client-secret", "x-client-exec-id", "authorization"} {
-		if !strings.Contains(headers, name) {
-			t.Fatal("missing allowed header")
-		}
-	}
-	fixture.origin.global = false
-	response = perform(fixture.router, preflight("https://client.example.com"))
-	if response.Code != 403 || response.Header().Get("Access-Control-Allow-Origin") != "" {
-		t.Fatal("revoked origin accepted")
-	}
-	fixture.origin.global = true
-	fixture.origin.scoped = false
-	req := businessRequest("GET", "/api/v1/profile", "")
-	req.Header.Set("Origin", "https://client.example.com")
-	response = perform(fixture.router, req)
-	if response.Code != 403 || fixture.origin.scopedCalls != 1 || len(fixture.recorder.calls) != 0 {
-		t.Fatal("other client's origin accepted")
-	}
-	fixture.origin.scoped = true
-	response = perform(fixture.router, req)
-	if response.Code != 200 || fixture.origin.scopedCalls != 2 {
-		t.Fatal("client origin was not rechecked")
-	}
-	fixture.origin.failure = domainmodelserror.NewError("database failed", domainmodelserror.Failure, errors.New("private database details"))
-	response = perform(fixture.router, preflight("https://client.example.com"))
-	if response.Code != 500 || strings.Contains(response.Body.String(), "private database") || response.Header().Get("Access-Control-Allow-Origin") != "" {
-		t.Fatal("origin lookup failure did not fail closed")
-	}
-	fixture.origin.failure = nil
-	req = preflight("https://client.example.com")
-	req.Header.Add("Origin", "https://other.example.com")
-	if response := perform(fixture.router, req); response.Code != 403 {
-		t.Fatal("ambiguous origin accepted")
-	}
-	// Even matching request Host must pass the persisted allowlist.
-	fixture.origin.global = false
-	req = preflight("http://example.com")
-	if response := perform(fixture.router, req); response.Code != 403 {
-		t.Fatal("same-host origin bypassed lookup")
-	}
-	fixture.origin.global = true
-	if response := perform(fixture.router, req); response.Code != 204 {
-		t.Fatal("same-host preflight not completed")
-	}
-	fixture.origin.globalCalls = 0
-	fixture.origin.scopedCalls = 0
-	if response := perform(fixture.router, businessRequest("GET", "/api/v1/profile", "")); response.Code != 200 || fixture.origin.globalCalls != 0 || fixture.origin.scopedCalls != 0 {
-		t.Fatal("non-browser request checked origin")
+}
+
+func TestIPAllowlistForwardedHeader(t *testing.T) {
+	for _, item := range []struct {
+		name, peer, header, want string
+		trusted                  []netip.Prefix
+	}{
+		{"trusted forwarded list", "127.0.0.1:1234", "203.0.113.9, 127.0.0.2", "203.0.113.9", []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}},
+		{"trusted single value", "127.0.0.1:1234", "203.0.113.9", "203.0.113.9", []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}},
+		{"untrusted peer ignores header", "198.18.0.1:1234", "203.0.113.9", "198.18.0.1", []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}},
+		{"trusted without header", "127.0.0.1:1234", "", "127.0.0.1", []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}},
+		{"no trusted proxy", "198.18.0.1:1234", "203.0.113.9", "198.18.0.1", nil},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			captured := &ipAllowlistStub{allowed: true}
+			router := gin.New()
+			router.Use(func(c *gin.Context) {
+				ctx := presentationhttputils.InjectClientIdentity(c.Request.Context(), &domainmodelsentity.ClientIdentity{Id: 1, SpaceId: 2, Slug: "web"})
+				c.Request = c.Request.WithContext(ctx)
+				c.Next()
+			})
+			router.Use(presentationhttpmiddleware.IPAllowlist(captured, item.trusted, "X-Forwarded-For"))
+			router.GET("/x", func(c *gin.Context) { c.Status(http.StatusOK) })
+			request := httptest.NewRequest("GET", "/x", nil)
+			request.RemoteAddr = item.peer
+			if item.header != "" {
+				request.Header.Set("X-Forwarded-For", item.header)
+			}
+			response := perform(router, request)
+			if response.Code != 200 || len(captured.ips) != 1 || captured.ips[0] != item.want {
+				t.Fatalf("resolved %v, want %s", captured.ips, item.want)
+			}
+		})
 	}
 }
 func TestTraceAndRecovery(t *testing.T) {

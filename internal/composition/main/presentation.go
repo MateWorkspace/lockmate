@@ -39,7 +39,8 @@ func (l *launcher) newPresentation(ctx context.Context) error {
 		Flow: presentationhttphandlerauth.NewFlowHandler(l.app.authGoogle, l.app.authHandoff),
 		Auth: auth, Jwks: jwks, Profile: profile, Management: management, Version: version,
 		Client: l.app.authClient, Session: l.app.authSession,
-		Tracer: l.app.miscTracer, AllowedOrigin: l.app.miscAllowedOrigin,
+		Tracer: l.app.miscTracer, IpAllowlist: l.app.miscIpAllowlist,
+		TrustedProxies: config.Env.TrustedProxies, ClientIpHeader: config.Env.ClientIpHeader,
 	})
 
 	cronStop, err := presentationcronrunner.Run(ctx, presentationcronrunner.Args{

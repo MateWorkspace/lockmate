@@ -58,33 +58,33 @@ func (u *usecase) seedClients(ctx context.Context, spaceId int64, created *chang
 			return err
 		}
 
-		for _, origin := range value.Origins {
-			_, err := u.clientOrigin.ReadByClientIdAndOrigin(ctx, spaceId, clientId, origin)
+		for _, cidr := range value.IpAllowlist {
+			_, err := u.clientIpAllowlist.ReadByClientIdAndCidr(ctx, spaceId, clientId, cidr)
 			if err == nil {
 				continue
 			}
 
-			if !errors.Is(err, domainmodelserror.ClientOriginNotFound) {
-				u.logger.Error(ctx, tag, "failed to read seed client origin", domainmodelslogger.Meta{"err": err})
+			if !errors.Is(err, domainmodelserror.ClientIpAllowlistNotFound) {
+				u.logger.Error(ctx, tag, "failed to read seed client IP allowlist", domainmodelslogger.Meta{"err": err})
 
 				return err
 			}
 
-			id, err := u.clientOrigin.Create(ctx, spaceId, domaincontractsrepository.CreateClientOriginArgs{
+			id, err := u.clientIpAllowlist.Create(ctx, spaceId, domaincontractsrepository.CreateClientIpAllowlistArgs{
 				ClientId: clientId,
-				Origin:   origin,
+				Cidr:     cidr,
 			})
 			if err != nil {
 				if canRetrySeed(ctx, err) {
-					u.logger.Warn(ctx, tag, "failed to create seed client origin", domainmodelslogger.Meta{"err": err})
+					u.logger.Warn(ctx, tag, "failed to create seed client IP allowlist", domainmodelslogger.Meta{"err": err})
 				} else {
-					u.logger.Error(ctx, tag, "failed to create seed client origin", domainmodelslogger.Meta{"err": err})
+					u.logger.Error(ctx, tag, "failed to create seed client IP allowlist", domainmodelslogger.Meta{"err": err})
 				}
 
 				return err
 			}
 
-			created.origins = append(created.origins, record{id: id, identifier: value.Slug})
+			created.ipAllowlist = append(created.ipAllowlist, record{id: id, identifier: value.Slug})
 		}
 	}
 

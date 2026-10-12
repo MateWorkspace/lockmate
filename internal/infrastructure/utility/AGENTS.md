@@ -12,7 +12,7 @@ these adapters. Utilities return domain models and errors through their contract
 - `token/jwt.go`: ES256 access and HMAC refresh JWT generation and validation.
 - `secret/seal.go`: AES-256-GCM sealing plus ES256 keypair and public-JWK generation.
 - `validator/validator.go`: all validator contract methods; `utils.go`: shared
-  helpers, including URL and address checks for client origins.
+  helpers, including URL and address checks for client IP allowlists.
 - `permission_guard/claims.go`: permission checks against access claims.
 - `tracer/context.go`: UUIDv7 event generation and context injection/extraction.
 - `logger/slog.go` and `normalize.go`: slog output and metadata normalization.
@@ -108,12 +108,11 @@ Run `go test ./...`, `go vet ./...`, and `go build ./...` from the Lockmate root
 when changing Go implementations. Documentation-only changes need a content and
 whitespace review.
 
-ClientOrigin validation accepts canonical HTTPS origins and HTTP only for
-localhost or loopback IP addresses. Accept valid ASCII DNS/punycode names and
-canonical IPs, omit default ports, and reject paths, credentials, queries,
-fragments, wildcards, null origins, whitespace, and trailing-dot hostnames.
-Nondefault ports are 1–65535; the limit is 2048 bytes. Reject noncanonical input
-rather than rewriting it, resolving DNS, or checking persistence.
+ClientIpAllowlist validation accepts canonical IPv4/IPv6 addresses and CIDRs.
+Single host addresses are stored as /32 or /128; CIDRs must be masked (no host
+bits). Reject hostnames, ports, zones, whitespace, noncanonical input, and
+values longer than 128 bytes. Reject noncanonical input rather than rewriting
+it, resolving DNS, or checking persistence.
 
 auth_flow/random.go generates 32 cryptographically random bytes encoded as URL-safe
 base64 and SHA-256 hex digests. google_oauth/oidc.go implements provider authorization,
@@ -126,5 +125,5 @@ ClientAuthRedirectUri accepts canonical HTTPS callback URLs with paths. Construc
 injection from config.Env.AuthRedirectAllowHttp enables HTTP callbacks explicitly
 through LOCKMATE_AUTH_REDIRECT_ALLOW_HTTP, default false. Do not read env/config
 in the adapter. Reuse origin-format validation with HTTP enabled for redirects only. Keep its
-existing port, host, credential, query, fragment, and path checks. ClientOrigin's
-HTTP policy remains limited to localhost and loopback addresses.
+existing port, host, credential, query, fragment, and path checks. IP allowlist
+validation is unrelated to redirect origins.

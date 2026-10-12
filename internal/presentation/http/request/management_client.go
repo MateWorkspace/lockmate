@@ -22,12 +22,12 @@ type ManagementUpdateClientRequest struct {
 	Preferences            *json.RawMessage `json:"preferences" swaggertype:"object"`
 }
 
-type ManagementCreateClientOriginRequest struct {
-	Origin   string `json:"origin" example:"https://app.example.com"`
+type ManagementCreateClientIpAllowlistRequest struct {
+	Cidr     string `json:"cidr" example:"203.0.113.0/24"`
 	IsActive *bool  `json:"is_active" example:"true"`
 }
 
-type ManagementUpdateClientOriginRequest struct {
-	Origin   *string `json:"origin" example:"https://app.example.com"`
+type ManagementUpdateClientIpAllowlistRequest struct {
+	Cidr     *string `json:"cidr" example:"203.0.113.0/24"`
 	IsActive *bool   `json:"is_active" example:"true"`
 }

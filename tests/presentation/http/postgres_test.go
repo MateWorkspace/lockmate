@@ -12,7 +12,7 @@ import (
 	applicationauthclient "github.com/MateWorkspace/lockmate/internal/application/auth/client"
 	applicationauthsession "github.com/MateWorkspace/lockmate/internal/application/auth/session"
 	applicationmanagementclient "github.com/MateWorkspace/lockmate/internal/application/management/client"
-	applicationmiscallowedorigin "github.com/MateWorkspace/lockmate/internal/application/misc/allowed_origin"
+	applicationmiscipallowlist "github.com/MateWorkspace/lockmate/internal/application/misc/ip_allowlist"
 	applicationmisctracer "github.com/MateWorkspace/lockmate/internal/application/misc/tracer"
 	applicationprofileaccount "github.com/MateWorkspace/lockmate/internal/application/profile/account"
 	applicationprofilesecurity "github.com/MateWorkspace/lockmate/internal/application/profile/security"
@@ -38,7 +38,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
+func TestPostgresHTTPAuthenticationAndIpAllowlist(t *testing.T) {
 	fixture := testshared.NewPostgresFixture(t)
 	ctx := context.Background()
 	yes := true
@@ -57,7 +57,7 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	rolePermission := infrastructurerepositoryrolepermission.NewPostgresImpl(dt, &question, &dollar)
 	googleAuth := infrastructurerepositorygoogleauth.NewPostgresImpl(dt, &question, &dollar)
 	var profileGrantId int64
-	for _, slug := range []string{"profile:get", "profile:set", "profile_security:get", "profile_security:set", "client:get", "client:add", "client_secret:set", "client_origin:get", "client_origin:add", "client_origin:set", "client_origin:remove"} {
+	for _, slug := range []string{"profile:get", "profile:set", "profile_security:get", "profile_security:set", "client:get", "client:add", "client_secret:set", "client_ip_allowlist:get", "client_ip_allowlist:add", "client_ip_allowlist:set", "client_ip_allowlist:remove"} {
 		permissionId, err := permission.Create(ctx, spaceId, domaincontractsrepository.CreatePermissionArgs{Slug: slug, Name: slug})
 		if err != nil {
 			t.Fatal(err)
@@ -87,7 +87,8 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	originId, err := fixture.ClientOrigin.Create(ctx, spaceId, domaincontractsrepository.CreateClientOriginArgs{ClientId: clientId, Origin: "https://app.example.com"})
+	// httptest requests originate from the documentation address 192.0.2.1.
+	allowlistId, err := fixture.ClientIpAllowlist.Create(ctx, spaceId, domaincontractsrepository.CreateClientIpAllowlistArgs{ClientId: clientId, Cidr: "192.0.2.1/32"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +105,7 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	session := applicationauthsession.NewUsecaseImpl(fixture.Client, fixture.Space, fixture.User, fixture.ClassicAuth, fixture.SpaceMember, fixture.SpaceMemberRole, fixture.SigningKey, password, token, fixture.Secret, validator, fixture.Transactor, logger)
 	account := applicationprofileaccount.NewUsecaseImpl(fixture.User, fixture.Space, fixture.SpaceMember, fixture.SpaceMemberRole, guard, validator, fixture.Transactor, logger)
 	security := applicationprofilesecurity.NewUsecaseImpl(fixture.User, fixture.Space, fixture.SpaceMember, fixture.ClassicAuth, googleAuth, password, guard, validator, fixture.Transactor, logger)
-	clientManagement := applicationmanagementclient.NewUsecaseImpl(fixture.User, fixture.Space, fixture.SpaceMember, fixture.Client, fixture.ClientOrigin, guard, validator, logger, fixture.Transactor, keygen, "lockmate")
+	clientManagement := applicationmanagementclient.NewUsecaseImpl(fixture.User, fixture.Space, fixture.SpaceMember, fixture.Client, fixture.ClientIpAllowlist, guard, validator, logger, fixture.Transactor, keygen, "lockmate")
 	r := &recorder{}
 	router := gin.New()
 	presentationhttproute.Route(router, presentationhttproute.Args{
@@ -112,14 +113,13 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 		Profile:    presentationhttphandlerprofile.NewHandler(account, security),
 		Management: presentationhttphandlermanagement.NewHandler(&managementSpaceStub{r}, &managementPermissionStub{r}, &managementRoleStub{r}, &managementUserStub{r}, &managementClassicAuthStub{r}, &managementGoogleAuthStub{r}, clientManagement, &managementSpaceMemberStub{r}, &managementRolePermissionStub{r}, &managementSpaceMemberRoleStub{r}),
 		Version:    presentationhttphandlerversion.NewHandler(domainmodelsapp.Info{Name: "lockmate", Version: "test"}),
-		Client:     clientAuth, Session: session, Tracer: applicationmisctracer.NewUsecaseImpl(tracer, logger), AllowedOrigin: applicationmiscallowedorigin.NewUsecaseImpl(fixture.ClientOrigin, validator, logger),
+		Client:     clientAuth, Session: session, Tracer: applicationmisctracer.NewUsecaseImpl(tracer, logger), IpAllowlist: applicationmiscipallowlist.NewUsecaseImpl(fixture.ClientIpAllowlist, logger),
 	})
 	access := ""
 	makeRequest := func(method, path, body string) *http.Request {
 		req := businessRequest(method, path, body)
 		req.Header.Set("X-Client-Slug", "web")
 		req.Header.Set("X-Client-Secret", secret)
-		req.Header.Set("Origin", "https://app.example.com")
 		req.Header.Set("Authorization", "Bearer "+access)
 		return req
 	}
@@ -139,11 +139,12 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	if response.Code != 200 {
 		t.Fatalf("profile: %d %s", response.Code, response.Body.String())
 	}
+	// A client without an allowlist entry is rejected before the handler.
 	req := makeRequest("GET", "/api/v1/profile", "")
 	req.Header.Set("X-Client-Slug", "other-web")
 	req.Header.Set("X-Client-Secret", otherSecret)
 	if response := perform(router, req); response.Code != 403 {
-		t.Fatal("another client's origin accepted")
+		t.Fatal("client without allowlist entry accepted")
 	}
 	response = perform(router, makeRequest("POST", "/api/v1/auth/sign-in", `{"username":"alex","password":"SecurePass123!"}`))
 	if response.Code != 200 {
@@ -160,23 +161,23 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	if response := perform(router, makeRequest("GET", "/api/v1/profile", "")); response.Code != 403 {
 		t.Fatal("stale signed grant was trusted")
 	}
-	// Client-origin mutation is guarded by independent permission slugs.
-	originsPath := fmt.Sprintf("/api/v1/management/spaces/%d/clients/%d/origins", spaceId, clientId)
-	response = perform(router, makeRequest("POST", originsPath, `{"origin":"https://preview.example.com"}`))
+	// IP allowlist mutation is guarded by independent permission slugs.
+	allowlistPath := fmt.Sprintf("/api/v1/management/spaces/%d/clients/%d/ip-allowlist", spaceId, clientId)
+	response = perform(router, makeRequest("POST", allowlistPath, `{"cidr":"203.0.113.0/24"}`))
 	if response.Code != 201 {
-		t.Fatalf("origin create: %d %s", response.Code, response.Body.String())
+		t.Fatalf("allowlist create: %d %s", response.Code, response.Body.String())
 	}
 	var created presentationhttpresponse.IdResponse
 	if err := json.Unmarshal(response.Body.Bytes(), &created); err != nil {
 		t.Fatal(err)
 	}
-	response = perform(router, makeRequest("PATCH", fmt.Sprintf("%s/%d", originsPath, created.Id), `{"is_active":false}`))
+	response = perform(router, makeRequest("PATCH", fmt.Sprintf("%s/%d", allowlistPath, created.Id), `{"is_active":false}`))
 	if response.Code != 204 {
-		t.Fatalf("origin update: %s", response.Body.String())
+		t.Fatalf("allowlist update: %s", response.Body.String())
 	}
-	response = perform(router, makeRequest("DELETE", fmt.Sprintf("%s/%d", originsPath, created.Id), ""))
+	response = perform(router, makeRequest("DELETE", fmt.Sprintf("%s/%d", allowlistPath, created.Id), ""))
 	if response.Code != 204 {
-		t.Fatalf("origin delete: %s", response.Body.String())
+		t.Fatalf("allowlist delete: %s", response.Body.String())
 	}
 	// Committed secret rotation immediately rejects the previous secret.
 	rotatePath := fmt.Sprintf("/api/v1/management/spaces/%d/clients/%d/secret", spaceId, clientId)
@@ -196,12 +197,12 @@ func TestPostgresHTTPAuthenticationAndDynamicOrigins(t *testing.T) {
 	if response.Code != 200 {
 		t.Fatalf("new client secret rejected: %s", response.Body.String())
 	}
-	// Persisted origin changes take effect on the next actual request.
+	// Deactivating the caller's allowlist entry rejects the next request.
 	no := false
-	if err := fixture.ClientOrigin.UpdateById(ctx, spaceId, originId, domaincontractsrepository.UpdateClientOriginArgs{IsActive: &no}); err != nil {
+	if err := fixture.ClientIpAllowlist.UpdateById(ctx, spaceId, allowlistId, domaincontractsrepository.UpdateClientIpAllowlistArgs{IsActive: &no}); err != nil {
 		t.Fatal(err)
 	}
 	if response := perform(router, makeRequest("POST", "/api/v1/auth/refresh", fmt.Sprintf(`{"refresh_token":%q}`, registered.RefreshToken))); response.Code != 403 {
-		t.Fatal("revoked origin remained valid")
+		t.Fatal("revoked allowlist entry remained valid")
 	}
 }

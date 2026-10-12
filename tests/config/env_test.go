@@ -35,6 +35,7 @@ func setupEnvironment(t *testing.T) {
 		"LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", "LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY_PREVIOUS",
 		"LOCKMATE_SIGNING_KEY_ROTATION_INTERVAL", "LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL",
 		"LOCKMATE_SIGNING_KEY_RECONCILE_INTERVAL",
+		"LOCKMATE_CLIENT_IP_HEADER", "LOCKMATE_TRUSTED_PROXIES",
 		"LOCKMATE_PASSWORD_BCRYPT_COST", "LOCKMATE_SEEDER_ENABLED",
 		"LOCKMATE_SEEDER_SUPER_PASSWORD", "LOCKMATE_SEEDER_ADMIN_PASSWORD",
 		"LOCKMATE_SEEDER_USER_PASSWORD", "LOCKMATE_SEEDER_CLIENT_SECRET_KEY",
@@ -124,6 +125,38 @@ func TestLoadEnvCallsValidate(t *testing.T) {
 				t.Fatalf("incorrect validation error: %v", err)
 			}
 		})
+	}
+}
+
+func TestClientIPEnvironment(t *testing.T) {
+	setupEnvironment(t)
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if config.Env.ClientIpHeader != "CF-Connecting-IP" || len(config.Env.TrustedProxies) != 0 {
+		t.Fatal("incorrect IP defaults")
+	}
+
+	t.Setenv("LOCKMATE_CLIENT_IP_HEADER", "X-Forwarded-For")
+	t.Setenv("LOCKMATE_TRUSTED_PROXIES", "127.0.0.1/32, 10.0.0.0/8, 2001:db8::1")
+	if err := config.LoadEnv(); err != nil {
+		t.Fatal(err)
+	}
+	if config.Env.ClientIpHeader != "X-Forwarded-For" || len(config.Env.TrustedProxies) != 3 {
+		t.Fatal("IP settings ignored")
+	}
+	if config.Env.TrustedProxies[2].String() != "2001:db8::1/128" {
+		t.Fatalf("bare address not a host prefix: %s", config.Env.TrustedProxies[2])
+	}
+
+	t.Setenv("LOCKMATE_TRUSTED_PROXIES", "not-a-cidr")
+	if err := config.LoadEnv(); !errors.Is(err, domainmodelserror.EnvironmentInvalid) || !strings.Contains(err.Error(), "TRUSTED_PROXIES") {
+		t.Fatal("invalid trusted proxy accepted")
+	}
+	t.Setenv("LOCKMATE_TRUSTED_PROXIES", "")
+	t.Setenv("LOCKMATE_CLIENT_IP_HEADER", " ")
+	if err := config.LoadEnv(); !errors.Is(err, domainmodelserror.EnvironmentRequired) {
+		t.Fatal("blank client IP header accepted")
 	}
 }
 

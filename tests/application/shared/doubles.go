@@ -2,6 +2,7 @@ package applicationsharedtest
 
 import (
 	"context"
+	"net/netip"
 	"time"
 
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
@@ -654,7 +655,7 @@ type Validator struct {
 	ClientSlugFn            func(val string) error
 	ClientNameFn            func(val string) error
 	ClientDescFn            func(val string) error
-	ClientOriginFn          func(val string) error
+	ClientIpAllowlistFn     func(val string) error
 	ClientAuthRedirectUriFn func(val string) error
 }
 
@@ -954,98 +955,89 @@ func (s *Logger) Debug(ctx context.Context, tag, message string, meta domainmode
 	s.record("debug", tag, message, meta)
 }
 
-func (s *Validator) ClientOrigin(val string) error {
-	if s.ClientOriginFn == nil {
-		panic("unexpected Validator.ClientOrigin call")
+func (s *Validator) ClientIpAllowlist(val string) error {
+	if s.ClientIpAllowlistFn == nil {
+		panic("unexpected Validator.ClientIpAllowlist call")
 	}
 
-	return s.ClientOriginFn(val)
+	return s.ClientIpAllowlistFn(val)
 }
 
-type ClientOrigin struct {
-	CreateFn                   func(ctx context.Context, spaceId int64, args domaincontractsrepository.CreateClientOriginArgs) (id int64, err error)
-	ReadByIdFn                 func(ctx context.Context, spaceId, id int64) (*domainmodelsentity.ClientOrigin, error)
-	ReadByClientIdAndOriginFn  func(ctx context.Context, spaceId, clientId int64, origin string) (*domainmodelsentity.ClientOrigin, error)
-	ReadByClientIdFn           func(ctx context.Context, spaceId, clientId int64) ([]domainmodelsentity.ClientOrigin, error)
-	ReadByFilterFn             func(ctx context.Context, spaceId int64, filter domaincontractsrepository.ClientOriginFilter) ([]domainmodelsentity.ClientOrigin, int64, error)
-	UpdateByIdFn               func(ctx context.Context, spaceId, id int64, args domaincontractsrepository.UpdateClientOriginArgs) error
-	DeleteByIdFn               func(ctx context.Context, spaceId, id int64, by *int64) error
-	IsAllowedOriginForClientFn func(ctx context.Context, spaceId, clientId int64, origin string) (bool, error)
-	IsAllowedOriginFn          func(ctx context.Context, origin string) (bool, error)
+type ClientIpAllowlist struct {
+	CreateFn                func(ctx context.Context, spaceId int64, args domaincontractsrepository.CreateClientIpAllowlistArgs) (id int64, err error)
+	ReadByIdFn              func(ctx context.Context, spaceId, id int64) (*domainmodelsentity.ClientIpAllowlist, error)
+	ReadByClientIdAndCidrFn func(ctx context.Context, spaceId, clientId int64, cidr string) (*domainmodelsentity.ClientIpAllowlist, error)
+	ReadByClientIdFn        func(ctx context.Context, spaceId, clientId int64) ([]domainmodelsentity.ClientIpAllowlist, error)
+	ReadByFilterFn          func(ctx context.Context, spaceId int64, filter domaincontractsrepository.ClientIpAllowlistFilter) ([]domainmodelsentity.ClientIpAllowlist, int64, error)
+	UpdateByIdFn            func(ctx context.Context, spaceId, id int64, args domaincontractsrepository.UpdateClientIpAllowlistArgs) error
+	DeleteByIdFn            func(ctx context.Context, spaceId, id int64, by *int64) error
+	IsAllowedForClientFn    func(ctx context.Context, spaceId, clientId int64, ip netip.Addr) (bool, error)
 }
 
-var _ domaincontractsrepository.ClientOrigin = (*ClientOrigin)(nil)
+var _ domaincontractsrepository.ClientIpAllowlist = (*ClientIpAllowlist)(nil)
 
-func (s *ClientOrigin) Create(ctx context.Context, spaceId int64, args domaincontractsrepository.CreateClientOriginArgs) (id int64, err error) {
+func (s *ClientIpAllowlist) Create(ctx context.Context, spaceId int64, args domaincontractsrepository.CreateClientIpAllowlistArgs) (id int64, err error) {
 	if s.CreateFn == nil {
-		panic("unexpected ClientOrigin.Create call")
+		panic("unexpected ClientIpAllowlist.Create call")
 	}
 
 	return s.CreateFn(ctx, spaceId, args)
 }
 
-func (s *ClientOrigin) ReadById(ctx context.Context, spaceId, id int64) (*domainmodelsentity.ClientOrigin, error) {
+func (s *ClientIpAllowlist) ReadById(ctx context.Context, spaceId, id int64) (*domainmodelsentity.ClientIpAllowlist, error) {
 	if s.ReadByIdFn == nil {
-		panic("unexpected ClientOrigin.ReadById call")
+		panic("unexpected ClientIpAllowlist.ReadById call")
 	}
 
 	return s.ReadByIdFn(ctx, spaceId, id)
 }
 
-func (s *ClientOrigin) ReadByClientIdAndOrigin(ctx context.Context, spaceId, clientId int64, origin string) (*domainmodelsentity.ClientOrigin, error) {
-	if s.ReadByClientIdAndOriginFn == nil {
-		panic("unexpected ClientOrigin.ReadByClientIdAndOrigin call")
+func (s *ClientIpAllowlist) ReadByClientIdAndCidr(ctx context.Context, spaceId, clientId int64, cidr string) (*domainmodelsentity.ClientIpAllowlist, error) {
+	if s.ReadByClientIdAndCidrFn == nil {
+		panic("unexpected ClientIpAllowlist.ReadByClientIdAndCidr call")
 	}
 
-	return s.ReadByClientIdAndOriginFn(ctx, spaceId, clientId, origin)
+	return s.ReadByClientIdAndCidrFn(ctx, spaceId, clientId, cidr)
 }
 
-func (s *ClientOrigin) ReadByClientId(ctx context.Context, spaceId, clientId int64) ([]domainmodelsentity.ClientOrigin, error) {
+func (s *ClientIpAllowlist) ReadByClientId(ctx context.Context, spaceId, clientId int64) ([]domainmodelsentity.ClientIpAllowlist, error) {
 	if s.ReadByClientIdFn == nil {
-		panic("unexpected ClientOrigin.ReadByClientId call")
+		panic("unexpected ClientIpAllowlist.ReadByClientId call")
 	}
 
 	return s.ReadByClientIdFn(ctx, spaceId, clientId)
 }
 
-func (s *ClientOrigin) ReadByFilter(ctx context.Context, spaceId int64, filter domaincontractsrepository.ClientOriginFilter) ([]domainmodelsentity.ClientOrigin, int64, error) {
+func (s *ClientIpAllowlist) ReadByFilter(ctx context.Context, spaceId int64, filter domaincontractsrepository.ClientIpAllowlistFilter) ([]domainmodelsentity.ClientIpAllowlist, int64, error) {
 	if s.ReadByFilterFn == nil {
-		panic("unexpected ClientOrigin.ReadByFilter call")
+		panic("unexpected ClientIpAllowlist.ReadByFilter call")
 	}
 
 	return s.ReadByFilterFn(ctx, spaceId, filter)
 }
 
-func (s *ClientOrigin) UpdateById(ctx context.Context, spaceId, id int64, args domaincontractsrepository.UpdateClientOriginArgs) error {
+func (s *ClientIpAllowlist) UpdateById(ctx context.Context, spaceId, id int64, args domaincontractsrepository.UpdateClientIpAllowlistArgs) error {
 	if s.UpdateByIdFn == nil {
-		panic("unexpected ClientOrigin.UpdateById call")
+		panic("unexpected ClientIpAllowlist.UpdateById call")
 	}
 
 	return s.UpdateByIdFn(ctx, spaceId, id, args)
 }
 
-func (s *ClientOrigin) DeleteById(ctx context.Context, spaceId, id int64, by *int64) error {
+func (s *ClientIpAllowlist) DeleteById(ctx context.Context, spaceId, id int64, by *int64) error {
 	if s.DeleteByIdFn == nil {
-		panic("unexpected ClientOrigin.DeleteById call")
+		panic("unexpected ClientIpAllowlist.DeleteById call")
 	}
 
 	return s.DeleteByIdFn(ctx, spaceId, id, by)
 }
 
-func (s *ClientOrigin) IsAllowedOriginForClient(ctx context.Context, spaceId, clientId int64, origin string) (bool, error) {
-	if s.IsAllowedOriginForClientFn == nil {
-		panic("unexpected ClientOrigin.IsAllowedOriginForClient call")
+func (s *ClientIpAllowlist) IsAllowedForClient(ctx context.Context, spaceId, clientId int64, ip netip.Addr) (bool, error) {
+	if s.IsAllowedForClientFn == nil {
+		panic("unexpected ClientIpAllowlist.IsAllowedForClient call")
 	}
 
-	return s.IsAllowedOriginForClientFn(ctx, spaceId, clientId, origin)
-}
-
-func (s *ClientOrigin) IsAllowedOrigin(ctx context.Context, origin string) (bool, error) {
-	if s.IsAllowedOriginFn == nil {
-		panic("unexpected ClientOrigin.IsAllowedOrigin call")
-	}
-
-	return s.IsAllowedOriginFn(ctx, origin)
+	return s.IsAllowedForClientFn(ctx, spaceId, clientId, ip)
 }
 
 func (s *Validator) ClientAuthRedirectUri(val string) error {

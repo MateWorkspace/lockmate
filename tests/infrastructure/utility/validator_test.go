@@ -86,13 +86,6 @@ func TestClientAuthRedirectUri(t *testing.T) {
 	}
 }
 
-func TestHTTPCallbackDoesNotBroadenCORSOrigins(t *testing.T) {
-	v := infrastructureutilityvalidator.NewValidatorImpl(true)
-	if err := v.ClientOrigin("http://100.92.75.2:10703"); !errors.Is(err, domainmodelserror.ClientOriginInvalid) {
-		t.Fatal("non-loopback HTTP origin accepted")
-	}
-}
-
 func TestHTTPCallbackRequiresExplicitAllowance(t *testing.T) {
 	v := infrastructureutilityvalidator.NewValidatorImpl(false)
 	for _, value := range []string{

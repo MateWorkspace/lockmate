@@ -121,10 +121,12 @@ is supported without overriding process variables. Document settings in
 HTTP defaults to port `10701`. Development uses
 `https://lockmate-dev.dhonan.my.id` through cloudflared. Business API calls require
 `X-Client-Slug`, `X-Client-Secret`, and a nonzero UUID `X-Client-Exec-Id`; protected
-user operations also require a bearer token. Dynamic CORS checks persisted client
-origins. Google browser launch/callback instead validate saved state and an
+user operations also require a bearer token. Each authenticated client has a
+persisted caller IP allowlist; the resolved client IP is checked after client
+authentication, honoring LOCKMATE_CLIENT_IP_HEADER only from LOCKMATE_TRUSTED_PROXIES.
+Google browser launch/callback instead validate saved state and an
 attempt-specific browser-binding cookie. Client `auth_redirect_uri` is independent
-of CORS origins. See [Google setup and integration](docs/google-auth.md).
+of client IP allowlists. See [Google setup and integration](docs/google-auth.md).
 
 Google is optional and disabled until configured. Docker startup applies pending
 migrations, then application startup fills missing bootstrap records before HTTP.

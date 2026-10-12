@@ -10,7 +10,7 @@ lockmate. Composition uses it for management authorization even when seeding is
 disabled. Permission and role definitions are scoped to this space. Keep slugs
 separate from readable names, and align permission.json with the application
 permission catalog. Super has every permission; Admin manages users, credentials,
-clients, origins, and memberships but only reads authorization catalogs; User has
+clients, IP allowlist entries, and memberships but only reads authorization catalogs; User has
 self-service profile/security grants and is the declared default role.
 
 User passwords and client secrets are supplied through LOCKMATE_SEEDER_* settings,

@@ -16,8 +16,8 @@ infrastructure dependencies. Constructors and domain contracts stay independent
 of the catalog. Keep independent permission expectations in application tests so
 an accidental policy change cannot silently change both implementation and tests.
 
-Origin administration belongs to management Client but uses its own
-client_origin:add/get/set/remove slugs. Name constants after the client methods;
+IP allowlist administration belongs to management Client but uses its own
+client_ip_allowlist:add/get/set/remove slugs. Name constants after the client methods;
 do not reuse client metadata or secret permissions. Misc allowlist checks run
 before authentication and have no permission requirement. Include these slugs in
 embedded seed definitions and their catalog coverage tests.

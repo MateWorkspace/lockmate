@@ -21,8 +21,8 @@ func TestErrorClassificationAndSanitization(t *testing.T) {
 	}{
 		{"validation", domainmodelserror.UserPasswordTooShort, 400, true},
 		{"password mismatch", domainmodelserror.PasswordMismatch, 400, false},
-		{"entity missing", domainmodelserror.ClientOriginNotFound, 404, true},
-		{"conflict", domainmodelserror.ClientOriginConflict, 409, true},
+		{"entity missing", domainmodelserror.ClientIpAllowlistNotFound, 404, true},
+		{"conflict", domainmodelserror.ClientIpAllowlistConflict, 409, true},
 		{"state", domainmodelserror.BadState, 412, true},
 		{"expired", domainmodelserror.TokenExpired, 401, false},
 		{"permission", domainmodelserror.Forbidden, 403, true},

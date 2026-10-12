@@ -17,7 +17,7 @@ import (
 	domainmodelsentity "github.com/MateWorkspace/lockmate/internal/domain/models/entity"
 	infrastructurerepositoryclassicauth "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/classic_auth"
 	infrastructurerepositoryclient "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client"
-	infrastructurerepositoryclientorigin "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client_origin"
+	infrastructurerepositoryclientipallowlist "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/client_ip_allowlist"
 	infrastructurerepositoryrole "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/role"
 	infrastructurerepositorysigningkey "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/signing_key"
 	infrastructurerepositoryspace "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/space"
@@ -32,18 +32,18 @@ import (
 )
 
 type PostgresFixture struct {
-	Pool            *pgxpool.Pool
-	User            domaincontractsrepository.User
-	Space           domaincontractsrepository.Space
-	Role            domaincontractsrepository.Role
-	Client          domaincontractsrepository.Client
-	ClientOrigin    domaincontractsrepository.ClientOrigin
-	ClassicAuth     domaincontractsrepository.ClassicAuth
-	SpaceMember     domaincontractsrepository.SpaceMember
-	SpaceMemberRole domaincontractsrepository.SpaceMemberRole
-	SigningKey      domaincontractsrepository.SigningKey
-	Secret          domaincontractsutility.Secret
-	Transactor      domaincontractsutility.Transactor
+	Pool              *pgxpool.Pool
+	User              domaincontractsrepository.User
+	Space             domaincontractsrepository.Space
+	Role              domaincontractsrepository.Role
+	Client            domaincontractsrepository.Client
+	ClientIpAllowlist domaincontractsrepository.ClientIpAllowlist
+	ClassicAuth       domaincontractsrepository.ClassicAuth
+	SpaceMember       domaincontractsrepository.SpaceMember
+	SpaceMemberRole   domaincontractsrepository.SpaceMemberRole
+	SigningKey        domaincontractsrepository.SigningKey
+	Secret            domaincontractsutility.Secret
+	Transactor        domaincontractsutility.Transactor
 }
 
 func NewPostgresFixture(t *testing.T) *PostgresFixture {
@@ -131,17 +131,17 @@ func NewPostgresFixture(t *testing.T) *PostgresFixture {
 	}
 
 	return &PostgresFixture{
-		Pool:            pool,
-		User:            infrastructurerepositoryuser.NewPostgresImpl(dt, &question, &dollar),
-		Space:           infrastructurerepositoryspace.NewPostgresImpl(dt, &question, &dollar),
-		Role:            infrastructurerepositoryrole.NewPostgresImpl(dt, &question, &dollar),
-		Client:          infrastructurerepositoryclient.NewPostgresImpl(dt, &question, &dollar),
-		ClientOrigin:    infrastructurerepositoryclientorigin.NewPostgresImpl(dt, &question, &dollar),
-		ClassicAuth:     infrastructurerepositoryclassicauth.NewPostgresImpl(dt, &question, &dollar),
-		SpaceMember:     infrastructurerepositoryspacemember.NewPostgresImpl(dt, &question, &dollar),
-		SpaceMemberRole: infrastructurerepositoryspacememberrole.NewPostgresImpl(dt, &question, &dollar),
-		SigningKey:      signingKey,
-		Secret:          secret,
-		Transactor:      infrastructureutilitytransactor.NewPgxdtImpl(pgxdt.NewTransactor(pool)),
+		Pool:              pool,
+		User:              infrastructurerepositoryuser.NewPostgresImpl(dt, &question, &dollar),
+		Space:             infrastructurerepositoryspace.NewPostgresImpl(dt, &question, &dollar),
+		Role:              infrastructurerepositoryrole.NewPostgresImpl(dt, &question, &dollar),
+		Client:            infrastructurerepositoryclient.NewPostgresImpl(dt, &question, &dollar),
+		ClientIpAllowlist: infrastructurerepositoryclientipallowlist.NewPostgresImpl(dt, &question, &dollar),
+		ClassicAuth:       infrastructurerepositoryclassicauth.NewPostgresImpl(dt, &question, &dollar),
+		SpaceMember:       infrastructurerepositoryspacemember.NewPostgresImpl(dt, &question, &dollar),
+		SpaceMemberRole:   infrastructurerepositoryspacememberrole.NewPostgresImpl(dt, &question, &dollar),
+		SigningKey:        signingKey,
+		Secret:            secret,
+		Transactor:        infrastructureutilitytransactor.NewPgxdtImpl(pgxdt.NewTransactor(pool)),
 	}
 }

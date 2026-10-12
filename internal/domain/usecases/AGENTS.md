@@ -20,7 +20,7 @@ and management operations.
 - `management/`: one interface file per current entity; Google identities expose
   monitoring reads only. Assignment entities retain separate files.
 - `misc/`: small helper usecases exposed to presentation through application,
-  including tracer injection, the pre-authentication allowed-origin helper, the
+  including tracer injection, the pre-authentication IP allowlist helper, the
   public JWK set, and signing-key reconciliation.
 - `shared/`: `Page[T]` and credential-free classic-auth/client views that reuse
   existing repository summaries.
@@ -185,7 +185,7 @@ follow repository visibility rules; inactive targets remain manageable.
 | Own classic credential/password changes | `profile_security:set` |
 
 Entity prefixes are space, permission, role, user, classic_auth, google_auth,
-client, client_origin, space_member, role_permission, and space_member_role.
+client, client_ip_allowlist, space_member, role_permission, and space_member_role.
 Embedded seed definitions follow this catalog; independent tests verify parity.
 
 User.Create atomically creates a profile and required classic credentials; it
@@ -251,23 +251,25 @@ Forgotten-password recovery, OTP/verification delivery, authentication-method
 linking/unlinking in profile, self-deletion/space departure, persisted sessions,
 server-side logout/revocation, API keys, caching, and object storage are deferred.
 
-## Client origins
+## Client IP allowlists
 
-Client management owns origin administration through CreateOrigin,
-ReadOriginById, ReadOriginByValue, ReadOriginsByClientId, ReadOriginsByFilter,
-UpdateOriginById, and DeleteOriginById. All require explicit target space/client
-IDs and separate client_origin:add/get/set/remove permissions. Requests cannot
-supply ownership or audit actors. Exact origin operations verify client ownership;
-inactive clients and origins remain manageable. Validate canonical origins with
-the validator utility. Mutations own strict transactions and derive audit actors
-from the authenticated caller. Origin and activation changes are access updates.
+Client management owns allowlist administration through CreateIpAllowlist,
+ReadIpAllowlistById, ReadIpAllowlistByCidr, ReadIpAllowlistsByClientId,
+ReadIpAllowlistsByFilter, UpdateIpAllowlistById, and DeleteIpAllowlistById. All
+require explicit target space/client IDs and separate
+client_ip_allowlist:add/get/set/remove permissions. Requests cannot supply
+ownership or audit actors. Exact entry operations verify client ownership;
+inactive clients and entries remain manageable. Validate canonical IP/CIDR
+entries with the validator utility. Client creation adds loopback entries.
+Mutations own strict transactions and derive audit actors from the authenticated
+caller. CIDR and activation changes are access updates.
 
-Misc AllowedOrigin exposes global and client-scoped checks before authentication.
-It delegates through ClientOrigin and Validator contracts without a permission
-check or transaction. Known invalid/oversized origins return false without error,
-logging, or database access. Operational failures remain errors and emit explicit
-logs; successful matches and ordinary denials stay quiet. Scoped IDs must be
-positive. A match does not authenticate or identify a client. Gin/CORS wiring and
+Misc IpAllowlist checks the resolved caller IP for a client without a permission
+check or transaction. It delegates through ClientIpAllowlist and short-circuits
+loopback; invalid IPs are ordinary nonmatches returned without error, logging,
+or database access. Operational failures remain errors and emit explicit logs;
+successful matches and ordinary denials stay quiet. Scoped IDs must be positive.
+A match does not authenticate or identify a client. Transport IP resolution and
 caching are outside these usecases.
 
 Google now exposes Start, Launch, and SignInCallback. Start accepts project state,

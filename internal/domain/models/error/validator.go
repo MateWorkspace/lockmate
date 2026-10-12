@@ -64,8 +64,8 @@ var (
 	ClientAuthRedirectUriInvalid = errors.New("CLIENT_AUTH_REDIRECT_URI_INVALID")
 	ClientAuthRedirectUriTooLong = errors.New("CLIENT_AUTH_REDIRECT_URI_TOO_LONG")
 
-	ClientOriginInvalid = errors.New("CLIENT_ORIGIN_INVALID")
-	ClientOriginTooLong = errors.New("CLIENT_ORIGIN_TOO_LONG")
+	ClientIpAllowlistInvalid = errors.New("CLIENT_IP_ALLOWLIST_INVALID")
+	ClientIpAllowlistTooLong = errors.New("CLIENT_IP_ALLOWLIST_TOO_LONG")
 
 	SpaceDescInvalid = errors.New("SPACE_DESC_INVALID")
 	SpaceDescTooLong = errors.New("SPACE_DESC_TOO_LONG")

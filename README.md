@@ -15,7 +15,7 @@ Built with Go, Gin, and PostgreSQL.
 - Google sign-in with automatic registration for new users.
 - User profile and password management.
 - Administration of users, spaces, memberships, roles, permissions, and clients.
-- Per-client browser origin allowlists and dynamic CORS.
+- Per-client caller IP allowlists with trusted-proxy client IP resolution.
 - Client callback URLs and single-use authentication handoffs to application backends.
 - Swagger API documentation and structured logging.
 

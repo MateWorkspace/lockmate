@@ -73,14 +73,14 @@ definitions:
         example: alex
         type: string
     type: object
-  github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientOriginRequest:
+  github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientIpAllowlistRequest:
     properties:
+      cidr:
+        example: 203.0.113.0/24
+        type: string
       is_active:
         example: true
         type: boolean
-      origin:
-        example: https://app.example.com
-        type: string
     type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientRequest:
     properties:
@@ -243,14 +243,14 @@ definitions:
         example: alex
         type: string
     type: object
-  github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientOriginRequest:
+  github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientIpAllowlistRequest:
     properties:
+      cidr:
+        example: 203.0.113.0/24
+        type: string
       is_active:
         example: true
         type: boolean
-      origin:
-        example: https://app.example.com
-        type: string
     type: object
   github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientRequest:
     properties:
@@ -441,8 +441,11 @@ definitions:
         example: alex
         type: string
     type: object
-  github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse:
+  github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse:
     properties:
+      cidr:
+        example: 203.0.113.0/24
+        type: string
       client_id:
         example: 1
         type: integer
@@ -464,9 +467,6 @@ definitions:
       is_active:
         example: true
         type: boolean
-      origin:
-        example: https://app.example.com
-        type: string
       updated_at:
         example: "2026-10-10T09:30:00Z"
         type: string
@@ -601,11 +601,11 @@ definitions:
       page:
         $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageResponse'
     type: object
-  ? github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClientOriginResponse
+  ? github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClientIpAllowlistResponse
   : properties:
       data:
         items:
-          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse'
+          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse'
         type: array
       page:
         $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageResponse'
@@ -2947,7 +2947,7 @@ paths:
       summary: Update client
       tags:
       - 09. Clients
-  /v1/management/spaces/{space_id}/clients/{client_id}/origins:
+  /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist:
     get:
       parameters:
       - description: Nonzero execution UUID
@@ -2990,7 +2990,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClientOriginResponse'
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.PageDataResponse-github_com_MateWorkspace_lockmate_internal_presentation_http_response_ClientIpAllowlistResponse'
         "400":
           description: Bad Request
           schema:
@@ -3028,9 +3028,9 @@ paths:
         ClientExecId: []
         ClientSecret: []
         ClientSlug: []
-      summary: Read client origin list
+      summary: Read client IP allowlist list
       tags:
-      - 10. Client Origins
+      - 10. Client IP Allowlist
     post:
       consumes:
       - application/json
@@ -3056,7 +3056,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientOriginRequest'
+          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementCreateClientIpAllowlistRequest'
       produces:
       - application/json
       responses:
@@ -3101,10 +3101,10 @@ paths:
         ClientExecId: []
         ClientSecret: []
         ClientSlug: []
-      summary: Create client origin
+      summary: Create client IP allowlist
       tags:
-      - 10. Client Origins
-  /v1/management/spaces/{space_id}/clients/{client_id}/origins/{origin_id}:
+      - 10. Client IP Allowlist
+  /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/{ip_allowlist_id}:
     delete:
       parameters:
       - description: Nonzero execution UUID
@@ -3123,9 +3123,9 @@ paths:
         name: client_id
         required: true
         type: integer
-      - description: origin_id
+      - description: ip_allowlist_id
         in: path
-        name: origin_id
+        name: ip_allowlist_id
         required: true
         type: integer
       produces:
@@ -3170,9 +3170,9 @@ paths:
         ClientExecId: []
         ClientSecret: []
         ClientSlug: []
-      summary: Delete client origin
+      summary: Delete client IP allowlist
       tags:
-      - 10. Client Origins
+      - 10. Client IP Allowlist
     get:
       parameters:
       - description: Nonzero execution UUID
@@ -3191,9 +3191,9 @@ paths:
         name: client_id
         required: true
         type: integer
-      - description: origin_id
+      - description: ip_allowlist_id
         in: path
-        name: origin_id
+        name: ip_allowlist_id
         required: true
         type: integer
       produces:
@@ -3202,7 +3202,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse'
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse'
         "400":
           description: Bad Request
           schema:
@@ -3240,9 +3240,9 @@ paths:
         ClientExecId: []
         ClientSecret: []
         ClientSlug: []
-      summary: Read client origin by id
+      summary: Read client IP allowlist by id
       tags:
-      - 10. Client Origins
+      - 10. Client IP Allowlist
     patch:
       consumes:
       - application/json
@@ -3263,9 +3263,9 @@ paths:
         name: client_id
         required: true
         type: integer
-      - description: origin_id
+      - description: ip_allowlist_id
         in: path
-        name: origin_id
+        name: ip_allowlist_id
         required: true
         type: integer
       - description: Request
@@ -3273,7 +3273,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientOriginRequest'
+          $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_request.ManagementUpdateClientIpAllowlistRequest'
       produces:
       - application/json
       responses:
@@ -3316,10 +3316,10 @@ paths:
         ClientExecId: []
         ClientSecret: []
         ClientSlug: []
-      summary: Update client origin
+      summary: Update client IP allowlist
       tags:
-      - 10. Client Origins
-  /v1/management/spaces/{space_id}/clients/{client_id}/origins/all:
+      - 10. Client IP Allowlist
+  /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/all:
     get:
       parameters:
       - description: Nonzero execution UUID
@@ -3345,7 +3345,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse'
+              $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse'
             type: array
         "400":
           description: Bad Request
@@ -3384,10 +3384,10 @@ paths:
         ClientExecId: []
         ClientSecret: []
         ClientSlug: []
-      summary: Read client origin all
+      summary: Read client IP allowlist all
       tags:
-      - 10. Client Origins
-  /v1/management/spaces/{space_id}/clients/{client_id}/origins/by-value:
+      - 10. Client IP Allowlist
+  /v1/management/spaces/{space_id}/clients/{client_id}/ip-allowlist/by-cidr:
     get:
       parameters:
       - description: Nonzero execution UUID
@@ -3406,9 +3406,9 @@ paths:
         name: client_id
         required: true
         type: integer
-      - description: origin
+      - description: cidr
         in: query
-        name: origin
+        name: cidr
         required: true
         type: string
       produces:
@@ -3417,7 +3417,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientOriginResponse'
+            $ref: '#/definitions/github_com_MateWorkspace_lockmate_internal_presentation_http_response.ClientIpAllowlistResponse'
         "400":
           description: Bad Request
           schema:
@@ -3455,9 +3455,9 @@ paths:
         ClientExecId: []
         ClientSecret: []
         ClientSlug: []
-      summary: Read client origin by value
+      summary: Read client IP allowlist by value
       tags:
-      - 10. Client Origins
+      - 10. Client IP Allowlist
   /v1/management/spaces/{space_id}/clients/{client_id}/secret:
     patch:
       parameters:

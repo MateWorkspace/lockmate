@@ -16,8 +16,8 @@ import (
 	applicationmanagementspacemember "github.com/MateWorkspace/lockmate/internal/application/management/space_member"
 	applicationmanagementspacememberrole "github.com/MateWorkspace/lockmate/internal/application/management/space_member_role"
 	applicationmanagementuser "github.com/MateWorkspace/lockmate/internal/application/management/user"
-	applicationmiscallowedorigin "github.com/MateWorkspace/lockmate/internal/application/misc/allowed_origin"
 	applicationmiscauthflow "github.com/MateWorkspace/lockmate/internal/application/misc/auth_flow"
+	applicationmiscipallowlist "github.com/MateWorkspace/lockmate/internal/application/misc/ip_allowlist"
 	applicationmiscjwks "github.com/MateWorkspace/lockmate/internal/application/misc/jwks"
 	applicationmiscsigningkey "github.com/MateWorkspace/lockmate/internal/application/misc/signing_key"
 	applicationmisctracer "github.com/MateWorkspace/lockmate/internal/application/misc/tracer"
@@ -52,7 +52,7 @@ type application struct {
 	managementRolePermission  domainusecasesmanagement.RolePermission
 	managementSpaceMemberRole domainusecasesmanagement.SpaceMemberRole
 	miscTracer                domainusecasesmisc.Tracer
-	miscAllowedOrigin         domainusecasesmisc.AllowedOrigin
+	miscIpAllowlist           domainusecasesmisc.IpAllowlist
 	miscSigningKey            domainusecasesmisc.SigningKey
 	miscJwks                  domainusecasesmisc.Jwks
 }
@@ -71,7 +71,7 @@ func (l *launcher) newApplication() {
 			l.infra.spaceMember,
 			l.infra.spaceMemberRole,
 			l.infra.client,
-			l.infra.clientOrigin,
+			l.infra.clientIpAllowlist,
 			l.infra.password,
 			l.infra.keygen,
 			l.infra.validator,
@@ -235,7 +235,7 @@ func (l *launcher) newApplication() {
 			l.infra.space,
 			l.infra.spaceMember,
 			l.infra.client,
-			l.infra.clientOrigin,
+			l.infra.clientIpAllowlist,
 			l.infra.permissionGuard,
 			l.infra.validator,
 			l.infra.logger,
@@ -277,9 +277,8 @@ func (l *launcher) newApplication() {
 			l.infra.tracer,
 			l.infra.logger,
 		),
-		miscAllowedOrigin: applicationmiscallowedorigin.NewUsecaseImpl(
-			l.infra.clientOrigin,
-			l.infra.validator,
+		miscIpAllowlist: applicationmiscipallowlist.NewUsecaseImpl(
+			l.infra.clientIpAllowlist,
 			l.infra.logger,
 		),
 		miscSigningKey: applicationmiscsigningkey.NewUsecaseImpl(

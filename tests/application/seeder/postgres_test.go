@@ -56,7 +56,7 @@ func seedDatabase(t *testing.T) *seedFixture {
 	return &seedFixture{PostgresFixture: base, data: definitions(t), permission: infrastructurerepositorypermission.NewPostgresImpl(dt, &q, &d), rolePermission: infrastructurerepositoryrolepermission.NewPostgresImpl(dt, &q, &d), logger: &testshared.Logger{}, password: infrastructureutilitypassword.NewBcryptImpl(4), keygen: infrastructureutilitykeygen.NewGeneratorImpl(), validator: infrastructureutilityvalidator.NewValidatorImpl(true)}
 }
 func (f *seedFixture) seeder(logger domaincontractsutility.Logger) domainusecasesseeder.Seeder {
-	return applicationseeder.NewUsecaseImpl(f.Space, f.permission, f.Role, f.rolePermission, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.Client, f.ClientOrigin, f.password, f.keygen, f.validator, f.Transactor, logger, &f.data)
+	return applicationseeder.NewUsecaseImpl(f.Space, f.permission, f.Role, f.rolePermission, f.User, f.ClassicAuth, f.SpaceMember, f.SpaceMemberRole, f.Client, f.ClientIpAllowlist, f.password, f.keygen, f.validator, f.Transactor, logger, &f.data)
 }
 func (f *seedFixture) count(t *testing.T, table string) int {
 	t.Helper()
@@ -68,7 +68,7 @@ func (f *seedFixture) count(t *testing.T, table string) int {
 }
 func (f *seedFixture) assertBaseline(t *testing.T) {
 	t.Helper()
-	for table, expected := range map[string]int{"spaces": 1, "permissions": 46, "roles": 3, "role_permission": 83, "users": 3, "classic_auths": 3, "space_members": 3, "space_member_role": 5, "clients": 1, "client_origins": 3} {
+	for table, expected := range map[string]int{"spaces": 1, "permissions": 46, "roles": 3, "role_permission": 83, "users": 3, "classic_auths": 3, "space_members": 3, "space_member_role": 5, "clients": 1, "client_ip_allowlist": 2} {
 		if actual := f.count(t, table); actual != expected {
 			t.Fatalf("%s: got %d, expected %d", table, actual, expected)
 		}
@@ -140,7 +140,7 @@ func TestPostgresSeedBaselineAndPreservation(t *testing.T) {
 	if _, err := f.Pool.Exec(ctx, "UPDATE space_members SET is_active=false WHERE user_id=$1", auth.UserId); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.Pool.Exec(ctx, "UPDATE client_origins SET is_active=false"); err != nil {
+	if _, err := f.Pool.Exec(ctx, "UPDATE client_ip_allowlist SET is_active=false"); err != nil {
 		t.Fatal(err)
 	}
 	if err := u.Run(ctx); err != nil {
@@ -165,9 +165,9 @@ func TestPostgresSeedBaselineAndPreservation(t *testing.T) {
 	if err != nil || member.IsActive {
 		t.Fatal("seed reactivated membership")
 	}
-	origins, err := f.ClientOrigin.ReadByClientId(ctx, client.SpaceId, client.Id)
-	if err != nil || origins[0].IsActive {
-		t.Fatal("seed reactivated origin")
+	entries, err := f.ClientIpAllowlist.ReadByClientId(ctx, client.SpaceId, client.Id)
+	if err != nil || entries[0].IsActive {
+		t.Fatal("seed reactivated IP allowlist entry")
 	}
 	role, err := f.Role.ReadBySlug(ctx, client.SpaceId, "super")
 	if err != nil || role.Name != "Edited Role" {

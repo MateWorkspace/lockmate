@@ -2,6 +2,7 @@ package presentationhttproute
 
 import (
 	"net/http"
+	"net/netip"
 
 	_ "github.com/MateWorkspace/lockmate/docs/swagger"
 	domainusecasesauth "github.com/MateWorkspace/lockmate/internal/domain/usecases/auth"
@@ -15,23 +16,24 @@ import (
 )
 
 type Args struct {
-	Flow          AuthFlowHandler
-	Auth          AuthHandler
-	Jwks          JwksHandler
-	Profile       ProfileHandler
-	Management    ManagementHandler
-	Version       VersionHandler
-	Client        domainusecasesauth.Client
-	Session       domainusecasesauth.Session
-	Tracer        domainusecasesmisc.Tracer
-	AllowedOrigin domainusecasesmisc.AllowedOrigin
+	Flow           AuthFlowHandler
+	Auth           AuthHandler
+	Jwks           JwksHandler
+	Profile        ProfileHandler
+	Management     ManagementHandler
+	Version        VersionHandler
+	Client         domainusecasesauth.Client
+	Session        domainusecasesauth.Session
+	Tracer         domainusecasesmisc.Tracer
+	IpAllowlist    domainusecasesmisc.IpAllowlist
+	TrustedProxies []netip.Prefix
+	ClientIpHeader string
 }
 
 func Route(e *gin.Engine, args Args) {
 	e.HandleMethodNotAllowed = true
 	e.Use(presentationhttpmiddleware.Recovery())
 	e.Use(presentationhttpmiddleware.Trace(args.Tracer))
-	e.Use(presentationhttpmiddleware.CORS(args.AllowedOrigin))
 
 	api := e.Group("/api")
 	api.GET("/docs", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/api/docs/index.html") })
@@ -39,7 +41,8 @@ func Route(e *gin.Engine, args Args) {
 	api.GET("/version", args.Version.VersionGet)
 
 	publicV1 := api.Group("/v1")
-	publicV1.Use(presentationhttpmiddleware.Client(args.Client, args.AllowedOrigin))
+	publicV1.Use(presentationhttpmiddleware.Client(args.Client))
+	publicV1.Use(presentationhttpmiddleware.IPAllowlist(args.IpAllowlist, args.TrustedProxies, args.ClientIpHeader))
 	routeAuth(publicV1, args.Auth)
 	if args.Jwks != nil {
 		routeJwks(publicV1, args.Jwks)
@@ -50,7 +53,8 @@ func Route(e *gin.Engine, args Args) {
 	routeAuthFlow(publicV1, api.Group("/v1"), args.Flow)
 
 	v1 := api.Group("/v1")
-	v1.Use(presentationhttpmiddleware.Client(args.Client, args.AllowedOrigin))
+	v1.Use(presentationhttpmiddleware.Client(args.Client))
+	v1.Use(presentationhttpmiddleware.IPAllowlist(args.IpAllowlist, args.TrustedProxies, args.ClientIpHeader))
 	v1.Use(presentationhttpmiddleware.Auth(args.Session))
 	routeProfile(v1, args.Profile)
 	routeManagement(v1, args.Management)

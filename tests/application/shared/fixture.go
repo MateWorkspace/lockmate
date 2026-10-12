@@ -3,6 +3,7 @@ package applicationsharedtest
 import (
 	"context"
 	"errors"
+	"net/netip"
 	"testing"
 
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
@@ -15,42 +16,42 @@ import (
 type transactionKey struct{}
 
 type Fixture struct {
-	User            *User
-	Space           *Space
-	SpaceMember     *SpaceMember
-	Client          *Client
-	ClientOrigin    *ClientOrigin
-	ClassicAuth     *ClassicAuth
-	GoogleAuth      *GoogleAuth
-	SpaceMemberRole *SpaceMemberRole
-	Role            *Role
-	Permission      *Permission
-	RolePermission  *RolePermission
-	SigningKey      *SigningKey
-	Guard           *PermissionGuard
-	Validator       domaincontractsutility.Validator
-	Password        *Password
-	Token           *Token
-	Secret          *Secret
-	Keygen          *Keygen
-	Transactor      *Transactor
-	Logger          *Logger
-	Users           map[int64]*domainmodelsentity.User
-	Members         map[int64]*domainmodelsentity.SpaceMember
-	Classics        map[int64]*domainmodelsentity.ClassicAuth
-	Googles         map[int64]*domainmodelsentity.GoogleAuth
-	Caller          *domainmodelsentity.AccessClaims
-	CommitErr       error
-	BeginErr        error
-	TokenErr        error
-	MissingDefault  bool
-	Transactions    int
-	Committed       bool
+	User              *User
+	Space             *Space
+	SpaceMember       *SpaceMember
+	Client            *Client
+	ClientIpAllowlist *ClientIpAllowlist
+	ClassicAuth       *ClassicAuth
+	GoogleAuth        *GoogleAuth
+	SpaceMemberRole   *SpaceMemberRole
+	Role              *Role
+	Permission        *Permission
+	RolePermission    *RolePermission
+	SigningKey        *SigningKey
+	Guard             *PermissionGuard
+	Validator         domaincontractsutility.Validator
+	Password          *Password
+	Token             *Token
+	Secret            *Secret
+	Keygen            *Keygen
+	Transactor        *Transactor
+	Logger            *Logger
+	Users             map[int64]*domainmodelsentity.User
+	Members           map[int64]*domainmodelsentity.SpaceMember
+	Classics          map[int64]*domainmodelsentity.ClassicAuth
+	Googles           map[int64]*domainmodelsentity.GoogleAuth
+	Caller            *domainmodelsentity.AccessClaims
+	CommitErr         error
+	BeginErr          error
+	TokenErr          error
+	MissingDefault    bool
+	Transactions      int
+	Committed         bool
 }
 
 func NewFixture() *Fixture {
 	f := &Fixture{
-		User: &User{}, Space: &Space{}, SpaceMember: &SpaceMember{}, Client: &Client{}, ClientOrigin: &ClientOrigin{},
+		User: &User{}, Space: &Space{}, SpaceMember: &SpaceMember{}, Client: &Client{}, ClientIpAllowlist: &ClientIpAllowlist{},
 		ClassicAuth: &ClassicAuth{}, GoogleAuth: &GoogleAuth{}, SpaceMemberRole: &SpaceMemberRole{},
 		Role: &Role{}, Permission: &Permission{}, RolePermission: &RolePermission{},
 		SigningKey: &SigningKey{},
@@ -251,6 +252,12 @@ func NewFixture() *Fixture {
 	}
 	f.SigningKey.ListStaleFn = func(ctx context.Context, fingerprint string) ([]domainmodelsentity.SigningKey, error) {
 		return []domainmodelsentity.SigningKey{}, nil
+	}
+	f.ClientIpAllowlist.CreateFn = func(ctx context.Context, spaceId int64, args domaincontractsrepository.CreateClientIpAllowlistArgs) (int64, error) {
+		return 90, nil
+	}
+	f.ClientIpAllowlist.IsAllowedForClientFn = func(ctx context.Context, spaceId, clientId int64, ip netip.Addr) (bool, error) {
+		return true, nil
 	}
 	f.Keygen.GenerateFn = func() (string, string, string, error) { return "raw-secret", "hash:secret", "reda****cted", nil }
 	f.Keygen.CompareFn = func(hash, raw string) error {

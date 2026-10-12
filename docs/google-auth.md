@@ -78,7 +78,7 @@ exact URI. Clients in the same space can have different URIs. Queries, fragments
 credentials, and wildcards are rejected. HTTPS callback URLs are always accepted;
 HTTP requires LOCKMATE_AUTH_REDIRECT_ALLOW_HTTP=true. The default is false,
 which requires HTTPS even for localhost callbacks. The URI is independent of
-CORS origins.
+client IP allowlists.
 
 Clear it with `{"auth_redirect_uri_set_null":true}`. Do not supply a replacement
 and clearing flag together. Clearing/changing it invalidates flows saved against
@@ -146,8 +146,8 @@ the previous value. Null leaves classic JSON authentication available.
 
 Client secrets remain on application backends. Lockmate JWTs never appear in
 redirect URLs. The temporary Lockmate cookie supports top-level navigation;
-credentialed cross-origin API requests remain disabled. CORS origins continue
-using the existing dynamic client allowlist.
+business APIs are backend-to-backend and rely on client IP allowlists rather than
+browser CORS.
 
 ## Persistence, operations, and verification
 

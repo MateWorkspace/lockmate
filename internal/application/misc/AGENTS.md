@@ -22,14 +22,15 @@ whitespace. Keep unrelated helpers separate; add capabilities only when needed.
 Tests live in tests/application/misc and use injected contracts without mutating
 global UUID randomness.
 
-AllowedOrigin lives in allowed_origin/usecase.go. Inject the ClientOrigin
-repository, Validator, and Logger contracts. Expose global and scoped live
-allowlist checks without authentication, permissions, or transactions. Reject
-invalid scoped IDs as BadArgs. Known invalid/oversized origins return false, nil
-without logging or persistence; unexpected validation or repository failures
+IpAllowlist lives in ip_allowlist/usecase.go. Inject the ClientIpAllowlist and
+Logger contracts. Expose the client-scoped live allowlist check without
+authentication, permissions, or transactions. Reject invalid scoped IDs as
+BadArgs and short-circuit loopback. Unparseable caller IPs return false, nil
+without logging or persistence; unexpected repository failures
 return false with the original error and an explicit step-specific log. Never
 swallow operational failures or use an allowance as authenticated identity.
-Routine matches and nonmatches are quiet; middleware and caching are deferred.
+Routine matches and nonmatches are quiet; transport IP resolution and caching
+are deferred.
 
 auth_flow/usecase.go purges expired launch, attempt, and generic handoff records
 in batches of 1000, respecting cancellation. Each failed stage writes its own

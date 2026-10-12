@@ -40,24 +40,24 @@
     "description": "Update client within the authorized scope."
   },
   {
-    "slug": "client_origin:add",
-    "name": "Create client origin",
-    "description": "Create client origin within the authorized scope."
+    "slug": "client_ip_allowlist:add",
+    "name": "Create Client IP allowlist",
+    "description": "Create Client IP allowlist within the authorized scope."
   },
   {
-    "slug": "client_origin:get",
-    "name": "Read client origin",
-    "description": "Read client origin within the authorized scope."
+    "slug": "client_ip_allowlist:get",
+    "name": "Read Client IP allowlist",
+    "description": "Read Client IP allowlist within the authorized scope."
   },
   {
-    "slug": "client_origin:remove",
-    "name": "Delete client origin",
-    "description": "Delete client origin within the authorized scope."
+    "slug": "client_ip_allowlist:remove",
+    "name": "Delete Client IP allowlist",
+    "description": "Delete Client IP allowlist within the authorized scope."
   },
   {
-    "slug": "client_origin:set",
-    "name": "Update client origin",
-    "description": "Update client origin within the authorized scope."
+    "slug": "client_ip_allowlist:set",
+    "name": "Update Client IP allowlist",
+    "description": "Update Client IP allowlist within the authorized scope."
   },
   {
     "slug": "client_secret:set",

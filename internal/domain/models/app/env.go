@@ -1,6 +1,7 @@
 package domainmodelsapp
 
 import (
+	"net/netip"
 	"time"
 
 	domainmodelslogger "github.com/MateWorkspace/lockmate/internal/domain/models/logger"
@@ -47,6 +48,9 @@ type Env struct {
 
 	PasswordBcryptCost int
 	HttpPublicUrl      string
+
+	ClientIpHeader string
+	TrustedProxies []netip.Prefix
 
 	GoogleOAuthEnabled         bool
 	GoogleOAuthClientId        string

@@ -15,22 +15,22 @@ import (
 const tagPath = "seeder/seeder"
 
 type usecase struct {
-	space           domaincontractsrepository.Space
-	permission      domaincontractsrepository.Permission
-	role            domaincontractsrepository.Role
-	rolePermission  domaincontractsrepository.RolePermission
-	user            domaincontractsrepository.User
-	classicAuth     domaincontractsrepository.ClassicAuth
-	spaceMember     domaincontractsrepository.SpaceMember
-	spaceMemberRole domaincontractsrepository.SpaceMemberRole
-	client          domaincontractsrepository.Client
-	clientOrigin    domaincontractsrepository.ClientOrigin
-	password        domaincontractsutility.Password
-	keygen          domaincontractsutility.Keygen
-	validator       domaincontractsutility.Validator
-	transactor      domaincontractsutility.Transactor
-	logger          domaincontractsutility.Logger
-	data            *domainmodelsseeder.Data
+	space             domaincontractsrepository.Space
+	permission        domaincontractsrepository.Permission
+	role              domaincontractsrepository.Role
+	rolePermission    domaincontractsrepository.RolePermission
+	user              domaincontractsrepository.User
+	classicAuth       domaincontractsrepository.ClassicAuth
+	spaceMember       domaincontractsrepository.SpaceMember
+	spaceMemberRole   domaincontractsrepository.SpaceMemberRole
+	client            domaincontractsrepository.Client
+	clientIpAllowlist domaincontractsrepository.ClientIpAllowlist
+	password          domaincontractsutility.Password
+	keygen            domaincontractsutility.Keygen
+	validator         domaincontractsutility.Validator
+	transactor        domaincontractsutility.Transactor
+	logger            domaincontractsutility.Logger
+	data              *domainmodelsseeder.Data
 }
 
 func NewUsecaseImpl(
@@ -43,7 +43,7 @@ func NewUsecaseImpl(
 	spaceMember domaincontractsrepository.SpaceMember,
 	spaceMemberRole domaincontractsrepository.SpaceMemberRole,
 	client domaincontractsrepository.Client,
-	clientOrigin domaincontractsrepository.ClientOrigin,
+	clientIpAllowlist domaincontractsrepository.ClientIpAllowlist,
 	password domaincontractsutility.Password,
 	keygen domaincontractsutility.Keygen,
 	validator domaincontractsutility.Validator,
@@ -52,22 +52,22 @@ func NewUsecaseImpl(
 	data *domainmodelsseeder.Data,
 ) domainusecasesseeder.Seeder {
 	return &usecase{
-		space:           space,
-		permission:      permission,
-		role:            role,
-		rolePermission:  rolePermission,
-		user:            user,
-		classicAuth:     classicAuth,
-		spaceMember:     spaceMember,
-		spaceMemberRole: spaceMemberRole,
-		client:          client,
-		clientOrigin:    clientOrigin,
-		password:        password,
-		keygen:          keygen,
-		validator:       validator,
-		transactor:      transactor,
-		logger:          logger,
-		data:            data,
+		space:             space,
+		permission:        permission,
+		role:              role,
+		rolePermission:    rolePermission,
+		user:              user,
+		classicAuth:       classicAuth,
+		spaceMember:       spaceMember,
+		spaceMemberRole:   spaceMemberRole,
+		client:            client,
+		clientIpAllowlist: clientIpAllowlist,
+		password:          password,
+		keygen:            keygen,
+		validator:         validator,
+		transactor:        transactor,
+		logger:            logger,
+		data:              data,
 	}
 }
 
@@ -195,8 +195,8 @@ func (u *usecase) Run(ctx context.Context) error {
 		})
 	}
 
-	for _, item := range created.origins {
-		u.logger.Info(ctx, tag, "created seed client origin", domainmodelslogger.Meta{
+	for _, item := range created.ipAllowlist {
+		u.logger.Info(ctx, tag, "created seed client IP allowlist", domainmodelslogger.Meta{
 			"id":         item.id,
 			"space_id":   created.spaceId,
 			"identifier": item.identifier,
@@ -216,7 +216,7 @@ func seedConflict(err error) bool {
 		errors.Is(err, domainmodelserror.SpaceMemberConflict) ||
 		errors.Is(err, domainmodelserror.SpaceMemberRoleConflict) ||
 		errors.Is(err, domainmodelserror.ClientSlugConflict) ||
-		errors.Is(err, domainmodelserror.ClientOriginConflict)
+		errors.Is(err, domainmodelserror.ClientIpAllowlistConflict)
 }
 
 type retryKey struct{}

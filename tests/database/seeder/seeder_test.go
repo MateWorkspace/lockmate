@@ -79,7 +79,7 @@ func TestEmbeddedSeedCatalog(t *testing.T) {
 				t.Fatal("default policy")
 			}
 		case "admin":
-			if len(grants) != 33 || grants["role_permission:add"] || grants["space_member_role:add"] || !grants["client_origin:set"] || !grants["user_password:set"] {
+			if len(grants) != 33 || grants["role_permission:add"] || grants["space_member_role:add"] || !grants["client_ip_allowlist:set"] || !grants["user_password:set"] {
 				t.Fatal("admin policy")
 			}
 		default:

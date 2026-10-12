@@ -15,7 +15,7 @@ Write separate explicit info calls for each committed entity/assignment type.
 
 Preserve existing profiles, credentials, redirect settings, defaults, metadata,
 and activation state. Reuse natural keys and verify client space ownership.
-Create missing permissions, roles, memberships, clients, origins, and configured
+Create missing permissions, roles, memberships, clients, IP allowlist entries, and configured
 grants. Enabled startup restores removed baseline role/member grants. Membership
 creation assigns the current default role automatically; do not duplicate it.
 Keep an existing default role; if no default exists after role seeding, fail

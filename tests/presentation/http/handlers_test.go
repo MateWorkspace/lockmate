@@ -209,47 +209,47 @@ func (s *managementClientStub) DeleteById(ctx context.Context, caller *domainmod
 	s.recorder.record(ctx, "management.Client.DeleteById", caller, spaceId, id)
 	return s.recorder.failure
 }
-func (s *managementClientStub) CreateOrigin(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request domainusecasesmanagement.CreateClientOriginRequest) (int64, error) {
-	s.recorder.record(ctx, "management.Client.CreateOrigin", caller, spaceId, clientId, request)
+func (s *managementClientStub) CreateIpAllowlist(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request domainusecasesmanagement.CreateClientIpAllowlistRequest) (int64, error) {
+	s.recorder.record(ctx, "management.Client.CreateIpAllowlist", caller, spaceId, clientId, request)
 	if s.recorder.failure != nil {
 		return 0, s.recorder.failure
 	}
 	return 11, nil
 }
-func (s *managementClientStub) ReadOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) (*domainmodelsentity.ClientOrigin, error) {
-	s.recorder.record(ctx, "management.Client.ReadOriginById", caller, spaceId, clientId, id)
+func (s *managementClientStub) ReadIpAllowlistById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) (*domainmodelsentity.ClientIpAllowlist, error) {
+	s.recorder.record(ctx, "management.Client.ReadIpAllowlistById", caller, spaceId, clientId, id)
 	if s.recorder.failure != nil {
 		return nil, s.recorder.failure
 	}
 	if s.recorder.nilResult {
 		return nil, nil
 	}
-	return &domainmodelsentity.ClientOrigin{}, nil
+	return &domainmodelsentity.ClientIpAllowlist{}, nil
 }
-func (s *managementClientStub) ReadOriginByValue(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, origin string) (*domainmodelsentity.ClientOrigin, error) {
-	s.recorder.record(ctx, "management.Client.ReadOriginByValue", caller, spaceId, clientId, origin)
+func (s *managementClientStub) ReadIpAllowlistByCidr(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, cidr string) (*domainmodelsentity.ClientIpAllowlist, error) {
+	s.recorder.record(ctx, "management.Client.ReadIpAllowlistByCidr", caller, spaceId, clientId, cidr)
 	if s.recorder.failure != nil {
 		return nil, s.recorder.failure
 	}
 	if s.recorder.nilResult {
 		return nil, nil
 	}
-	return &domainmodelsentity.ClientOrigin{}, nil
+	return &domainmodelsentity.ClientIpAllowlist{}, nil
 }
-func (s *managementClientStub) ReadOriginsByClientId(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64) ([]domainmodelsentity.ClientOrigin, error) {
-	s.recorder.record(ctx, "management.Client.ReadOriginsByClientId", caller, spaceId, clientId)
+func (s *managementClientStub) ReadIpAllowlistsByClientId(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64) ([]domainmodelsentity.ClientIpAllowlist, error) {
+	s.recorder.record(ctx, "management.Client.ReadIpAllowlistsByClientId", caller, spaceId, clientId)
 	return nil, s.recorder.failure
 }
-func (s *managementClientStub) ReadOriginsByFilter(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request domainusecasesmanagement.FilterClientOriginRequest) (domainusecasesshared.Page[domainmodelsentity.ClientOrigin], error) {
-	s.recorder.record(ctx, "management.Client.ReadOriginsByFilter", caller, spaceId, clientId, request)
-	return domainusecasesshared.Page[domainmodelsentity.ClientOrigin]{Total: 19}, s.recorder.failure
+func (s *managementClientStub) ReadIpAllowlistsByFilter(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId int64, request domainusecasesmanagement.FilterClientIpAllowlistRequest) (domainusecasesshared.Page[domainmodelsentity.ClientIpAllowlist], error) {
+	s.recorder.record(ctx, "management.Client.ReadIpAllowlistsByFilter", caller, spaceId, clientId, request)
+	return domainusecasesshared.Page[domainmodelsentity.ClientIpAllowlist]{Total: 19}, s.recorder.failure
 }
-func (s *managementClientStub) UpdateOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64, request domainusecasesmanagement.UpdateClientOriginRequest) error {
-	s.recorder.record(ctx, "management.Client.UpdateOriginById", caller, spaceId, clientId, id, request)
+func (s *managementClientStub) UpdateIpAllowlistById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64, request domainusecasesmanagement.UpdateClientIpAllowlistRequest) error {
+	s.recorder.record(ctx, "management.Client.UpdateIpAllowlistById", caller, spaceId, clientId, id, request)
 	return s.recorder.failure
 }
-func (s *managementClientStub) DeleteOriginById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) error {
-	s.recorder.record(ctx, "management.Client.DeleteOriginById", caller, spaceId, clientId, id)
+func (s *managementClientStub) DeleteIpAllowlistById(ctx context.Context, caller *domainmodelsentity.AccessClaims, spaceId, clientId, id int64) error {
+	s.recorder.record(ctx, "management.Client.DeleteIpAllowlistById", caller, spaceId, clientId, id)
 	return s.recorder.failure
 }
 
@@ -669,24 +669,20 @@ func (s *clientAuthStub) Authenticate(ctx context.Context, request domainusecase
 	return &domainmodelsentity.ClientIdentity{Id: 1, SpaceId: 2, Slug: request.Slug}, nil
 }
 
-type originStub struct {
-	global      bool
-	scoped      bool
-	failure     error
-	globalCalls int
-	scopedCalls int
+type ipAllowlistStub struct {
+	allowed bool
+	failure error
+	calls   int
+	ips     []string
 }
 
-func (s *originStub) IsAllowedOrigin(ctx context.Context, origin string) (bool, error) {
-	s.globalCalls++
-	return s.global, s.failure
-}
-func (s *originStub) IsAllowedOriginForClient(ctx context.Context, spaceId, clientId int64, origin string) (bool, error) {
-	s.scopedCalls++
+func (s *ipAllowlistStub) IsAllowedIpForClient(ctx context.Context, spaceId, clientId int64, ip string) (bool, error) {
+	s.calls++
+	s.ips = append(s.ips, ip)
 	if spaceId != 2 || clientId != 1 {
-		panic("untrusted origin scope")
+		panic("untrusted allowlist scope")
 	}
-	return s.scoped, s.failure
+	return s.allowed, s.failure
 }
 
 type traceStub struct {
@@ -704,11 +700,11 @@ func (s *traceStub) Inject(ctx context.Context, slug string, execId uuid.UUID) (
 }
 
 type httpFixture struct {
-	router   *gin.Engine
-	recorder *recorder
-	client   *clientAuthStub
-	origin   *originStub
-	trace    *traceStub
+	router      *gin.Engine
+	recorder    *recorder
+	client      *clientAuthStub
+	ipAllowlist *ipAllowlistStub
+	trace       *traceStub
 }
 
 func newHTTPFixture() *httpFixture {
@@ -717,7 +713,7 @@ func newHTTPFixture() *httpFixture {
 
 func newHTTPFixtureWithFlow(flow presentationhttproute.AuthFlowHandler) *httpFixture {
 	r := &recorder{}
-	fixture := &httpFixture{recorder: r, client: &clientAuthStub{}, origin: &originStub{global: true, scoped: true}, trace: &traceStub{}}
+	fixture := &httpFixture{recorder: r, client: &clientAuthStub{}, ipAllowlist: &ipAllowlistStub{allowed: true}, trace: &traceStub{}}
 	fixture.router = gin.New()
 	presentationhttproute.Route(fixture.router, presentationhttproute.Args{
 		Flow:    flow,
@@ -729,7 +725,8 @@ func newHTTPFixtureWithFlow(flow presentationhttproute.AuthFlowHandler) *httpFix
 			&managementClassicAuthStub{r}, &managementGoogleAuthStub{r}, &managementClientStub{r}, &managementSpaceMemberStub{r},
 			&managementRolePermissionStub{r}, &managementSpaceMemberRoleStub{r}),
 		Version: presentationhttphandlerversion.NewHandler(domainmodelsapp.Info{Name: "lockmate", Version: "test"}),
-		Client:  fixture.client, Session: &authSessionStub{r}, Tracer: fixture.trace, AllowedOrigin: fixture.origin,
+		Client:  fixture.client, Session: &authSessionStub{r}, Tracer: fixture.trace,
+		IpAllowlist: fixture.ipAllowlist, ClientIpHeader: "X-Forwarded-For",
 	})
 	return fixture
 }
@@ -806,13 +803,13 @@ var operationCases = []operationCase{
 	{"PATCH", "/api/v1/management/spaces/7/clients/23", `{"name": "value-name", "description": "value-description", "is_active": false, "preferences": {"theme": "dark"}}`, "management.Client.UpdateById", 204},
 	{"PATCH", "/api/v1/management/spaces/7/clients/23/secret", `{}`, "management.Client.RotateSecret", 200},
 	{"DELETE", "/api/v1/management/spaces/7/clients/23", `{}`, "management.Client.DeleteById", 204},
-	{"POST", "/api/v1/management/spaces/7/clients/23/origins", `{"origin": "https://example.com", "is_active": false}`, "management.Client.CreateOrigin", 201},
-	{"GET", "/api/v1/management/spaces/7/clients/23/origins/41", `{}`, "management.Client.ReadOriginById", 200},
-	{"GET", "/api/v1/management/spaces/7/clients/23/origins/by-value?origin=https%3A%2F%2Fexample.com", `{}`, "management.Client.ReadOriginByValue", 200},
-	{"GET", "/api/v1/management/spaces/7/clients/23/origins/all", `{}`, "management.Client.ReadOriginsByClientId", 200},
-	{"GET", "/api/v1/management/spaces/7/clients/23/origins?page=3&limit=25&search=value-search&is_active=false", `{}`, "management.Client.ReadOriginsByFilter", 200},
-	{"PATCH", "/api/v1/management/spaces/7/clients/23/origins/41", `{"origin": "https://example.com", "is_active": false}`, "management.Client.UpdateOriginById", 204},
-	{"DELETE", "/api/v1/management/spaces/7/clients/23/origins/41", `{}`, "management.Client.DeleteOriginById", 204},
+	{"POST", "/api/v1/management/spaces/7/clients/23/ip-allowlist", `{"cidr": "203.0.113.0/24", "is_active": false}`, "management.Client.CreateIpAllowlist", 201},
+	{"GET", "/api/v1/management/spaces/7/clients/23/ip-allowlist/41", `{}`, "management.Client.ReadIpAllowlistById", 200},
+	{"GET", "/api/v1/management/spaces/7/clients/23/ip-allowlist/by-cidr?cidr=203.0.113.0%2F24", `{}`, "management.Client.ReadIpAllowlistByCidr", 200},
+	{"GET", "/api/v1/management/spaces/7/clients/23/ip-allowlist/all", `{}`, "management.Client.ReadIpAllowlistsByClientId", 200},
+	{"GET", "/api/v1/management/spaces/7/clients/23/ip-allowlist?page=3&limit=25&search=value-search&is_active=false", `{}`, "management.Client.ReadIpAllowlistsByFilter", 200},
+	{"PATCH", "/api/v1/management/spaces/7/clients/23/ip-allowlist/41", `{"cidr": "203.0.113.0/24", "is_active": false}`, "management.Client.UpdateIpAllowlistById", 204},
+	{"DELETE", "/api/v1/management/spaces/7/clients/23/ip-allowlist/41", `{}`, "management.Client.DeleteIpAllowlistById", 204},
 	{"POST", "/api/v1/management/spaces/7/space-members", `{"user_id": 47, "is_active": false, "preferences": {"theme": "dark"}}`, "management.SpaceMember.Create", 201},
 	{"GET", "/api/v1/management/spaces/7/space-members/29", `{}`, "management.SpaceMember.ReadById", 200},
 	{"GET", "/api/v1/management/spaces/7/space-members/by-user/13", `{}`, "management.SpaceMember.ReadByUserId", 200},
@@ -878,7 +875,7 @@ func TestAllOperationsDispatchAndErrors(t *testing.T) {
 			if item.status == 204 && response.Body.Len() != 0 {
 				t.Fatal("204 response has body")
 			}
-			if strings.Contains(item.operation, "ReadByFilter") || strings.Contains(item.operation, "ReadOriginsByFilter") {
+			if strings.Contains(item.operation, "ReadByFilter") || strings.Contains(item.operation, "ReadIpAllowlistsByFilter") {
 				var page struct {
 					Data []any
 					Page struct{ Page, Limit, TotalItems int64 }
@@ -907,7 +904,7 @@ func TestAllOperationsDispatchAndErrors(t *testing.T) {
 }
 func TestHandlerArgumentsAndClearFlags(t *testing.T) {
 	fixture := newHTTPFixture()
-	req := businessRequest("PATCH", "/api/v1/management/spaces/7/clients/23/origins/41", `{"origin":"https://changed.example.com","is_active":false,"created_by":900,"client_id":900}`)
+	req := businessRequest("PATCH", "/api/v1/management/spaces/7/clients/23/ip-allowlist/41", `{"cidr":"198.51.100.0/24","is_active":false,"created_by":900,"client_id":900}`)
 	response := perform(fixture.router, req)
 	if response.Code != 204 {
 		t.Fatalf("%d: %s", response.Code, response.Body.String())
@@ -916,8 +913,8 @@ func TestHandlerArgumentsAndClearFlags(t *testing.T) {
 	if call.args[1] != int64(7) || call.args[2] != int64(23) || call.args[3] != int64(41) {
 		t.Fatalf("wrong ownership: %+v", call.args)
 	}
-	arg := call.args[4].(domainusecasesmanagement.UpdateClientOriginRequest)
-	if arg.Origin == nil || *arg.Origin != "https://changed.example.com" || arg.IsActive == nil || *arg.IsActive {
+	arg := call.args[4].(domainusecasesmanagement.UpdateClientIpAllowlistRequest)
+	if arg.Cidr == nil || *arg.Cidr != "198.51.100.0/24" || arg.IsActive == nil || *arg.IsActive {
 		t.Fatal("optional update fields lost")
 	}
 	fixture.recorder.calls = nil

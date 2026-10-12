@@ -63,8 +63,26 @@ func validateText(field, val string, invalid, tooLong domainmodelserror.Type) er
 	return nil
 }
 
-func validClientOrigin(val string) bool {
-	return validOrigin(val, false)
+func validClientIpAllowlist(val string) bool {
+	if val == "" || strings.TrimSpace(val) != val || strings.ContainsAny(val, " \t\r\n") {
+		return false
+	}
+
+	if strings.Contains(val, "/") {
+		prefix, err := netip.ParsePrefix(val)
+		if err != nil {
+			return false
+		}
+
+		return prefix.Masked() == prefix && prefix.Addr().Zone() == ""
+	}
+
+	address, err := netip.ParseAddr(val)
+	if err != nil {
+		return false
+	}
+
+	return address.String() == val && address.Zone() == ""
 }
 
 func validOrigin(val string, allowHTTP bool) bool {

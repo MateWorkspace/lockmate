@@ -125,13 +125,13 @@ const (
 	ProfileSecurityChangePassword    = "profile_security:set"
 )
 
-// Client-origin administration within management client operations.
+// Client IP allowlist administration within management client operations.
 const (
-	ManagementClientCreateOrigin          = "client_origin:add"
-	ManagementClientReadOriginById        = "client_origin:get"
-	ManagementClientReadOriginByValue     = "client_origin:get"
-	ManagementClientReadOriginsByClientId = "client_origin:get"
-	ManagementClientReadOriginsByFilter   = "client_origin:get"
-	ManagementClientUpdateOriginById      = "client_origin:set"
-	ManagementClientDeleteOriginById      = "client_origin:remove"
+	ManagementClientCreateIpAllowlist          = "client_ip_allowlist:add"
+	ManagementClientReadIpAllowlistById        = "client_ip_allowlist:get"
+	ManagementClientReadIpAllowlistByCidr      = "client_ip_allowlist:get"
+	ManagementClientReadIpAllowlistsByClientId = "client_ip_allowlist:get"
+	ManagementClientReadIpAllowlistsByFilter   = "client_ip_allowlist:get"
+	ManagementClientUpdateIpAllowlistById      = "client_ip_allowlist:set"
+	ManagementClientDeleteIpAllowlistById      = "client_ip_allowlist:remove"
 )

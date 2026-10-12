@@ -12,7 +12,7 @@ query builders. `shared/` contains BasePostgres, pagination, parent/default-role
 locks, explicit scanners, and PostgreSQL error classification.
 
 The entity folders are `space`, `permission`, `role`, `user`, `classic_auth`,
-`google_auth`, `client`, `client_origin`, `space_member`, `role_permission`,
+`google_auth`, `client`, `client_ip_allowlist`, `space_member`, `role_permission`,
 `space_member_role`, and `signing_key`. Use the existing concatenated
 `infrastructurerepository<entity>` package names and private `postgresImpl`
 structs embedding `shared.BasePostgres`.
@@ -83,12 +83,12 @@ ignored. Do not mutate a developer's database for validation.
 Run `go test ./...`, `go vet ./...`, and `go build ./...` from the Lockmate root.
 Format changed Go files with gofmt. PostgreSQL tests skip without the test URL.
 
-Client-origin writes lock the live space before the live, space-owned client.
+Client-IP-allowlist writes lock the live space before the live, space-owned client.
 Management reads include inactive records but hide deleted parents. Allowlist
-checks require the origin, client, and space to be active and nondeleted; false
-is an ordinary nonmatch, whereas database failures remain errors. Use exact
-canonical-origin equality. Preserve child origins when a parent is soft-deleted.
-Client-origin uniqueness is per client among all nondeleted records.
+checks require the matching entry, client, and space to be active and nondeleted;
+false is an ordinary nonmatch, whereas database failures remain errors. Match the
+resolved IP with Postgres CIDR containment. Preserve child entries when a parent
+is soft-deleted. Client-IP-allowlist uniqueness is per client among all nondeleted records.
 
 Internal google_oauth_launch, google_oauth_attempt, and auth_handoff adapters keep
 query building in postgres_query.go. Use atomic DELETE ... RETURNING with digest

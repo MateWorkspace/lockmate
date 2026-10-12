@@ -6,7 +6,7 @@ type Client struct {
 	Description     string   `json:"description"`
 	IsActive        bool     `json:"is_active"`
 	AuthRedirectUri *string  `json:"auth_redirect_uri"`
-	Origins         []string `json:"origins"`
+	IpAllowlist     []string `json:"ip_allowlist"`
 
 	// SecretKey is supplied at runtime and is never embedded or serialized.
 	SecretKey string `json:"-"`

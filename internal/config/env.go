@@ -50,6 +50,7 @@ var Env = domainmodelsapp.Env{
 	SeederEnabled:      true,
 	PasswordBcryptCost: bcrypt.DefaultCost,
 	HttpPublicUrl:      "https://lockmate-dev.dhonan.my.id",
+	ClientIpHeader:     "CF-Connecting-IP",
 
 	GoogleOAuthEnabled:         false,
 	GoogleOAuthClientId:        "",
@@ -105,6 +106,13 @@ func LoadEnv() error {
 	Env.SeederUserPassword = envGetString("LOCKMATE_SEEDER_USER_PASSWORD", Env.SeederUserPassword)
 	Env.SeederClientSecretKey = envGetString("LOCKMATE_SEEDER_CLIENT_SECRET_KEY", Env.SeederClientSecretKey)
 	Env.HttpPublicUrl = envGetString("LOCKMATE_HTTP_PUBLIC_URL", Env.HttpPublicUrl)
+	Env.ClientIpHeader = envGetString("LOCKMATE_CLIENT_IP_HEADER", Env.ClientIpHeader)
+
+	trustedProxies, err := envGetPrefixes("LOCKMATE_TRUSTED_PROXIES")
+	if err != nil {
+		return err
+	}
+	Env.TrustedProxies = trustedProxies
 
 	Env.GoogleOAuthEnabled = envGetBool("LOCKMATE_GOOGLE_OAUTH_ENABLED", Env.GoogleOAuthEnabled)
 	Env.GoogleOAuthClientId = envGetString("LOCKMATE_GOOGLE_OAUTH_CLIENT_ID", Env.GoogleOAuthClientId)
@@ -199,6 +207,14 @@ func validate() error {
 
 	if Env.PasswordBcryptCost < bcrypt.MinCost || Env.PasswordBcryptCost > bcrypt.MaxCost {
 		return domainmodelserror.NewError("LOCKMATE_PASSWORD_BCRYPT_COST must be between 4 and 31", domainmodelserror.EnvironmentInvalid, nil)
+	}
+
+	if strings.TrimSpace(Env.ClientIpHeader) == "" {
+		return domainmodelserror.NewError("LOCKMATE_CLIENT_IP_HEADER is required", domainmodelserror.EnvironmentRequired, nil)
+	}
+
+	if !validHeaderName(Env.ClientIpHeader) {
+		return domainmodelserror.NewError("LOCKMATE_CLIENT_IP_HEADER has an invalid format", domainmodelserror.EnvironmentInvalid, nil)
 	}
 
 	if Env.SeederEnabled {
@@ -298,6 +314,51 @@ func envGetStrings(key string, fallback []string) []string {
 	}
 
 	return result
+}
+
+func envGetPrefixes(key string) ([]netip.Prefix, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return nil, nil
+	}
+
+	entries := strings.Split(value, ",")
+	result := make([]netip.Prefix, 0, len(entries))
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+
+		prefix, err := netip.ParsePrefix(entry)
+		if err != nil {
+			address, addressErr := netip.ParseAddr(entry)
+			if addressErr != nil {
+				return nil, domainmodelserror.NewError(key+" must be a comma-separated list of IP addresses or CIDRs", domainmodelserror.EnvironmentInvalid, err)
+			}
+
+			address = address.Unmap()
+			prefix = netip.PrefixFrom(address, address.BitLen())
+		}
+
+		result = append(result, prefix.Masked())
+	}
+
+	return result, nil
+}
+
+func validHeaderName(value string) bool {
+	if value == "" {
+		return false
+	}
+
+	for _, char := range value {
+		if !(char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9' || char == '-') {
+			return false
+		}
+	}
+
+	return true
 }
 
 func envGetInt(key string, fallback int) int {

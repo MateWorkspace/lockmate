@@ -1,7 +1,9 @@
-package infrastructurerepositoryclientorigin
+package infrastructurerepositoryclientipallowlist
 
 import (
 	"context"
+	"errors"
+	"net/netip"
 
 	"github.com/Masterminds/squirrel"
 	domaincontractsrepository "github.com/MateWorkspace/lockmate/internal/domain/contracts/repository"
@@ -9,13 +11,14 @@ import (
 	domainmodelserror "github.com/MateWorkspace/lockmate/internal/domain/models/error"
 	infrastructurerepositoryshared "github.com/MateWorkspace/lockmate/internal/infrastructure/repository/shared"
 	"github.com/MateWorkspace/mate-golang/pgxdt"
+	"github.com/jackc/pgx/v5"
 )
 
 type postgresImpl struct {
 	infrastructurerepositoryshared.BasePostgres
 }
 
-func NewPostgresImpl(dt pgxdt.Pgxdt, sqrQuestion, sqrDollar *squirrel.StatementBuilderType) domaincontractsrepository.ClientOrigin {
+func NewPostgresImpl(dt pgxdt.Pgxdt, sqrQuestion, sqrDollar *squirrel.StatementBuilderType) domaincontractsrepository.ClientIpAllowlist {
 	return &postgresImpl{
 		BasePostgres: infrastructurerepositoryshared.BasePostgres{
 			Dt:   dt,
@@ -27,11 +30,11 @@ func NewPostgresImpl(dt pgxdt.Pgxdt, sqrQuestion, sqrDollar *squirrel.StatementB
 
 func (p *postgresImpl) mapError(err error) error {
 	return infrastructurerepositoryshared.MapPgxError(
-		"client origin operation failed",
+		"client IP allowlist operation failed",
 		err,
 		infrastructurerepositoryshared.ConflictMatch{
-			Constraint: "uq_client_origins_client_id_origin",
-			Type:       domainmodelserror.ClientOriginConflict,
+			Constraint: "uq_client_ip_allowlist_client_id_cidr",
+			Type:       domainmodelserror.ClientIpAllowlistConflict,
 		},
 	)
 }
@@ -44,7 +47,7 @@ func (p *postgresImpl) lockParents(ctx context.Context, spaceId, clientId int64)
 	return infrastructurerepositoryshared.LockRow(ctx, p.Dt, "clients", clientId, &spaceId, domainmodelserror.ClientNotFound)
 }
 
-func (p *postgresImpl) Create(ctx context.Context, spaceId int64, args domaincontractsrepository.CreateClientOriginArgs) (id int64, err error) {
+func (p *postgresImpl) Create(ctx context.Context, spaceId int64, args domaincontractsrepository.CreateClientIpAllowlistArgs) (id int64, err error) {
 	if err := infrastructurerepositoryshared.PositiveIds(spaceId, args.ClientId); err != nil {
 		return 0, err
 	}
@@ -60,7 +63,7 @@ func (p *postgresImpl) Create(ctx context.Context, spaceId int64, args domaincon
 
 		query, values, err := p.queryCreate(args)
 		if err != nil {
-			return infrastructurerepositoryshared.QueryBuildError("failed to build create client origin query", err)
+			return infrastructurerepositoryshared.QueryBuildError("failed to build create client IP allowlist query", err)
 		}
 
 		if err := p.Dt.QueryRow(txCtx, query, values...).Scan(&id); err != nil {
@@ -76,50 +79,50 @@ func (p *postgresImpl) Create(ctx context.Context, spaceId int64, args domaincon
 	return id, nil
 }
 
-func (p *postgresImpl) ReadById(ctx context.Context, spaceId, id int64) (*domainmodelsentity.ClientOrigin, error) {
+func (p *postgresImpl) ReadById(ctx context.Context, spaceId, id int64) (*domainmodelsentity.ClientIpAllowlist, error) {
 	if err := infrastructurerepositoryshared.PositiveIds(spaceId, id); err != nil {
 		return nil, err
 	}
 
 	query, values, err := p.queryReadById(spaceId, id)
 	if err != nil {
-		return nil, infrastructurerepositoryshared.QueryBuildError("failed to build read client origin query", err)
+		return nil, infrastructurerepositoryshared.QueryBuildError("failed to build read client IP allowlist query", err)
 	}
 
-	item, err := infrastructurerepositoryshared.ScanClientOrigin(p.Dt.QueryRow(ctx, query, values...))
+	item, err := infrastructurerepositoryshared.ScanClientIpAllowlist(p.Dt.QueryRow(ctx, query, values...))
 	if err != nil {
-		return nil, infrastructurerepositoryshared.ReadError("client origin not found", err, domainmodelserror.ClientOriginNotFound)
+		return nil, infrastructurerepositoryshared.ReadError("client IP allowlist entry not found", err, domainmodelserror.ClientIpAllowlistNotFound)
 	}
 
 	return &item, nil
 }
 
-func (p *postgresImpl) ReadByClientIdAndOrigin(ctx context.Context, spaceId, clientId int64, origin string) (*domainmodelsentity.ClientOrigin, error) {
+func (p *postgresImpl) ReadByClientIdAndCidr(ctx context.Context, spaceId, clientId int64, cidr string) (*domainmodelsentity.ClientIpAllowlist, error) {
 	if err := infrastructurerepositoryshared.PositiveIds(spaceId, clientId); err != nil {
 		return nil, err
 	}
 
-	query, values, err := p.queryReadByClientIdAndOrigin(spaceId, clientId, origin)
+	query, values, err := p.queryReadByClientIdAndCidr(spaceId, clientId, cidr)
 	if err != nil {
-		return nil, infrastructurerepositoryshared.QueryBuildError("failed to build read client origin query", err)
+		return nil, infrastructurerepositoryshared.QueryBuildError("failed to build read client IP allowlist query", err)
 	}
 
-	item, err := infrastructurerepositoryshared.ScanClientOrigin(p.Dt.QueryRow(ctx, query, values...))
+	item, err := infrastructurerepositoryshared.ScanClientIpAllowlist(p.Dt.QueryRow(ctx, query, values...))
 	if err != nil {
-		return nil, infrastructurerepositoryshared.ReadError("client origin not found", err, domainmodelserror.ClientOriginNotFound)
+		return nil, infrastructurerepositoryshared.ReadError("client IP allowlist entry not found", err, domainmodelserror.ClientIpAllowlistNotFound)
 	}
 
 	return &item, nil
 }
 
-func (p *postgresImpl) ReadByClientId(ctx context.Context, spaceId, clientId int64) ([]domainmodelsentity.ClientOrigin, error) {
+func (p *postgresImpl) ReadByClientId(ctx context.Context, spaceId, clientId int64) ([]domainmodelsentity.ClientIpAllowlist, error) {
 	if err := infrastructurerepositoryshared.PositiveIds(spaceId, clientId); err != nil {
 		return nil, err
 	}
 
 	query, values, err := p.queryReadByClientId(spaceId, clientId)
 	if err != nil {
-		return nil, infrastructurerepositoryshared.QueryBuildError("failed to build list client origins query", err)
+		return nil, infrastructurerepositoryshared.QueryBuildError("failed to build list client IP allowlist query", err)
 	}
 
 	rows, err := p.Dt.Query(ctx, query, values...)
@@ -128,7 +131,7 @@ func (p *postgresImpl) ReadByClientId(ctx context.Context, spaceId, clientId int
 	}
 	defer rows.Close()
 
-	items, err := infrastructurerepositoryshared.ScanClientOriginList(rows)
+	items, err := infrastructurerepositoryshared.ScanClientIpAllowlistList(rows)
 	if err != nil {
 		return nil, p.mapError(err)
 	}
@@ -136,7 +139,7 @@ func (p *postgresImpl) ReadByClientId(ctx context.Context, spaceId, clientId int
 	return items, nil
 }
 
-func (p *postgresImpl) ReadByFilter(ctx context.Context, spaceId int64, filter domaincontractsrepository.ClientOriginFilter) ([]domainmodelsentity.ClientOrigin, int64, error) {
+func (p *postgresImpl) ReadByFilter(ctx context.Context, spaceId int64, filter domaincontractsrepository.ClientIpAllowlistFilter) ([]domainmodelsentity.ClientIpAllowlist, int64, error) {
 	if err := infrastructurerepositoryshared.PositiveIds(spaceId); err != nil {
 		return nil, 0, err
 	}
@@ -161,7 +164,7 @@ func (p *postgresImpl) ReadByFilter(ctx context.Context, spaceId int64, filter d
 	}
 	defer rows.Close()
 
-	items, err := infrastructurerepositoryshared.ScanClientOriginList(rows)
+	items, err := infrastructurerepositoryshared.ScanClientIpAllowlistList(rows)
 	if err != nil {
 		return nil, 0, p.mapError(err)
 	}
@@ -169,7 +172,7 @@ func (p *postgresImpl) ReadByFilter(ctx context.Context, spaceId int64, filter d
 	return items, total, nil
 }
 
-func (p *postgresImpl) UpdateById(ctx context.Context, spaceId, id int64, args domaincontractsrepository.UpdateClientOriginArgs) error {
+func (p *postgresImpl) UpdateById(ctx context.Context, spaceId, id int64, args domaincontractsrepository.UpdateClientIpAllowlistArgs) error {
 	if err := infrastructurerepositoryshared.PositiveIds(spaceId, id); err != nil {
 		return err
 	}
@@ -190,7 +193,7 @@ func (p *postgresImpl) UpdateById(ctx context.Context, spaceId, id int64, args d
 
 		query, values, err := p.queryUpdateById(spaceId, id, args)
 		if err != nil {
-			return infrastructurerepositoryshared.QueryBuildError("failed to build update client origin query", err)
+			return infrastructurerepositoryshared.QueryBuildError("failed to build update client IP allowlist query", err)
 		}
 
 		result, err := p.Dt.Exec(txCtx, query, values...)
@@ -199,7 +202,7 @@ func (p *postgresImpl) UpdateById(ctx context.Context, spaceId, id int64, args d
 		}
 
 		if result.RowsAffected() == 0 {
-			return infrastructurerepositoryshared.NotFound("client origin not found", domainmodelserror.ClientOriginNotFound)
+			return infrastructurerepositoryshared.NotFound("client IP allowlist entry not found", domainmodelserror.ClientIpAllowlistNotFound)
 		}
 
 		return nil
@@ -229,7 +232,7 @@ func (p *postgresImpl) DeleteById(ctx context.Context, spaceId, id int64, by *in
 
 		query, values, err := p.queryDeleteById(spaceId, id, by)
 		if err != nil {
-			return infrastructurerepositoryshared.QueryBuildError("failed to build delete client origin query", err)
+			return infrastructurerepositoryshared.QueryBuildError("failed to build delete client IP allowlist query", err)
 		}
 
 		result, err := p.Dt.Exec(txCtx, query, values...)
@@ -238,7 +241,7 @@ func (p *postgresImpl) DeleteById(ctx context.Context, spaceId, id int64, by *in
 		}
 
 		if result.RowsAffected() == 0 {
-			return infrastructurerepositoryshared.NotFound("client origin not found", domainmodelserror.ClientOriginNotFound)
+			return infrastructurerepositoryshared.NotFound("client IP allowlist entry not found", domainmodelserror.ClientIpAllowlistNotFound)
 		}
 
 		return nil
@@ -247,34 +250,28 @@ func (p *postgresImpl) DeleteById(ctx context.Context, spaceId, id int64, by *in
 	return p.mapError(err)
 }
 
-func (p *postgresImpl) IsAllowedOriginForClient(ctx context.Context, spaceId, clientId int64, origin string) (bool, error) {
+func (p *postgresImpl) IsAllowedForClient(ctx context.Context, spaceId, clientId int64, ip netip.Addr) (bool, error) {
 	if err := infrastructurerepositoryshared.PositiveIds(spaceId, clientId); err != nil {
 		return false, err
 	}
 
-	query, values, err := p.queryIsAllowedOrigin(spaceId, clientId, origin)
-	if err != nil {
-		return false, infrastructurerepositoryshared.QueryBuildError("failed to build client origin allowlist query", err)
+	if !ip.IsValid() {
+		return false, domainmodelserror.NewError("client IP is invalid", domainmodelserror.BadArgs, nil)
 	}
 
-	var allowed bool
-	if err := p.Dt.QueryRow(ctx, query, values...).Scan(&allowed); err != nil {
+	query, values, err := p.queryIsAllowedForClient(spaceId, clientId, ip)
+	if err != nil {
+		return false, infrastructurerepositoryshared.QueryBuildError("failed to build client IP allowlist query", err)
+	}
+
+	var found int
+	if err := p.Dt.QueryRow(ctx, query, values...).Scan(&found); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+
 		return false, p.mapError(err)
 	}
 
-	return allowed, nil
-}
-
-func (p *postgresImpl) IsAllowedOrigin(ctx context.Context, origin string) (bool, error) {
-	query, values, err := p.queryIsAllowedOrigin(0, 0, origin)
-	if err != nil {
-		return false, infrastructurerepositoryshared.QueryBuildError("failed to build global origin allowlist query", err)
-	}
-
-	var allowed bool
-	if err := p.Dt.QueryRow(ctx, query, values...).Scan(&allowed); err != nil {
-		return false, p.mapError(err)
-	}
-
-	return allowed, nil
+	return true, nil
 }
