@@ -91,18 +91,8 @@ func LoadEnv() error {
 	Env.TokenAccessDuration = envGetDuration("LOCKMATE_TOKEN_ACCESS_DURATION", Env.TokenAccessDuration)
 	Env.TokenRefreshDuration = envGetDuration("LOCKMATE_TOKEN_REFRESH_DURATION", Env.TokenRefreshDuration)
 
-	currentKey, err := envGetBase64("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", Env.SigningKeyEncryptionKey)
-	if err != nil {
-		return err
-	}
-	Env.SigningKeyEncryptionKey = currentKey
-
-	previousKey, err := envGetBase64("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY_PREVIOUS", Env.SigningKeyEncryptionKeyPrevious)
-	if err != nil {
-		return err
-	}
-	Env.SigningKeyEncryptionKeyPrevious = previousKey
-
+	Env.SigningKeyEncryptionKey = envGetBase64("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", Env.SigningKeyEncryptionKey)
+	Env.SigningKeyEncryptionKeyPrevious = envGetBase64("LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY_PREVIOUS", Env.SigningKeyEncryptionKeyPrevious)
 	Env.SigningKeyRotationInterval = envGetDuration("LOCKMATE_SIGNING_KEY_ROTATION_INTERVAL", Env.SigningKeyRotationInterval)
 	Env.SigningKeyRetentionInterval = envGetDuration("LOCKMATE_SIGNING_KEY_RETENTION_INTERVAL", Env.SigningKeyRetentionInterval)
 
@@ -264,18 +254,18 @@ func envGetString(key string, fallback string) string {
 	return value
 }
 
-func envGetBase64(key string, fallback []byte) ([]byte, error) {
+func envGetBase64(key string, fallback []byte) []byte {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
-		return fallback, nil
+		return fallback
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return nil, domainmodelserror.NewError(key+" must be base64-encoded", domainmodelserror.EnvironmentInvalid, err)
+		return fallback
 	}
 
-	return decoded, nil
+	return decoded
 }
 
 func envGetStrings(key string, fallback []string) []string {

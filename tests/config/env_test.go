@@ -103,7 +103,7 @@ func TestLoadEnvCallsValidate(t *testing.T) {
 		key, value string
 		kind       error
 	}{
-		{"LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", "!!not-base64!!", domainmodelserror.EnvironmentInvalid},
+		{"LOCKMATE_SIGNING_KEY_ENCRYPTION_KEY", "!!not-base64!!", domainmodelserror.EnvironmentRequired},
 		{"LOCKMATE_TOKEN_REFRESH_SECRET", " ", domainmodelserror.EnvironmentRequired},
 		{"LOCKMATE_TOKEN_ACCESS_DURATION", "999ms", domainmodelserror.EnvironmentInvalid},
 		{"LOCKMATE_TOKEN_REFRESH_DURATION", "0", domainmodelserror.EnvironmentInvalid},
